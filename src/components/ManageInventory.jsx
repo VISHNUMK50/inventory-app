@@ -91,6 +91,12 @@ const testGitHubAccess = async () => {
     
     console.log("GitHub config:", githubConfig); // Log the current config
     
+    console.log('GitHub config check:', {
+      hasToken: !!githubConfig.token,
+      tokenFirstChars: githubConfig.token ? 
+        githubConfig.token.substring(0, 4) + '...' : 'none'
+    });
+
     if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
       console.error("GitHub configuration is incomplete");
       setError("GitHub configuration is incomplete");
