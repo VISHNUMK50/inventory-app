@@ -1,8 +1,11 @@
 {
   "partNames": [
-    "eeprom ic"
+    "eeprom ic",
+    "ASD"
   ],
-  "manufacturers": [],
+  "manufacturers": [
+    "DAS"
+  ],
   "vendors": [],
   "categories": [
     "IC",
