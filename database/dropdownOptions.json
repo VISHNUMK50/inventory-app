@@ -3,7 +3,8 @@
     "eeprom ic"
   ],
   "manufacturers": [
-    "kl"
+    "kl",
+    "k"
   ],
   "vendors": [
     "hub"
