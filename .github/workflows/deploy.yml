@@ -4,7 +4,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      REACT_APP_DATABASE_PAT: ${{ secrets.NEXT_PUBLIC_GITHUB_PAT }}
+      NEXT_PUBLIC_DATABASE_PAT: ${{ secrets.NEXT_PUBLIC_GITHUB_PAT }}
 
     steps:
       - uses: actions/checkout@v3
