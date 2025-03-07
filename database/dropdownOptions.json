@@ -2,10 +2,8 @@
   "partNames": [
     "eeprom ic"
   ],
-  "manufacturers": [
-  ],
-  "vendors": [
-  ],
+  "manufacturers": [],
+  "vendors": [],
   "categories": [
     "IC",
     "Resistor",
