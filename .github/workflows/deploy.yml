@@ -6,7 +6,7 @@ jobs:
     env:
       REACT_APP_DATABASE_PAT: ${{ secrets.NEXT_PUBLIC_GITHUB_PAT }}
 
-      steps:
+    steps:
       - uses: actions/checkout@v3
       - name: Install Dependencies
         run: npm install
