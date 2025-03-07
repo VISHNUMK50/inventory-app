@@ -3,13 +3,12 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_DATABASE_PAT: ${{ secrets.NEXT_PUBLIC_GITHUB_PAT }}
-
     steps:
       - uses: actions/checkout@v3
       - name: Install Dependencies
         run: npm install
       - name: Build
+        env:
+          NEXT_PUBLIC_DATABASE_PAT: ${{ secrets.NEXT_PUBLIC_GITHUB_PAT }}
         run: npm run build
       # Add your deployment steps here

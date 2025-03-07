@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Search, Edit, Trash, Download, AlertCircle, Package, Filter, RefreshCw, ChevronDown, Upload,Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
+import githubConfig from '../config/githubConfig';
 
 const ManageInventory = () => {
   // State for inventory items
@@ -29,14 +30,13 @@ const ManageInventory = () => {
     maxStock: ""
   });
   
-  // State for GitHub configuration (same as in AddInventoryForm)
-  const [githubConfig, setGithubConfig] = useState({
-    token: process.env.NEXT_PUBLIC_DATABASE_PAT,
-    repo: "inventory-app",
-    owner: "VISHNUMK50",
-    branch: "master",
-    path: "database"
-  });
+  // Initialize state with the imported config
+  const [config, setConfig] = useState(githubConfig);
+  
+  // You can still update it if needed
+  const updateConfig = (newConfig) => {
+    setConfig({...config, ...newConfig});
+  };
 
   //hias
   // Fetch inventory items on component mount
