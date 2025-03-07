@@ -12,7 +12,7 @@ const ManageInventory = () => {
   
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState("active");
+  const [viewMode, setViewMode] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -49,6 +49,15 @@ const ManageInventory = () => {
       applyFiltersAndSearch();
     }
   }, [inventoryItems, searchTerm, filters, viewMode]);
+
+  useEffect(() => {
+  console.log("Inventory items after fetch:", inventoryItems);
+  console.log("View mode:", viewMode);
+  if (inventoryItems.length > 0) {
+    applyFiltersAndSearch();
+  }
+}, [inventoryItems, searchTerm, filters, viewMode]);
+
 
   // Fetch inventory items from GitHub or localStorage
   const fetchInventoryItems = async () => {
@@ -131,9 +140,9 @@ const ManageInventory = () => {
     
     // Apply active/inactive filter
     if (viewMode === "active") {
-      result = result.filter(item => item.quantity > 0);
+      result = result.filter(item => Number(item.quantity) > 0);
     } else if (viewMode === "inactive") {
-      result = result.filter(item => item.quantity <= 0);
+      result = result.filter(item => Number(item.quantity) <= 0);
     }
     
     // Apply search term
@@ -209,7 +218,8 @@ const ManageInventory = () => {
         return valA < valB ? 1 : valA > valB ? -1 : 0;
       }
     });
-    
+    console.log("Filtered items:", result); // Move this line here
+
     setFilteredItems(result);
   };
 
@@ -751,8 +761,17 @@ const ManageInventory = () => {
             <span> | <span className="font-medium">{selectedItems.length}</span> selected</span>
           )}
         </div>
-        <div className="text-sm text-gray-600">
-          Last updated: {new Date().toLocaleString()}
+        <div className="text-sm text-gray-600"   suppressHydrationWarning // Add this prop
+        >
+            Last updated: {new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+            })}
         </div>
       </div>
     </div>

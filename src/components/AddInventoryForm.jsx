@@ -674,7 +674,6 @@ const AddInventoryForm = () => {
                 </div>
             </div>
         </header>
-        dsfds
         
         
         
@@ -843,12 +842,13 @@ const AddInventoryForm = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity <span className="text-red-500">*</span> </label>
                     <input 
                       type="number" 
                       name="quantity" 
                       value={formData.quantity} 
-                      onChange={handleChange} 
+                      onChange={handleChange}
+                      required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" 
                     />
                   </div>
