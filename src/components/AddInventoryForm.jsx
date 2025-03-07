@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle } from "lucide-react";
+import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search } from "lucide-react";
 
 const AddInventoryForm = () => {
+  // Main form data state
   const [formData, setFormData] = useState({
     image: "",
-    imageData: "", // This will store base64 data
-    imageType: "", // Store the MIME type
+    imageData: "",
+    imageType: "",
     datasheet: "",
-    datasheetData: "", // This will store base64 data
-    datasheetType: "", // Store the MIME type
+    datasheetData: "",
+    datasheetType: "",
     manufacturer: "",
     manufacturerPart: "",
     vendor: "",
@@ -27,14 +28,37 @@ const AddInventoryForm = () => {
     partName: ""
   });
   
-  // State for part name dropdown
-  const [partNames, setPartNames] = useState([]);
-  const [newPartName, setNewPartName] = useState("");
-  const [isAddingNewPart, setIsAddingNewPart] = useState(false);
+  // State for dropdown options
+  const [dropdownOptions, setDropdownOptions] = useState({
+    partNames: [],
+    manufacturers: [],
+    vendors: [],
+    categories: [
+      "IC", "Resistor", "Capacitor", "Transistor", "Diode", "LED", "Connector", 
+      "Switch", "Sensor", "Microcontroller", "PCB", "Battery", "Module", "Tool", "Other"
+    ]
+  });
+  
+  // State for dropdown suggestions
+  const [suggestions, setSuggestions] = useState({
+    partName: [],
+    manufacturer: [],
+    vendor: []
+  });
+  
+  // State for new entries
+  const [newEntries, setNewEntries] = useState({
+    partName: "",
+    manufacturer: "",
+    vendor: ""
+  });
+  
+  // State for which field is currently being added to
+  const [addingField, setAddingField] = useState(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [githubConfig, setGithubConfig] = useState({
-    token: "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",
+    token: "",
     repo: "inventory-app",
     owner: "VISHNUMK50",
     branch: "master",
@@ -45,60 +69,218 @@ const AddInventoryForm = () => {
   // New state to preview uploads
   const [imagePreview, setImagePreview] = useState(null);
   const [datasheetName, setDatasheetName] = useState(null);
-
-  // Load saved part names from localStorage on component mount
+  
+  // Load data from GitHub on component mount
   useEffect(() => {
-    const savedPartNames = localStorage.getItem('partNames');
-    if (savedPartNames) {
-      setPartNames(JSON.parse(savedPartNames));
-    }
+    fetchDropdownOptionsFromGithub();
   }, []);
-
-  // Save part names to localStorage whenever they change
+  
+  // Filter suggestions when typing in fields
   useEffect(() => {
-    if (partNames.length > 0) {
-      localStorage.setItem('partNames', JSON.stringify(partNames));
+    if (formData.partName) {
+      const filteredPartNames = dropdownOptions.partNames.filter(name => 
+        name.toLowerCase().includes(formData.partName.toLowerCase())
+      );
+      setSuggestions(prev => ({ ...prev, partName: filteredPartNames }));
     }
-  }, [partNames]);
-
+    
+    if (formData.manufacturer) {
+      const filteredManufacturers = dropdownOptions.manufacturers.filter(name => 
+        name.toLowerCase().includes(formData.manufacturer.toLowerCase())
+      );
+      setSuggestions(prev => ({ ...prev, manufacturer: filteredManufacturers }));
+    }
+    
+    if (formData.vendor) {
+      const filteredVendors = dropdownOptions.vendors.filter(name => 
+        name.toLowerCase().includes(formData.vendor.toLowerCase())
+      );
+      setSuggestions(prev => ({ ...prev, vendor: filteredVendors }));
+    }
+  }, [formData.partName, formData.manufacturer, formData.vendor, dropdownOptions]);
+  
+  const fetchDropdownOptionsFromGithub = async () => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
+      
+      // Check if token and other required fields are available
+      if (!token || !repo || !owner) {
+        // Fall back to localStorage if GitHub config is not complete
+        loadFromLocalStorage();
+        return;
+      }
+      
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+      
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
+      
+      const response = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `token ${token}`
+        }
+      });
+      
+      if (response.status === 404) {
+        // File doesn't exist yet, use default options
+        loadFromLocalStorage();
+        return;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Decode content from base64
+      const content = atob(data.content);
+      const options = JSON.parse(content);
+      
+      // Update state with fetched options
+      setDropdownOptions(options);
+      
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      // Fall back to localStorage
+      loadFromLocalStorage();
+    }
+  };
+  
+  const loadFromLocalStorage = () => {
+    const savedOptions = localStorage.getItem('dropdownOptions');
+    if (savedOptions) {
+      setDropdownOptions(JSON.parse(savedOptions));
+    }
+  };
+  
+  const saveDropdownOptionsToGithub = async () => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
+      
+      if (!token || !repo || !owner) {
+        // Save to localStorage if GitHub config is not complete
+        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+        return;
+      }
+      
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+      
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
+      
+      // Check if file already exists
+      let sha = '';
+      try {
+        const checkResponse = await fetch(apiUrl, {
+          headers: {
+            "Authorization": `token ${token}`
+          }
+        });
+        
+        if (checkResponse.ok) {
+          const fileData = await checkResponse.json();
+          sha = fileData.sha;
+        }
+      } catch (error) {
+        // File doesn't exist yet, which is fine
+        console.log("Creating new dropdown options file");
+      }
+      
+      // Convert options to JSON and then to base64
+      const content = btoa(JSON.stringify(dropdownOptions, null, 2));
+      
+      // Prepare request body
+      const requestBody = {
+        message: "Update dropdown options",
+        content: content,
+        branch: branch
+      };
+      
+      // If file exists, include sha for update
+      if (sha) {
+        requestBody.sha = sha;
+      }
+      
+      // Make PUT request to GitHub API
+      const response = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.statusText}`);
+      }
+      
+      console.log("Dropdown options saved to GitHub successfully");
+      
+      // Also save to localStorage as backup
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+      
+    } catch (error) {
+      console.error("Error saving dropdown options:", error);
+      // Save to localStorage as fallback
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+    }
+  };
+  const handleGithubConfigChange = (e) => {
+    const { name, value } = e.target;
+    setGithubConfig({
+      ...githubConfig,
+      [name]: value
+    });
+  };
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
-
-  const handlePartNameChange = (e) => {
-    const value = e.target.value;
-    setFormData({ ...formData, partName: value });
+  
+  const handleSelectSuggestion = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+    setSuggestions({ ...suggestions, [field]: [] });
   };
-
-  const handleNewPartNameChange = (e) => {
-    setNewPartName(e.target.value);
+  
+  const handleNewEntryChange = (e) => {
+    const { name, value } = e.target;
+    setNewEntries({ ...newEntries, [name]: value });
   };
-
-  const addNewPartName = () => {
-    if (newPartName.trim() && !partNames.includes(newPartName.trim())) {
-      const updatedPartNames = [...partNames, newPartName.trim()];
-      setPartNames(updatedPartNames);
-      setFormData({ ...formData, partName: newPartName.trim() });
-      setNewPartName("");
-      setIsAddingNewPart(false);
+  
+  const addNewEntry = (field) => {
+    const value = newEntries[field].trim();
+    
+    if (value && !dropdownOptions[`${field}s`].includes(value)) {
+      // Add to dropdown options
+      const updatedOptions = {
+        ...dropdownOptions,
+        [`${field}s`]: [...dropdownOptions[`${field}s`], value]
+      };
+      
+      // Update state
+      setDropdownOptions(updatedOptions);
+      setFormData({ ...formData, [field]: value });
+      setNewEntries({ ...newEntries, [field]: "" });
+      setAddingField(null);
+      
+      // Save to GitHub
+      saveDropdownOptionsToGithub();
     }
   };
-
-  const toggleAddNewPart = () => {
-    setIsAddingNewPart(!isAddingNewPart);
-    if (!isAddingNewPart) {
+  
+  const toggleAddField = (field) => {
+    setAddingField(addingField === field ? null : field);
+    if (addingField !== field) {
       // Focus the input field when showing it
       setTimeout(() => {
-        const inputField = document.getElementById('new-part-name');
+        const inputField = document.getElementById(`new-${field}`);
         if (inputField) inputField.focus();
       }, 10);
     }
-  };
-
-  const handleGithubConfigChange = (e) => {
-    const { name, value } = e.target;
-    setGithubConfig({ ...githubConfig, [name]: value });
   };
 
   const handleImageUpload = (e) => {
@@ -209,6 +391,9 @@ const AddInventoryForm = () => {
         `Add inventory item: ${formData.partName}`
       );
       
+      // Save updated dropdown options as well
+      await saveDropdownOptionsToGithub();
+      
       return true;
     } catch (error) {
       console.error("Error saving to GitHub:", error);
@@ -260,8 +445,80 @@ const AddInventoryForm = () => {
         alert("Inventory item and associated files saved successfully to GitHub!");
       }
     } else {
+      // Save dropdown options to localStorage at minimum
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
       alert("Inventory item saved successfully to local state!");
     }
+  };
+
+  // Render autocomplete dropdown for a field
+  const renderAutocomplete = (field, label, required = false) => {
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <div className="relative">
+          {addingField === field ? (
+            <div className="flex items-center">
+              <input
+                type="text"
+                id={`new-${field}`}
+                name={field}
+                value={newEntries[field]}
+                onChange={handleNewEntryChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={`Enter new ${field}`}
+              />
+              <button
+                type="button"
+                onClick={() => addNewEntry(field)}
+                className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
+              >
+                Add
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center">
+                <div className="relative w-full">
+                  <input
+                    type="text"
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    required={required}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={`Type to search or select ${field}`}
+                    autoComplete="off"
+                  />
+                  {suggestions[field].length > 0 && (
+                    <div className="absolute z-10 w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {suggestions[field].map((item, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                          onClick={() => handleSelectSuggestion(field, item)}
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleAddField(field)}
+                  className="px-3 py-2 bg-blue-100 text-blue-700 rounded-r-md hover:bg-blue-200 flex items-center"
+                >
+                  <PlusCircle className="h-4 w-4 mr-1" /> New
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -318,56 +575,7 @@ const AddInventoryForm = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Part Name <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    {isAddingNewPart ? (
-                      <div className="flex items-center">
-                        <input
-                          type="text"
-                          id="new-part-name"
-                          value={newPartName}
-                          onChange={handleNewPartNameChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Enter new part name"
-                        />
-                        <button
-                          type="button"
-                          onClick={addNewPartName}
-                          className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <select
-                          name="partName"
-                          value={formData.partName}
-                          onChange={handlePartNameChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                        >
-                          <option value="">Select Part Name</option>
-                          {partNames.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={toggleAddNewPart}
-                          className="px-3 py-2 bg-blue-100 text-blue-700 rounded-r-md hover:bg-blue-200 flex items-center"
-                        >
-                          <PlusCircle className="h-4 w-4 mr-1" /> New
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {renderAutocomplete('partName', 'Part Name', true)}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -381,21 +589,9 @@ const AddInventoryForm = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   >
                     <option value="">Select Category</option>
-                    <option value="IC">IC (Integrated Circuit)</option>
-                    <option value="Resistor">Resistor</option>
-                    <option value="Capacitor">Capacitor</option>
-                    <option value="Transistor">Transistor</option>
-                    <option value="Diode">Diode</option>
-                    <option value="LED">LED</option>
-                    <option value="Connector">Connector</option>
-                    <option value="Switch">Switch</option>
-                    <option value="Sensor">Sensor</option>
-                    <option value="Microcontroller">Microcontroller</option>
-                    <option value="PCB">PCB</option>
-                    <option value="Battery">Battery</option>
-                    <option value="Module">Module</option>
-                    <option value="Tool">Tool</option>
-                    <option value="Other">Other</option>
+                    {dropdownOptions.categories.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -429,19 +625,7 @@ const AddInventoryForm = () => {
               </h3>
               
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Manufacturer <span className="text-red-500">*</span>
-                  </label>
-                  <input 
-                    type="text" 
-                    name="manufacturer" 
-                    value={formData.manufacturer} 
-                    onChange={handleChange} 
-                    required 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" 
-                  />
-                </div>
+                {renderAutocomplete('manufacturer', 'Manufacturer', true)}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -457,19 +641,7 @@ const AddInventoryForm = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                  <select 
-                    name="vendor" 
-                    value={formData.vendor} 
-                    onChange={handleChange} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                  >
-                    <option value="">Select Vendor</option>
-                    <option value="Vendor A">Vendor A</option>
-                    <option value="Vendor B">Vendor B</option>
-                  </select>
-                </div>
+                {renderAutocomplete('vendor', 'Vendor')}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Part#</label>
