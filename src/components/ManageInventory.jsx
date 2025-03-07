@@ -31,7 +31,7 @@ const ManageInventory = () => {
   
   // State for GitHub configuration (same as in AddInventoryForm)
   const [githubConfig, setGithubConfig] = useState({
-    token: process.env.REACT_APP_DATABASE_PAT,
+    token: "process.env.NEXT_PUBLIC_GITHUB_PAT",
     repo: "inventory-app",
     owner: "VISHNUMK50",
     branch: "master",
@@ -57,12 +57,60 @@ const ManageInventory = () => {
     applyFiltersAndSearch();
   }
 }, [inventoryItems, searchTerm, filters, viewMode]);
-
+// Add this function before fetchInventoryItems
+const testGitHubAccess = async () => {
+    try {
+      console.log(`Testing access to: https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`);
+      
+      const response = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`, {
+        headers: {
+          "Authorization": `Bearer ${githubConfig.token}`
+        }
+      });
+      
+      console.log("Response status:", response.status);
+      const data = await response.json();
+      console.log("GitHub API response:", data);
+      
+      if (!response.ok) {
+        setError(`GitHub API error: ${response.status} - ${data.message || 'Unknown error'}`);
+      }
+      
+      return response.ok;
+    } catch (error) {
+      console.error("GitHub access test failed:", error);
+      return false;
+    }
+  };
 
   // Fetch inventory items from GitHub or localStorage
   const fetchInventoryItems = async () => {
     setIsLoading(true);
     setError(null);
+    
+    console.log("GitHub config:", githubConfig); // Log the current config
+    
+    if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
+      console.error("GitHub configuration is incomplete");
+      setError("GitHub configuration is incomplete");
+      // Use fallback data
+      setInventoryItems(sampleInventoryItems);
+      setFilteredItems(sampleInventoryItems);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Add this block - Test GitHub API access
+    const canAccessGitHub = await testGitHubAccess();
+    if (!canAccessGitHub) {
+      console.error("Could not access GitHub API with provided credentials");
+      setError("Could not access GitHub repository. Please check credentials.");
+      // Fall back to sample data
+      setInventoryItems(sampleInventoryItems);
+      setFilteredItems(sampleInventoryItems);
+      setIsLoading(false);
+      return;
+    }   
     
     try {
       const { token, repo, owner, path } = githubConfig;
