@@ -4,7 +4,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_GITHUB_PAT: ${{ secrets.DATABASE_PAT1 }}
+      NEXT_PUBLIC_GITHUB_PAT: ${{ secrets.NEXT_PUBLIC_GITHUB_PAT }}
 
       steps:
       - uses: actions/checkout@v3
