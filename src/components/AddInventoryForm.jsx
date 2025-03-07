@@ -58,7 +58,7 @@ const AddInventoryForm = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [githubConfig, setGithubConfig] = useState({
-    token: "",
+    token: "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",
     repo: "inventory-app",
     owner: "VISHNUMK50",
     branch: "master",
