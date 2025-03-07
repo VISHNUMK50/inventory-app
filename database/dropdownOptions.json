@@ -1,0 +1,22 @@
+{
+  "partNames": [],
+  "manufacturers": [],
+  "vendors": [],
+  "categories": [
+    "IC",
+    "Resistor",
+    "Capacitor",
+    "Transistor",
+    "Diode",
+    "LED",
+    "Connector",
+    "Switch",
+    "Sensor",
+    "Microcontroller",
+    "PCB",
+    "Battery",
+    "Module",
+    "Tool",
+    "Other"
+  ]
+}
