@@ -1,11 +1,15 @@
 {
   "partNames": [
-    "DWQD"
+    "DWQD",
+    "eeprom"
   ],
   "manufacturers": [
-    "DWQ"
+    "DWQ",
+    "kl"
   ],
-  "vendors": [],
+  "vendors": [
+    "kk"
+  ],
   "categories": [
     "IC",
     "Resistor",
