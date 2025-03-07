@@ -1,14 +1,12 @@
 {
   "partNames": [
-    "DWQD",
-    "eeprom"
+    "eeprom ic"
   ],
   "manufacturers": [
-    "DWQ",
     "kl"
   ],
   "vendors": [
-    "kk"
+    "hub"
   ],
   "categories": [
     "IC",
