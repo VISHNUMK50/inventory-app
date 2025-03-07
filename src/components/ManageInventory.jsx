@@ -31,7 +31,7 @@ const ManageInventory = () => {
   
   // State for GitHub configuration (same as in AddInventoryForm)
   const [githubConfig, setGithubConfig] = useState({
-    token: "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",
+    token: process.env.REACT_APP_DATABASE_PAT,
     repo: "inventory-app",
     owner: "VISHNUMK50",
     branch: "master",

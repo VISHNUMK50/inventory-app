@@ -59,7 +59,11 @@ const AddInventoryForm = () => {
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [githubConfig, setGithubConfig] = useState({
+<<<<<<< HEAD
       token: process.env.REACT_APP_DATABASE_PAT,
+=======
+      token: ${{ secrets.DATABASE_PAT }},
+>>>>>>> 19f0397ceb848ee13ba01ac26556ba56e57e4f6c
       repo: "inventory-app",
       owner: "VISHNUMK50",
       branch: "master",
