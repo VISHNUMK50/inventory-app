@@ -1,6 +1,11 @@
 {
   "partNames": [
-    "eeprom ic"
+    "eeprom ic",
+    "a",
+    "as",
+    "asf",
+    "asfa",
+    "asfas"
   ],
   "manufacturers": [
     "kl",
