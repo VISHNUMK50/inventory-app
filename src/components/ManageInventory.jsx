@@ -38,6 +38,7 @@ const ManageInventory = () => {
     path: "database"
   });
 
+  //hias
   // Fetch inventory items on component mount
   useEffect(() => {
     fetchInventoryItems();
