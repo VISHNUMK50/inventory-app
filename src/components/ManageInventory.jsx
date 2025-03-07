@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, Edit, Trash, Download, AlertCircle, Package, Filter, RefreshCw, ChevronDown, Upload, ClipboardList, Clipboard, Home } from "lucide-react";
+import { Search, Edit, Trash, Download, AlertCircle, Package, Filter, RefreshCw, ChevronDown, Upload,Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
 
 const ManageInventory = () => {
@@ -458,36 +458,86 @@ const ManageInventory = () => {
     }
     return "";
   };
+  const [scrolled, setScrolled] = useState(false);
+  
+  // Add scroll event listener to track when to apply fixed positioning
+  useEffect(() => {
+    const handleScroll = () => {
+      // Get the header height to know when to trigger fixed position
+      const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
+      if (window.scrollY > mainHeaderHeight) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   return (
-    <div className="max-w-full mx-auto bg-white shadow-xl rounded-xl overflow-hidden">
-      {/* Header */}
-      
-        <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-            <div className="container mx-auto px-4 py-4">
-                <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                    <Package className="h-8 w-8" />
-                    <span className="text-2xl font-bold">InventoryPro</span>
-                </div>
-                <div className="flex items-center">
-                    <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
-                    <Home className="h-4 w-4 mr-2" /> Back to Dashboard
-                    </Link>
-                    <span className="mr-4">Welcome, Admin</span>
-                    <button className="bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition">
-                    Logout
-                    </button>
-                </div>
-                </div>
+    <div className="mx-auto bg-white shadow-xl overflow-hidden">
+      {/* Main header - with class for targeting */}
+      <header className="main-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
+        <div className="mx-auto py-4 px-6">
+          <div className="flex items justify-between">
+            <div className="flex items-center space-x-2">
+              <Package className="h-8 w-8" />
+              <span className="text-2xl font-bold">InventoryPro</span>
             </div>
-        </header>
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
-        <h2 className="text-2xl font-bold flex items-center">
-          <Package className="mr-2" /> Inventory Management System
-        </h2>
-        <p className="opacity-80">Manage your inventory items</p>
+            <h2 className="ml-60 text-3xl font-bold">
+              Inventory Management System
+            </h2>
+            <div className="flex items-center">
+              <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
+                <Home className="h-4 w-4 mr-2" /> Back to Dashboard
+              </Link>
+              <span className="mr-4">Welcome, Admin</span>
+              <button className="bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition">
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Fixed position action bar with a placeholder for when it's fixed */}
+      {scrolled && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            zIndex: 50 
+          }}
+          className="bg-gradient-to-r from-purple-600 to-indigo-700 shadow-md"
+        >
+          <div className="flex items-center justify-between py-3 px-6 border-t border-purple-500">
+            <h2 className="text-2xl font-bold text-white flex items-center">
+              <Store className="mr-2 h-5 w-5" /> Manage Products
+            </h2>
+          </div>
+        </div>
+      )}
+
+      {/* Regular action bar - always visible in the flow */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-700 shadow-md">
+        <div className="flex items-center justify-between py-3 px-6 border-t border-purple-500">
+          <h2 className="text-2xl font-bold text-white flex items-center">
+            <Store className="mr-2 h-5 w-5" /> Manage Products
+          </h2>
+        </div>
       </div>
+
+      {/* Add space to prevent content jump when the bar becomes fixed */}
+      {scrolled && <div style={{ height: '64px' }}></div>}
 
       {/* Action Buttons and Search */}
       <div className="p-4 flex flex-wrap justify-between items-center gap-3 border-b border-gray-200">

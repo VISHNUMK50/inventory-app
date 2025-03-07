@@ -31,7 +31,7 @@ const Dashboard = () => {
   ];
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-full mx-auto bg-gray-50">
       {/* Top navigation */}
       <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
         <div className="container mx-auto px-4 py-4">
@@ -51,7 +51,7 @@ const Dashboard = () => {
       </header>
       
       {/* Main content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-full mx-auto mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Inventory Dashboard</h1>
         
         {/* Quick action buttons */}
