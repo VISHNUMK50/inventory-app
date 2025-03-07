@@ -1,4 +1,4 @@
-import AddInventoryForm from '../components/AddInventoryForm';
+// import AddInventoryForm from '../components/AddInventoryForm';
 import Dashboard from '../components/dashboard';
 
 
