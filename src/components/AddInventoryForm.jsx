@@ -17,7 +17,7 @@ const AddInventoryForm = () => {
     manufacturer: "",
     manufacturerPart: "",
     vendor: "",
-    vendorPart: "",
+    vendorProductLink: "", // Changed from vendorPart
     customerRef: "",
     description: "",
     bin: "",
@@ -30,29 +30,32 @@ const AddInventoryForm = () => {
     partName: ""
   });
 
-  // State for dropdown options
+  // State for dropdown options - Added manufacturerParts
   const [dropdownOptions, setDropdownOptions] = useState({
     partNames: [],
     manufacturers: [],
     vendors: [],
+    manufacturerParts: [], // Added this array for manufacturer part numbers
     categories: [
       "IC", "Resistor", "Capacitor", "Transistor", "Diode", "LED", "Connector",
       "Switch", "Sensor", "Microcontroller", "PCB", "Battery", "Module", "Tool", "Other"
     ]
   });
 
-  // State for dropdown suggestions
+  // State for dropdown suggestions - Added manufacturerPart
   const [suggestions, setSuggestions] = useState({
     partName: [],
     manufacturer: [],
-    vendor: []
+    vendor: [],
+    manufacturerPart: [] // Added suggestions for manufacturer parts
   });
 
-  // State for new entries
+  // State for new entries - Added manufacturerPart
   const [newEntries, setNewEntries] = useState({
     partName: "",
     manufacturer: "",
-    vendor: ""
+    vendor: "",
+    manufacturerPart: "" // Added new entry field for manufacturer parts
   });
 
   // State for which field is currently being added to
@@ -69,17 +72,19 @@ const AddInventoryForm = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [datasheetName, setDatasheetName] = useState(null);
 
-  // Refs for tracking active dropdowns and focus
+  // Refs for tracking active dropdowns and focus - Added manufacturerPart
   const dropdownRefs = {
     partName: useRef(null),
     manufacturer: useRef(null),
-    vendor: useRef(null)
+    vendor: useRef(null),
+    manufacturerPart: useRef(null) // Added ref for manufacturerPart dropdown
   };
 
   const inputRefs = {
     partName: useRef(null),
     manufacturer: useRef(null),
-    vendor: useRef(null)
+    vendor: useRef(null),
+    manufacturerPart: useRef(null) // Added ref for manufacturerPart input
   };
 
   // Track whether user is actively using a dropdown
@@ -109,7 +114,7 @@ const AddInventoryForm = () => {
     setFormData({ ...formData, [name]: value });
 
     // Only update suggestions for these specific fields
-    if (['partName', 'manufacturer', 'vendor'].includes(name)) {
+    if (['partName', 'manufacturer', 'vendor', 'manufacturerPart'].includes(name)) {
       updateSuggestions(name, value);
 
       // Only show the dropdown when typing (prevent auto-open)
@@ -158,6 +163,11 @@ const AddInventoryForm = () => {
       const content = atob(data.content);
       const options = JSON.parse(content);
 
+      // Ensure manufacturerParts exists in the options
+      if (!options.manufacturerParts) {
+        options.manufacturerParts = [];
+      }
+
       // Update state with fetched options
       setDropdownOptions(options);
 
@@ -171,7 +181,14 @@ const AddInventoryForm = () => {
   const loadFromLocalStorage = () => {
     const savedOptions = localStorage.getItem('dropdownOptions');
     if (savedOptions) {
-      setDropdownOptions(JSON.parse(savedOptions));
+      const options = JSON.parse(savedOptions);
+
+      // Ensure manufacturerParts exists in the options
+      if (!options.manufacturerParts) {
+        options.manufacturerParts = [];
+      }
+
+      setDropdownOptions(options);
     }
   };
 
@@ -395,7 +412,8 @@ const AddInventoryForm = () => {
         setSuggestions({
           partName: [],
           manufacturer: [],
-          vendor: []
+          vendor: [],
+          manufacturerPart: []
         });
         setActiveDropdown(null);
       }
@@ -410,7 +428,7 @@ const AddInventoryForm = () => {
   // Process new entries when submitting the form
   const processNewEntries = async () => {
     // Fields to check
-    const fieldsToCheck = ['partName', 'manufacturer', 'vendor'];
+    const fieldsToCheck = ['partName', 'manufacturer', 'vendor', 'manufacturerPart'];
     let hasUpdates = false;
 
     // Create a copy of current dropdown options
@@ -433,33 +451,198 @@ const AddInventoryForm = () => {
     if (hasUpdates) {
       // Update the state first
       setDropdownOptions(updatedOptions);
-      // Wait for GitHub save to complete
-      await saveDropdownOptionsToGithub();
+
+      // Instead of immediately trying to save, use the updated options directly
+      try {
+        // Create a modified version of saveDropdownOptionsToGithub that accepts options
+        await saveOptionsToGithub(updatedOptions);
+      } catch (error) {
+        console.error("Error saving dropdown options:", error);
+        // Save to localStorage as fallback
+        localStorage.setItem('dropdownOptions', JSON.stringify(updatedOptions));
+      }
     }
 
     return hasUpdates; // Return whether updates were made
   };
 
-  // Updated handleSubmit function to properly await processNewEntries
+  // New function that accepts options parameter
+  const saveOptionsToGithub = async (options) => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
+
+      if (!token || !repo || !owner) {
+        // Save to localStorage if GitHub config is not complete
+        localStorage.setItem('dropdownOptions', JSON.stringify(options));
+        return;
+      }
+
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
+
+      // Always check for the latest version of the file
+      let sha = '';
+      try {
+        const checkResponse = await fetch(apiUrl, {
+          headers: {
+            "Authorization": `token ${token}`
+          }
+        });
+
+        if (checkResponse.ok) {
+          const fileData = await checkResponse.json();
+          sha = fileData.sha;
+        }
+      } catch (error) {
+        console.log("Creating new dropdown options file");
+      }
+
+      // Convert options to JSON and then to base64
+      const content = btoa(JSON.stringify(options, null, 2));
+
+      // Prepare request body
+      const requestBody = {
+        message: "Update dropdown options",
+        content: content,
+        branch: branch
+      };
+
+      // Always include sha if we have it
+      if (sha) {
+        requestBody.sha = sha;
+      }
+
+      // Make PUT request to GitHub API
+      const response = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`GitHub API error: ${errorData.message}`);
+      }
+
+      console.log("Dropdown options saved to GitHub successfully");
+
+      // Also save to localStorage as backup
+      localStorage.setItem('dropdownOptions', JSON.stringify(options));
+
+    } catch (error) {
+      throw error; // Re-throw the error to be handled by the caller
+    }
+  };
+
+  // Function to check if an item already exists
+  const checkItemExists = async () => {
+    const { token, repo, owner, branch, path } = githubConfig;
+
+    if (!token || !repo || !owner) {
+      return false; // Can't check, assume it doesn't exist
+    }
+
+    try {
+      // Generate the same identifier used for saving
+      const sanitizedManufacturerPart = formData.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
+      const sanitizedPartName = formData.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const itemIdentifier = `${sanitizedPartName}-${sanitizedManufacturerPart}`;
+
+      // Path to the JSON file
+      const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
+
+      // GitHub API URL for the file
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonFilePath}`;
+
+      // Check if the file exists
+      const response = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `token ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // File exists, fetch its content
+        const fileData = await response.json();
+        const content = atob(fileData.content);
+        const existingItem = JSON.parse(content);
+
+        // Return the existing item
+        return existingItem;
+      }
+
+      return false; // Item doesn't exist
+    } catch (error) {
+      console.error("Error checking if item exists:", error);
+      return false;
+    }
+  };
+
+  // Updated handleSubmit function with merge logic
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // First process any new entries and wait for completion
-    const entriesUpdated = await processNewEntries();
-
-    console.log("Inventory Data Submitted:", formData);
-
-    // If GitHub config is shown, save to GitHub
-    const success = await saveToGithub();
-    if (success) {
-      alert("Inventory item and associated files saved successfully to GitHub!");
-      resetForm(); // Reset form after successful save
+    // Validate required fields
+    if (!formData.partName || !formData.manufacturer || !formData.manufacturerPart) {
+      alert("Please fill all required fields: Part Name, Manufacturer, and Manufacturer Part#");
+      return;
     }
-    else {
-      // Save dropdown options to localStorage at minimum
-      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-      alert("Inventory item saved successfully to local state!");
-      resetForm(); // Reset form after successful save
+
+    setIsSubmitting(true);
+
+    try {
+      // First process any new entries and wait for completion
+      await processNewEntries();
+
+      // Check if a matching item already exists
+      const existingItem = await checkItemExists();
+
+      // If the item exists and matches critical fields, update the quantity
+      if (existingItem &&
+        existingItem.partName === formData.partName &&
+        existingItem.manufacturer === formData.manufacturer &&
+        existingItem.manufacturerPart === formData.manufacturerPart &&
+        existingItem.vendor === formData.vendor) {
+
+        // Parse quantities
+        const existingQty = parseInt(existingItem.quantity) || 0;
+        const newQty = parseInt(formData.quantity) || 0;
+
+        // Create merged data, keeping most fields from existing item
+        const mergedData = {
+          ...existingItem,
+          quantity: (existingQty + newQty).toString()
+        };
+
+        // Update form data with merged data
+        setFormData(mergedData);
+
+        alert(`This item already exists! Adding ${newQty} to the existing quantity of ${existingQty}.`);
+      }
+
+      // If GitHub config is shown, save to GitHub
+      const success = await saveToGithub();
+      if (success) {
+        alert("Inventory item and associated files saved successfully to GitHub!");
+        resetForm(); // Reset form after successful save
+      }
+      else {
+        // Save dropdown options to localStorage at minimum
+        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+        alert("Inventory item saved successfully to local state!");
+        resetForm(); // Reset form after successful save
+      }
+    } catch (error) {
+      console.error("Error during submission:", error);
+      alert(`Error submitting form: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -596,7 +779,7 @@ const AddInventoryForm = () => {
       manufacturer: "",
       manufacturerPart: "",
       vendor: "",
-      vendorPart: "",
+      vendorProductLink: "", // Changed from vendorPart
       customerRef: "",
       description: "",
       bin: "",
@@ -617,14 +800,16 @@ const AddInventoryForm = () => {
     setNewEntries({
       partName: "",
       manufacturer: "",
-      vendor: ""
+      vendor: "",
+      manufacturerPart: ""
     });
 
     // Clear suggestions
     setSuggestions({
       partName: [],
       manufacturer: [],
-      vendor: []
+      vendor: [],
+      manufacturerPart: []
     });
 
     // Reset active state
@@ -754,427 +939,444 @@ const AddInventoryForm = () => {
         </div>
       </header>
 
-      {/* Fixed position action bar with a placeholder for when it's fixed */}
-      {scrolled && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 50
-          }}
-          className="bg-gray-300 shadow-md" >
-          <div className="flex items-center justify-between py-3 px-6 border-t border-purple-500">
+      {/* Fixed action bar that appears on scroll */}
+      <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-3 px-6`}>
+        <div className="bg-gray-300  flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+
             <h2 className="text-2xl font-bold text-black flex items-center">
               <PlusCircle className="mr-2 h-5 w-5" /> Add Product
             </h2>
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-5 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="inventory-form"
-                disabled={isSubmitting}
-                className={`px-6 py-2  text-white rounded-md hover:from-blue-500 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-lg font-medium transform hover:scale-105 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-                {isSubmitting ? 'Saving...' : (showGithubConfig ? 'Save to GitHub' : 'Save Inventory Item')}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
-
-      {/* Regular action bar - always visible in the flow */}
-      <div className="bg-gray-300 shadow-md">
-        <div className="flex items-center justify-between py-3 px-6 border-t border-purple-500">
-          <h2 className="text-2xl font-bold text-black flex items-center">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add Product
-          </h2>
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={resetForm}
-              className="px-5 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+              onClick={() => setShowGithubConfig(!showGithubConfig)}
+              className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
             >
-              Cancel
+              <Github className="h-4 w-4 mr-2" />
+              {showGithubConfig ? "Hide GitHub Config" : "Show GitHub Config"}
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Reset
             </button>
             <button
               type="submit"
-              form="inventory-form"
+              form="inventoryForm"
               disabled={isSubmitting}
-              className={`px-6 py-2  text-white rounded-md hover:from-blue-500 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-lg font-medium transform hover:scale-105 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-              {isSubmitting ? 'Saving...' : (showGithubConfig ? 'Save to GitHub' : 'Save Inventory Item')}
+              className="flex items-center px-4 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              {isSubmitting ? "Saving..." : "Add to Inventory"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Add space to prevent content jump when the bar becomes fixed */}
-      {scrolled && <div style={{ height: '64px' }}></div>}
-      {/* handle submit */}
-      <form id="inventory-form" onSubmit={handleSubmit} className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left column */}
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
+      {/* GitHub Configuration Section */}
+      {showGithubConfig && (
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-800 mb-3">GitHub Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Token</label>
+              <input
+                type="password"
+                name="token"
+                value={githubConfig.token}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="GitHub Personal Access Token"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+              <input
+                type="text"
+                name="owner"
+                value={githubConfig.owner}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="GitHub Username or Org"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Repository</label>
+              <input
+                type="text"
+                name="repo"
+                value={githubConfig.repo}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Repository Name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+              <input
+                type="text"
+                name="branch"
+                value={githubConfig.branch}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="main"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Path</label>
+              <input
+                type="text"
+                name="path"
+                value={githubConfig.path}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="inventory"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Form */}
+      <form id="inventoryForm" onSubmit={handleSubmit} className="px-6 py-4">
+        <div className="mb-4 ">
+          <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="bg-indigo-50 p-4 rounded-lg">
               <h3 className="font-medium text-blue-800 mb-3 flex items-center">
                 <Tag className="mr-2 h-5 w-5" /> Product Identification
               </h3>
-
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      {imagePreview ? (
-                        <img src={imagePreview} alt="Preview" className="h-24 w-24 rounded-md object-cover border-2 border-blue-200" />
-                      ) : (
-                        <div className="h-24 w-24 rounded-md bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300">
-                          <span className="text-gray-400 text-sm text-center px-2">No image</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-grow">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label
-                        htmlFor="image-upload"
-                        className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-md cursor-pointer hover:bg-blue-200 transition-colors"
-                      >
-                        Upload Image
-                      </label>
-                      {imagePreview && (
-                        <p className="mt-1 text-sm text-gray-501">
-                          {formData.image}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {renderAutocomplete('partName', 'Part Name', true)}
-
+                {/* Part Name */}
+                {renderAutocomplete("partName", "Part Name", true)}
+                {/* Category */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Product Category <span className="text-red-500">*</span>
+                    Category
                   </label>
                   <select
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select Category</option>
-                    {dropdownOptions.categories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
+                    <option value="">Select a category</option>
+                    {dropdownOptions.categories.map((category, index) => (
+                      <option key={index} value={category}>
+                        {category}
+                      </option>
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Datasheet (PDF)</label>
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handleDatasheetUpload}
-                    className="hidden"
-                    id="datasheet-upload"
-                  />
-                  <label
-                    htmlFor="datasheet-upload"
-                    className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-md cursor-pointer hover:bg-blue-200 transition-colors"
-                  >
-                    {formData.datasheet ? "Replace Datasheet" : "Upload Datasheet"}
-                  </label>
-                  {datasheetName && (
-                    <div className="mt-1 text-sm text-gray-500 flex items-center">
-                      <Clipboard className="h-4 w-4 mr-1" /> {datasheetName}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-indigo-50 p-4 rounded-lg">
-              <h3 className="font-medium text-indigo-800 mb-3 flex items-center">
-                <Folder className="mr-2 h-5 w-5" /> Manufacturer Details
-              </h3>
-
-              <div className="space-y-4">
-                {renderAutocomplete('manufacturer', 'Manufacturer', true)}
-
+                {/* Customer Reference */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Manufacturer Part# <span className="text-red-500">*</span>
+                    Customer Reference
                   </label>
-                  <input
-                    type="text"
-                    name="manufacturerPart"
-                    value={formData.manufacturerPart}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                {renderAutocomplete('vendor', 'Vendor')}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Part#</label>
-                  <input
-                    type="text"
-                    name="vendorPart"
-                    value={formData.vendorPart}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Reference</label>
-                  <input
-                    type="text"
+                  <textarea
                     name="customerRef"
                     value={formData.customerRef}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    rows="2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Customer part reference"
+                  />
+                </div>
+              </div>
+
+            </div>
+            <div className="bg-pink-50 p-4 rounded-lg md:col-span-1 lg:col-span-2">
+              <h3 className="font-medium text-indigo-800 mb-3 flex items-center">
+                <Folder className="mr-2 h-5 w-5" /> Manufacturer Details
+              </h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                  {/* Manufacturer */}
+                  {renderAutocomplete("manufacturer", "Manufacturer", true)}
+
+                  {/* Manufacturer Part # */}
+                  {renderAutocomplete("manufacturerPart", "Manufacturer Part #", true)}
+
+
+                  {/* Vendor */}
+                  {renderAutocomplete("vendor", "Vendor")}
+
+                  {/* Vendor Product Link - Updated field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Vendor Product Link
+                    </label>
+                    <input
+                      type="text"
+                      name="vendorProductLink"
+                      value={formData.vendorProductLink}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="https://vendor.com/product/123"
+                    />
+                  </div>
+                </div>
+
+
+
+                {/* Description */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows="2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Brief description of the part"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <div className="bg-green-50 p-4 rounded-lg ">
+            <h3 className="font-medium text-green-800 mb-3 flex items-center">
+              <DollarSign className="mr-2 h-5 w-5" /> Pricing Information
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                {/* Cost Price */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center">
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      <span>Cost Price</span>
+                    </div>
+                  </label>
+                  <input
+                    type="number"
+                    name="costPrice"
+                    value={formData.costPrice}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Sale Price */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center">
+                      <Tag className="h-4 w-4 mr-1" />
+                      <span>Sale Price</span>
+                    </div>
+                  </label>
+                  <input
+                    type="number"
+                    name="salePrice"
+                    value={formData.salePrice}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right column */}
-          <div className="space-y-6">
+        </div>
+        <div className="mb-4">
+          <div className="space-y-4">
             <div className="bg-purple-50 p-4 rounded-lg">
               <h3 className="font-medium text-purple-800 mb-3 flex items-center">
                 <MapPin className="mr-2 h-5 w-5" /> Inventory Details
               </h3>
-
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bin Location</label>
-                  <input
-                    type="text"
-                    name="bin"
-                    value={formData.bin}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity <span className="text-red-500">*</span> </label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                  {/* Quantity */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <span className="flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" /> Reorder Point
-                      </span>
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={formData.quantity}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+
+                  {/* Bin Location */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span>Bin Location</span>
+                      </div>
+                    </label>
+                    <input
+                      type="text"
+                      name="bin"
+                      value={formData.bin}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="A1-B2-C3"
+                    />
+                  </div>
+
+                  {/* Reorder Point */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reorder Point
                     </label>
                     <input
                       type="number"
                       name="reorderPoint"
                       value={formData.reorderPoint}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="5"
+                      min="0"
                     />
                   </div>
 
+                  {/* Reorder Quantity */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <span className="flex items-center">
-                        <ShoppingCart className="h-4 w-4 mr-1" /> Reorder Qty
-                      </span>
+                      Reorder Quantity
                     </label>
                     <input
                       type="number"
                       name="reorderQty"
                       value={formData.reorderQty}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="10"
+                      min="0"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="font-medium text-green-800 mb-3 flex items-center">
-                <DollarSign className="mr-2 h-5 w-5" /> Pricing Information
-              </h3>
+          </div>
+        </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cost Price</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500">$</span>
-                      </div>
-                      <input
-                        type="number"
-                        name="costPrice"
-                        value={formData.costPrice}
-                        onChange={handleChange}
-                        step="0.01"
-                        className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+        <div className="mb-4 bg-gray-50 p-4 rounded-lg">
+          <h3 className="text-xl font-medium text-gray-800 mb-3">Files & Documentation</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Component Image
+              </label>
+              <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <div className="space-y-1 text-center">
+                  {imagePreview ? (
+                    <div>
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="mx-auto h-32 w-auto object-contain mb-2"
                       />
+                      <p className="text-xs text-gray-500">{formData.image}</p>
                     </div>
-                  </div>
-
+                  ) : (
+                    <div>
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                  )}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500">$</span>
-                      </div>
+                    <label
+                      htmlFor="image-upload"
+                      className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                    >
+                      <span>{imagePreview ? "Change Image" : "Upload Image"}</span>
                       <input
-                        type="number"
-                        name="salePrice"
-                        value={formData.salePrice}
-                        onChange={handleChange}
-                        step="0.01"
-                        className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        id="image-upload"
+                        name="image"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="sr-only"
                       />
-                    </div>
+                    </label>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-medium text-gray-800 mb-3">Product Description</h3>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows="4"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter detailed product description..."
-              ></textarea>
+            {/* Datasheet Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Datasheet
+              </label>
+              <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <div className="space-y-1 text-center">
+                  {datasheetName ? (
+                    <div>
+                      <Clipboard className="mx-auto h-12 w-12 text-blue-500" />
+                      <p className="text-xs font-medium text-gray-900 mt-2">
+                        {datasheetName}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Folder className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="text-xs text-gray-500">PDF, DOC, XLS up to 10MB</p>
+                    </div>
+                  )}
+                  <div>
+                    <label
+                      htmlFor="datasheet-upload"
+                      className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                    >
+                      <span>{datasheetName ? "Change File" : "Upload Datasheet"}</span>
+                      <input
+                        id="datasheet-upload"
+                        name="datasheet"
+                        type="file"
+                        onChange={handleDatasheetUpload}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* GitHub Configuration Toggle */}
-        <div className="mt-6 flex items-center">
-          <button
-            type="button"
-            onClick={() => setShowGithubConfig(!showGithubConfig)}
-            className="flex items-center text-gray-700 bg-gray-100 px-4 py-2 rounded-md hover:bg-gray-200"
-          >
-            <Github className="h-4 w-4 mr-2" />
-            {showGithubConfig ? "Hide GitHub Settings" : "Store Data on GitHub"}
-          </button>
-        </div>
-
-        {/* GitHub Configuration Section */}
-        {showGithubConfig && (
-          <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="font-medium text-gray-800 mb-3 flex items-center">
-              <Github className="mr-2 h-5 w-5" /> GitHub Integration Settings
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  GitHub Personal Access Token <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  name="token"
-                  value={githubConfig.token}
-                  onChange={handleGithubConfigChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxx"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Token requires repo scope permissions
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Repository Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="repo"
-                  value={githubConfig.repo}
-                  onChange={handleGithubConfigChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="inventory-data"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Repository Owner <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="owner"
-                  value={githubConfig.owner}
-                  onChange={handleGithubConfigChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="username or organization"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Branch
-                </label>
-                <input
-                  type="text"
-                  name="branch"
-                  value={githubConfig.branch}
-                  onChange={handleGithubConfigChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="main"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  File Path Directory
-                </label>
-                <input
-                  type="text"
-                  name="path"
-                  value={githubConfig.path}
-                  onChange={handleGithubConfigChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="inventory-data"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        
       </form>
     </div>
   );

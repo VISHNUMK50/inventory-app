@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, Edit, Trash, Download, AlertCircle, Package, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
+import { Search, Edit, Trash, Download, AlertCircle, Package, Eye, PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
 import githubConfig from '../config/githubConfig';
 
@@ -396,7 +396,7 @@ const ManageInventory = () => {
 
     // Create CSV rows
     const rows = itemsToExport.map(item => [
-      item.manufacturerPart || "",
+      item.partName || "",
       item.manufacturer || "",
       item.description || "",
       item.bin || "",
@@ -439,7 +439,7 @@ const ManageInventory = () => {
 
     // Create text rows
     const rows = itemsToCopy.map(item => [
-      item.manufacturerPart || "",
+      item.partName || "",
       item.manufacturer || "",
       item.description || "",
       item.bin || "",
@@ -661,130 +661,108 @@ const ManageInventory = () => {
           </div>
         </div>
       </header>
-
       {/* Fixed position action bar with a placeholder for when it's fixed */}
-      {scrolled && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 50
-          }}
-          className="bg-gradient-to-r from-purple-600 to-indigo-700 shadow-md"
-        >
-          <div className="flex items-center justify-between py-3 px-6 border-t border-purple-500">
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <Store className="mr-2 h-5 w-5" /> Manage Products
-            </h2>
-          </div>
-        </div>
-      )}
+      <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-1 px-6`}>
 
-      {/* Regular action bar - always visible in the flow */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-700 shadow-md">
-        <div className="flex items-center justify-between py-3 px-6 border-t border-purple-500">
-          <h2 className="text-2xl font-bold text-white flex items-center">
+        <div className="flex items-center justify-between space-x-4 ">
+          <h2 className="text-2xl font-bold text-black flex items-center">
             <Store className="mr-2 h-5 w-5" /> Manage Products
           </h2>
-        </div>
-      </div>
 
-      {/* Add space to prevent content jump when the bar becomes fixed */}
-      {scrolled && <div style={{ height: '64px' }}></div>}
-
-      {/* Action Buttons and Search */}
-      <div className="p-4 flex flex-wrap justify-between items-center gap-3 border-b border-gray-200">
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="w-4 h-4 mr-2" /> Filter
-          </button>
-
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
-            onClick={fetchInventoryItems}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-          </button>
-
-          <div className="relative">
-            <button
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
-            >
-              View <ChevronDown className="w-4 h-4 ml-1" />
-            </button>
-            <select
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)}
-            >
-              <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          {selectedItems.length > 0 && (
-            <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-1 flex gap-2">
               <button
-                className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center"
-                onClick={() => handleDeleteItem(item.manufacturerPart)}
+                className="p-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center "
+                onClick={() => setShowFilters(!showFilters)}
+                title="Filter"
               >
-                <Trash className="w-4 h-4 mr-2" /> Delete
+                <Filter className="w-4 h-4" />
               </button>
 
               <button
-                className="px-4 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center"
-                onClick={exportToCSV}
+                className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center "
+                onClick={fetchInventoryItems}
+                title="Refresh"
               >
-                <Download className="w-4 h-4 mr-2" /> Export
+                <RefreshCw className="w-4 h-4" />
               </button>
 
-              <button
-                className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center"
-                onClick={copyToClipboard}
-              >
-                <Clipboard className="w-4 h-4 mr-2" /> Copy
-              </button>
+              <div className="relative">
+                <button
+                  className="p-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center "
+                  title="View Options"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                <select
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  value={viewMode}
+                  onChange={(e) => setViewMode(e.target.value)}
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              {selectedItems.length > 0 && (
+                <>
+                  <button
+                    className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center text-sm"
+                    onClick={() => handleDeleteItem(item.manufacturerPart)}
+                  >
+                    <Trash className="w-3 h-3 mr-1" /> Delete
+                  </button>
+
+                  <button
+                    className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center text-sm"
+                    onClick={exportToCSV}
+                  >
+                    <Download className="w-3 h-3 mr-1" /> Export
+                  </button>
+
+                  <button
+                    className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center text-sm"
+                    onClick={copyToClipboard}
+                  >
+                    <Clipboard className="w-3 h-3 mr-1" /> Copy
+                  </button>
+                </>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="flex gap-2 items-center">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search inventory..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-            />
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            <div className="relative ml-2">
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-8 pr-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-48 text-sm bg-white"
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute left-2 top-1.5" />
+            </div>
+
+            <Link href="/add-product">
+              <button className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center ">
+                <PlusCircle className="w-4 h-4 mr-2" /> Add Product
+              </button>
+            </Link>
           </div>
-
-          <Link href="/add-product">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
-              + Add Product
-            </button>
-          </Link>
         </div>
       </div>
+
 
       {/* Filters Section */}
       {showFilters && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <div className="flex flex-wrap gap-4">
-            <div className="w-full md:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+        <div className="p-3 bg-gray-50 border-b border-gray-200">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center">
+              <label className="text-xs font-medium text-gray-700 mr-2">Category</label>
               <select
                 name="category"
                 value={filters.category}
                 onChange={handleFilterChange}
-                className="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-44 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">All Categories</option>
                 {getUniqueCategories().map(cat => (
@@ -793,13 +771,13 @@ const ManageInventory = () => {
               </select>
             </div>
 
-            <div className="w-full md:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
+            <div className="flex items-center">
+              <label className="text-xs font-medium text-gray-700 mr-2">Manufacturer</label>
               <select
                 name="manufacturer"
                 value={filters.manufacturer}
                 onChange={handleFilterChange}
-                className="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-44 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">All Manufacturers</option>
                 {getUniqueManufacturers().map(mfr => (
@@ -808,38 +786,36 @@ const ManageInventory = () => {
               </select>
             </div>
 
-            <div className="w-full md:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
+            <div className="flex items-center">
+              <label className="text-xs font-medium text-gray-700 mr-2">Min Stock</label>
               <input
                 type="number"
                 name="minStock"
                 value={filters.minStock}
                 onChange={handleFilterChange}
-                className="w-full md:w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 min="0"
               />
             </div>
 
-            <div className="w-full md:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
+            <div className="flex items-center">
+              <label className="text-xs font-medium text-gray-700 mr-2">Max Stock</label>
               <input
                 type="number"
                 name="maxStock"
                 value={filters.maxStock}
                 onChange={handleFilterChange}
-                className="w-full md:w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 min="0"
               />
             </div>
 
-            <div className="w-full md:w-auto flex items-end">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-              >
-                Reset Filters
-              </button>
-            </div>
+            <button
+              onClick={resetFilters}
+              className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Reset
+            </button>
           </div>
         </div>
       )}
@@ -875,15 +851,15 @@ const ManageInventory = () => {
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("part")}
+                  onClick={() => handleSort("partname")}
                 >
-                  Part {renderSortIndicator("part")}
+                  Part NAME{renderSortIndicator("partname")}
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("part")}
+                  onClick={() => handleSort("manufacturerpart")}
                 >
-                  Part # {renderSortIndicator("part")}
+                  MANUFACTURER Part # {renderSortIndicator("manufacturerpart")}
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
