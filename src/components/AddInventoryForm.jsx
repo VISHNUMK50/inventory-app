@@ -563,25 +563,72 @@ const AddInventoryForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     // Process any new entries in dropdown fields
-    processNewEntries();
+    // First, update dropdownOptions state with new entries
+    const fieldsToCheck = ['partName', 'manufacturer', 'vendor'];
+    let hasUpdates = false;
+    
+    // Create a copy of current dropdown options
+    const updatedOptions = {...dropdownOptions};
+    
+    // Check each field
+    fieldsToCheck.forEach(field => {
+      const value = formData[field]?.trim();
+      if (value && !dropdownOptions[`${field}s`].includes(value) && 
+          !dropdownOptions[`${field}s`].some(item => 
+            item.toLowerCase() === value.toLowerCase()
+          )) {
+        // Add to dropdown options
+        updatedOptions[`${field}s`] = [...updatedOptions[`${field}s`], value];
+        hasUpdates = true;
+      }
+    });
+    
+    // Update dropdownOptions state if there were changes
+    if (hasUpdates) {
+      // Update the state with the new options
+      setDropdownOptions(updatedOptions);
+      
+      // Save the updated options immediately
+      try {
+        // Save to GitHub if configured
+        if (showGithubConfig) {
+          await saveDropdownOptionsToGithub();
+        } else {
+          // Save to localStorage
+          localStorage.setItem('dropdownOptions', JSON.stringify(updatedOptions));
+        }
+      } catch (error) {
+        console.error("Error saving dropdown options:", error);
+        // Fallback to localStorage
+        localStorage.setItem('dropdownOptions', JSON.stringify(updatedOptions));
+      }
+    }
+    
     console.log("Inventory Data Submitted:", formData);
     
-    // If GitHub config is shown, save to GitHub
-      const success = await saveToGithub();
-      if (success) {
-        alert("Inventory item and associated files saved successfully to GitHub!");
+    try {
+      setIsSubmitting(true);
+      
+      // If GitHub config is shown, save to GitHub
+      if (showGithubConfig) {
+        const success = await saveToGithub();
+        if (success) {
+          alert("Inventory item and associated files saved successfully to GitHub!");
+          resetForm(); // Reset form after successful save
+        }
+      } else {
+        // Save to localStorage at minimum
+        localStorage.setItem('dropdownOptions', JSON.stringify(updatedOptions));
+        alert("Inventory item saved successfully to local state!");
         resetForm(); // Reset form after successful save
-        // OR to refresh the page instead:
-        // window.location.reload();
       }
-    else {
-      // Save dropdown options to localStorage at minimum
-      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-      alert("Inventory item saved successfully to local state!");
-      resetForm(); // Reset form after successful save
-      // OR to refresh the page instead:
-      // window.location.reload();
+    } catch (error) {
+      console.error("Error during form submission:", error);
+      alert(`Error during form submission: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   

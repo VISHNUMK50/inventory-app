@@ -933,19 +933,13 @@ const deleteSelectedItems = async () => {
                 />
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
-  {item.partName ? (
-    <Link 
-      href={`/product/${encodeURIComponent(
-        `${item.partName.replace(/[^a-zA-Z0-9]/g, '-')}-${(item.manufacturerPart || '').replace(/[^a-zA-Z0-9]/g, '-')}`
-      )}`} 
-      className="text-blue-600 hover:underline cursor-pointer"
-    >
-      {item.partName}
-    </Link>
-  ) : (
-    (item.manufacturerPart?.split(' ')[0] || "N/A")
-  )}
-</td>
+                <Link 
+                  href={`/product/${encodeURIComponent(item.manufacturerPart)}`}
+                  className="text-blue-600 hover:underline cursor-pointer"
+                >
+                  {item.partName || item.manufacturerPart || "N/A"}
+                </Link>
+              </td>
               {/* // Inside your table row where the part number is displayed */}
               <td className="px-4 py-3 whitespace-nowrap">{item.manufacturerPart}</td>
               <td className="px-4 py-3 whitespace-nowrap">{item.category || "Uncategorized"}</td>
