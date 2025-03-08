@@ -10,11 +10,11 @@
   "customerRef": "",
   "description": "",
   "bin": "",
-  "quantity": "498",
+  "quantity": "1000",
   "reorderPoint": "",
   "reorderQty": "",
-  "costPrice": "10",
-  "salePrice": "21",
+  "costPrice": "500",
+  "salePrice": "999.98",
   "category": "Other",
   "partName": "PNTEST6"
 }
