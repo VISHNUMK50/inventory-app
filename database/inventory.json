@@ -1,0 +1,22 @@
+[
+  {
+    "image": "",
+    "imageType": "",
+    "datasheet": "",
+    "datasheetType": "",
+    "manufacturer": "234",
+    "manufacturerPart": "MAUFACTUREPART",
+    "vendor": "",
+    "vendorPart": "",
+    "customerRef": "",
+    "description": "adsfads",
+    "bin": "",
+    "quantity": "2",
+    "reorderPoint": "",
+    "reorderQty": "",
+    "costPrice": "",
+    "salePrice": "",
+    "category": "Capacitor",
+    "partName": "PARTNAME"
+  }
+]

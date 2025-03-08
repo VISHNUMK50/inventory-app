@@ -1,11 +1,12 @@
 {
   "partNames": [
-    "eeprom ic"
+    "eeprom ic",
+    "ASD"
   ],
   "manufacturers": [
+    "DAS"
   ],
-  "vendors": [
-  ],
+  "vendors": [],
   "categories": [
     "IC",
     "Resistor",
