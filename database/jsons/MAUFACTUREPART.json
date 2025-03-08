@@ -8,7 +8,7 @@
   "vendor": "",
   "vendorPart": "",
   "customerRef": "",
-  "description": "",
+  "description": "sdfdsf",
   "bin": "",
   "quantity": "2",
   "reorderPoint": "",
@@ -16,5 +16,5 @@
   "costPrice": "",
   "salePrice": "",
   "category": "Capacitor",
-  "partName": "PARTNAMEsas"
+  "partName": "PARTNAMEscss"
 }
