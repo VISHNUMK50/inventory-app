@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home} from "lucide-react";
 import Link from "next/link";
 import githubConfigImport from '../config/githubConfig';
@@ -69,40 +69,55 @@ const AddInventoryForm = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [datasheetName, setDatasheetName] = useState(null);
   
+  // Refs for tracking active dropdowns and focus
+  const dropdownRefs = {
+    partName: useRef(null),
+    manufacturer: useRef(null),
+    vendor: useRef(null)
+  };
+  
+  const inputRefs = {
+    partName: useRef(null),
+    manufacturer: useRef(null),
+    vendor: useRef(null)
+  };
+  
+  // Track whether user is actively using a dropdown
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  
   // Load data from GitHub on component mount
   useEffect(() => {
     fetchDropdownOptionsFromGithub();
   }, []);
     
-  // Filter suggestions when typing in fields
-  useEffect(() => {
-    if (formData.partName) {
-      const filteredPartNames = dropdownOptions.partNames.filter(name => 
-        name.toLowerCase().includes(formData.partName.toLowerCase())
+  // Controlled filter for suggestions when typing in fields
+  const updateSuggestions = (field, value) => {
+    if (value) {
+      const fieldList = dropdownOptions[`${field}s`] || [];
+      const filteredItems = fieldList.filter(name => 
+        name.toLowerCase().includes(value.toLowerCase())
       );
-      setSuggestions(prev => ({ ...prev, partName: filteredPartNames }));
+      setSuggestions(prev => ({ ...prev, [field]: filteredItems }));
     } else {
-      setSuggestions(prev => ({ ...prev, partName: [] }));
+      setSuggestions(prev => ({ ...prev, [field]: [] }));
     }
+  };
+  
+  // Handle input changes with controlled suggestion updates
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
     
-    if (formData.manufacturer) {
-      const filteredManufacturers = dropdownOptions.manufacturers.filter(name => 
-        name.toLowerCase().includes(formData.manufacturer.toLowerCase())
-      );
-      setSuggestions(prev => ({ ...prev, manufacturer: filteredManufacturers }));
-    } else {
-      setSuggestions(prev => ({ ...prev, manufacturer: [] }));
+    // Only update suggestions for these specific fields
+    if (['partName', 'manufacturer', 'vendor'].includes(name)) {
+      updateSuggestions(name, value);
+      
+      // Only show the dropdown when typing (prevent auto-open)
+      if (value && !activeDropdown) {
+        setActiveDropdown(name);
+      }
     }
-    
-    if (formData.vendor) {
-      const filteredVendors = dropdownOptions.vendors.filter(name => 
-        name.toLowerCase().includes(formData.vendor.toLowerCase())
-      );
-      setSuggestions(prev => ({ ...prev, vendor: filteredVendors }));
-    } else {
-      setSuggestions(prev => ({ ...prev, vendor: [] }));
-    }
-  }, [formData.partName, formData.manufacturer, formData.vendor, dropdownOptions]);
+  };
     
   const fetchDropdownOptionsFromGithub = async () => {
     try {
@@ -246,44 +261,27 @@ const AddInventoryForm = () => {
       [name]: value
     });
   };
-    
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const processNewEntries = () => {
-    // Fields to check
-    const fieldsToCheck = ['partName', 'manufacturer', 'vendor'];
-    let hasUpdates = false;
-    
-    // Create a copy of current dropdown options
-    const updatedOptions = {...dropdownOptions};
-    
-    // Check each field
-    fieldsToCheck.forEach(field => {
-      const value = formData[field]?.trim();
-      if (value && !dropdownOptions[`${field}s`].includes(value) && 
-          !dropdownOptions[`${field}s`].some(item => 
-            item.toLowerCase() === value.toLowerCase()
-          )) {
-        // Add to dropdown options
-        updatedOptions[`${field}s`] = [...updatedOptions[`${field}s`], value];
-        hasUpdates = true;
-      }
-    });
-    
-    // Update state and save if there were changes
-    if (hasUpdates) {
-      setDropdownOptions(updatedOptions);
-      saveDropdownOptionsToGithub();
-    }
-  };
 
   const handleSelectSuggestion = (field, value) => {
     setFormData({ ...formData, [field]: value });
-    // Clear suggestions to close dropdown
+    // Clear suggestions and active dropdown
     setSuggestions({ ...suggestions, [field]: [] });
+    setActiveDropdown(null);
+  };
+  
+  // Method to explicitly close dropdowns when needed
+  const closeDropdown = (field) => {
+    setSuggestions(prev => ({ ...prev, [field]: [] }));
+    setActiveDropdown(null);
+  };
+  
+  // Method to explicitly open dropdowns when focused
+  const openDropdown = (field) => {
+    // Only update if we have a value to filter on
+    if (formData[field]) {
+      updateSuggestions(field, formData[field]);
+      setActiveDropdown(field);
+    }
   };
     
   const handleNewEntryChange = (e) => {
@@ -295,19 +293,22 @@ const AddInventoryForm = () => {
     const value = newEntries[field].trim();
     
     if (value && !dropdownOptions[`${field}s`].includes(value)) {
-      // Add to dropdown options
+      // Create a new array by spreading to ensure React detects change
+      const updatedFieldArray = [...dropdownOptions[`${field}s`], value];
+      
+      // Create a new object for the updated options
       const updatedOptions = {
         ...dropdownOptions,
-        [`${field}s`]: [...dropdownOptions[`${field}s`], value]
+        [`${field}s`]: updatedFieldArray
       };
       
-      // Update state
+      // Update state with the new object
       setDropdownOptions(updatedOptions);
       setFormData({ ...formData, [field]: value });
       setNewEntries({ ...newEntries, [field]: "" });
       setAddingField(null);
       
-      // Save to GitHub
+      // Save to GitHub and localStorage
       saveDropdownOptionsToGithub();
     }
   };
@@ -372,22 +373,32 @@ const AddInventoryForm = () => {
     reader.readAsDataURL(file);
   };
   
-  // Click outside handler to close dropdown
+  // Improved click outside handler for better dropdown control
   useEffect(() => {
     function handleClickOutside(event) {
-      const dropdowns = document.querySelectorAll('.dropdown-suggestions');
+      // Check if click is outside all dropdown components
+      const isOutsideAllDropdowns = 
+        Object.keys(dropdownRefs).every(field => 
+          !dropdownRefs[field].current || 
+          !dropdownRefs[field].current.contains(event.target)
+        );
       
-      dropdowns.forEach(dropdown => {
-        if (!dropdown.contains(event.target) && 
-            !event.target.classList.contains('autocomplete-input')) {
-          // Clear all suggestions when clicking outside
-          setSuggestions({
-            partName: [],
-            manufacturer: [],
-            vendor: []
-          });
-        }
-      });
+      // Also check if click is on any of our input fields
+      const isOnInputField = 
+        Object.keys(inputRefs).some(field => 
+          inputRefs[field].current && 
+          inputRefs[field].current.contains(event.target)
+        );
+      
+      // If clicked outside all dropdown components and not on an input field
+      if (isOutsideAllDropdowns && !isOnInputField) {
+        setSuggestions({
+          partName: [],
+          manufacturer: [],
+          vendor: []
+        });
+        setActiveDropdown(null);
+      }
     }
     
     document.addEventListener('mousedown', handleClickOutside);
@@ -395,6 +406,35 @@ const AddInventoryForm = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+  
+  // Process new entries when submitting the form
+  const processNewEntries = () => {
+    // Fields to check
+    const fieldsToCheck = ['partName', 'manufacturer', 'vendor'];
+    let hasUpdates = false;
+    
+    // Create a copy of current dropdown options
+    const updatedOptions = {...dropdownOptions};
+    
+    // Check each field
+    fieldsToCheck.forEach(field => {
+      const value = formData[field]?.trim();
+      if (value && !updatedOptions[`${field}s`].includes(value) && 
+          !updatedOptions[`${field}s`].some(item => 
+            item.toLowerCase() === value.toLowerCase()
+          )) {
+        // Add to dropdown options with a new array to ensure React detects change
+        updatedOptions[`${field}s`] = [...updatedOptions[`${field}s`], value];
+        hasUpdates = true;
+      }
+    });
+    
+    // Update state and save if there were changes
+    if (hasUpdates) {
+      setDropdownOptions(updatedOptions);
+      saveDropdownOptionsToGithub();
+    }
+  };
   
   const saveToGithub = async () => {
     const { token, repo, owner, branch, path } = githubConfig;
@@ -457,7 +497,7 @@ const AddInventoryForm = () => {
         `Add inventory item: ${formData.partName}`
       );
       
-      // Save updated dropdown options as well
+      // Make sure dropdown options are saved
       await saveDropdownOptionsToGithub();
       
       return true;
@@ -559,6 +599,9 @@ const AddInventoryForm = () => {
       manufacturer: [],
       vendor: []
     });
+    
+    // Reset active state
+    setActiveDropdown(null);
   };
 
   const handleSubmit = async (e) => {
@@ -568,24 +611,20 @@ const AddInventoryForm = () => {
     console.log("Inventory Data Submitted:", formData);
     
     // If GitHub config is shown, save to GitHub
-      const success = await saveToGithub();
-      if (success) {
-        alert("Inventory item and associated files saved successfully to GitHub!");
-        resetForm(); // Reset form after successful save
-        // OR to refresh the page instead:
-        // window.location.reload();
-      }
+    const success = await saveToGithub();
+    if (success) {
+      alert("Inventory item and associated files saved successfully to GitHub!");
+      resetForm(); // Reset form after successful save
+    }
     else {
       // Save dropdown options to localStorage at minimum
       localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
       alert("Inventory item saved successfully to local state!");
       resetForm(); // Reset form after successful save
-      // OR to refresh the page instead:
-      // window.location.reload();
     }
   };
   
-  // Render autocomplete dropdown for a field
+  // Improved autocomplete dropdown with controlled focus/blur behavior
   const renderAutocomplete = (field, label, required = false) => {
     return (
       <div>
@@ -615,18 +654,20 @@ const AddInventoryForm = () => {
           ) : (
             <div>
               <div className="flex items-center">
-                <div className="relative w-full">
+                <div className="relative w-full" ref={dropdownRefs[field]}>
                   <input
                     type="text"
                     name={field}
+                    ref={inputRefs[field]}
                     value={formData[field]}
                     onChange={handleChange}
+                    onFocus={() => openDropdown(field)}
                     required={required}
                     className="autocomplete-input w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={`Type to search or select ${field}`}
                     autoComplete="off"
                   />
-                  {suggestions[field].length > 0 && (
+                  {activeDropdown === field && suggestions[field].length > 0 && (
                     <div className="dropdown-suggestions absolute z-10 w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                       {suggestions[field].map((item, index) => (
                         <div
@@ -802,7 +843,7 @@ const AddInventoryForm = () => {
                         />
                         <label 
                           htmlFor="image-upload" 
-                          className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-md cursor-pointer hover:bg-blue-200 transition-colors"
+                                      className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-md cursor-pointer hover:bg-blue-200 transition-colors"
                         >
                           Upload Image
                         </label>
