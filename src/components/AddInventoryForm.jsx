@@ -848,7 +848,7 @@ const AddInventoryForm = () => {
                           Upload Image
                         </label>
                         {imagePreview && (
-                          <p className="mt-1 text-sm text-gray-500">
+                          <p className="mt-1 text-sm text-gray-501">
                             {formData.image}
                           </p>
                         )}
