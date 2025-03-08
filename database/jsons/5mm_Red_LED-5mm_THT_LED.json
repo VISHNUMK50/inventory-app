@@ -1,0 +1,20 @@
+{
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/5mm_Red_LED-5mm_THT_LED_LED-Red-5mm-1.webp",
+  "imageType": "image/webp",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/5mm_Red_LED-5mm_THT_LED_5mm-LED-Datasheet.pdf",
+  "datasheetType": "application/pdf",
+  "manufacturer": "AUDIOS",
+  "manufacturerPart": "5mm_THT_LED",
+  "vendor": "AUDIOS",
+  "vendorPart": "LED",
+  "customerRef": "",
+  "description": "",
+  "bin": "",
+  "quantity": "99",
+  "reorderPoint": "",
+  "reorderQty": "",
+  "costPrice": "1",
+  "salePrice": "",
+  "category": "LED",
+  "partName": "5mm Red LED"
+}
