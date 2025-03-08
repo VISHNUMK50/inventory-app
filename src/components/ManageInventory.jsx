@@ -636,6 +636,101 @@ const ManageInventory = () => {
     };
   }, []);
 
+  // Function to get image URL or return a placeholder
+  const getImageUrl = (item) => {
+    // Check if the item has an image property with a valid URL
+    if (item.image && item.image.startsWith('http')) {
+      return item.image;
+    }
+
+    // Return a placeholder based on the item's category
+    const category = (item.category || "").toLowerCase();
+
+    if (category.includes("led") || category.includes("light")) {
+      return "/api/placeholder/48/48?text=LED";
+    } else if (category.includes("connector") || category.includes("wire")) {
+      return "/api/placeholder/48/48?text=CONN";
+    } else if (category.includes("ic") || category.includes("chip")) {
+      return "/api/placeholder/48/48?text=IC";
+    } else if (category.includes("tool")) {
+      return "/api/placeholder/48/48?text=TOOL";
+    } else if (category.includes("transistor")) {
+      return "/api/placeholder/48/48?text=TRAN";
+    } else {
+      return "/api/placeholder/48/48?text=PART";
+    }
+  };
+
+  // ImagePreview component
+  const ImagePreview = ({ url, alt, handleClick }) => {
+    return (
+      <div
+        className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
+        onClick={handleClick}
+        title="Click to view larger image"
+      >
+        <img
+          src={url}
+          alt={alt || "Product Image"}
+          className="object-contain h-10 w-10"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+          }
+          }
+        />
+      </div>
+    );
+  };
+
+  // Optional: Add a modal component for showing larger images
+  const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+        <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-end mb-2">
+            <button
+              className="text-gray-500 hover:text-gray-800"
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex items-center justify-center">
+            <img
+              src={imageUrl}
+              alt={altText}
+              className="max-h-[70vh] max-w-full object-contain"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "/api/placeholder/400/300?text=Image+Not+Available";
+              }}
+            />
+          </div>
+          <div className="mt-2 text-center text-sm text-gray-600 truncate">
+            {altText}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add these state variables to your component
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState({ url: '', alt: '' });
+
+  // Add this function to handle image click
+  const handleImageClick = (url, alt) => {
+    setSelectedImage({ url, alt });
+    setModalOpen(true);
+  };
+
+
+
+
+
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       {/* Main header - with class for targeting */}
@@ -849,6 +944,9 @@ const ManageInventory = () => {
                     className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Image
+                </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSort("partname")}
@@ -909,6 +1007,13 @@ const ManageInventory = () => {
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
+                      <ImagePreview
+                        url={getImageUrl(item)}
+                        alt={item.partName || item.manufacturerPart}
+                        handleClick={() => handleImageClick(getImageUrl(item), item.partName || item.manufacturerPart)}
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <Link
                         href={`/product/${encodeURIComponent(item.manufacturerPart)}`}
                         className="text-blue-600 hover:underline cursor-pointer"
@@ -924,8 +1029,12 @@ const ManageInventory = () => {
                     <td className="px-4 py-3 whitespace-nowrap">{item.bin}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-800">
+                        <button
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={() => handleopendatasheet(item.manufacturerPart)}
+                        >
                           <Edit className="h-4 w-4" />
+
                         </button>
                         <button
                           className="text-red-600 hover:text-red-800"
@@ -964,7 +1073,15 @@ const ManageInventory = () => {
           })}
         </div>
       </div>
+      // Add the modal component to your JSX, just before the closing div of the component
+      <ImageModal
+        isOpen={modalOpen}
+        imageUrl={selectedImage.url}
+        altText={selectedImage.alt}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
+
   );
 };
 
