@@ -1,0 +1,20 @@
+{
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/PNTEST6-MPTEST6_LED-Red-5mm-1.webp",
+  "imageType": "image/webp",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/PNTEST6-MPTEST6_5mm-LED-Datasheet.pdf",
+  "datasheetType": "application/pdf",
+  "manufacturer": "MTEST6",
+  "manufacturerPart": "MPTEST6",
+  "vendor": "VTEST6",
+  "vendorProductLink": "",
+  "customerRef": "",
+  "description": "",
+  "bin": "",
+  "quantity": "4",
+  "reorderPoint": "",
+  "reorderQty": "",
+  "costPrice": "",
+  "salePrice": "",
+  "category": "Other",
+  "partName": "PNTEST6"
+}
