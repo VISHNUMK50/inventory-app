@@ -277,7 +277,40 @@ const testGitHubAccess = async () => {
 
     setFilteredItems(result);
   };
-
+  // Add this function to handle single item deletion
+  const handleDeleteItem = async (itemId) => {
+    if (confirm(`Are you sure you want to delete this item?`)) {
+      try {
+        setIsLoading(true);
+        
+        // Only attempt GitHub deletion if we have complete GitHub config
+        if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
+          await deleteFileFromGitHub(itemId);
+        }
+        
+        // After successful GitHub deletion or if we're using local storage, update the UI
+        const newItems = inventoryItems.filter(
+          item => item.manufacturerPart !== itemId
+        );
+        
+        setInventoryItems(newItems);
+        
+        // If this item was also in selected items, remove it
+        if (selectedItems.includes(itemId)) {
+          setSelectedItems(selectedItems.filter(id => id !== itemId));
+        }
+        
+        // Also update localStorage if we're using it as a backup
+        localStorage.setItem('inventoryItems', JSON.stringify(newItems));
+        
+        alert(`Item deleted successfully`);
+      } catch (error) {
+        alert(`Error deleting item: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
   // Handle sort click
   const handleSort = (field) => {
     if (sortField === field) {
@@ -426,14 +459,25 @@ const testGitHubAccess = async () => {
   };
 
   // Delete selected items (stub for now)
-  const deleteSelectedItems = () => {
-    if (selectedItems.length === 0) {
-      alert("No items selected for deletion");
-      return;
-    }
-    
-    if (confirm(`Are you sure you want to delete ${selectedItems.length} item(s)?`)) {
-      // Filter out selected items
+// Update the deleteSelectedItems function to also delete from GitHub
+const deleteSelectedItems = async () => {
+  if (selectedItems.length === 0) {
+    alert("No items selected for deletion");
+    return;
+  }
+  
+  if (confirm(`Are you sure you want to delete ${selectedItems.length} item(s)?`)) {
+    try {
+      setIsLoading(true);
+      
+      // Only attempt GitHub deletion if we have complete GitHub config
+      if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
+        // Delete items one by one from GitHub
+        const deletePromises = selectedItems.map(itemId => deleteFileFromGitHub(itemId));
+        await Promise.all(deletePromises);
+      }
+      
+      // After successful GitHub deletion or if we're using local storage, update the UI
       const newItems = inventoryItems.filter(
         item => !selectedItems.includes(item.manufacturerPart)
       );
@@ -442,11 +486,17 @@ const testGitHubAccess = async () => {
       setSelectedItems([]);
       setSelectAll(false);
       
-      alert(`Deleted ${selectedItems.length} item(s) successfully`);
+      // Also update localStorage if we're using it as a backup
+      localStorage.setItem('inventoryItems', JSON.stringify(newItems));
       
-      // In a real implementation, you would also handle deletion from GitHub or localStorage
+      alert(`Deleted ${selectedItems.length} item(s) successfully`);
+    } catch (error) {
+      alert(`Error deleting items: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
+};
 
   // Sample inventory data for testing
   const sampleInventoryItems = [
@@ -505,7 +555,57 @@ const testGitHubAccess = async () => {
       onLoan: "0"
     }
   ];
-
+  const deleteFileFromGitHub = async (itemId) => {
+    try {
+      const { token, repo, owner, path } = githubConfig;
+      
+      // Path to the specific JSON file
+      const filePath = `${path}/jsons/${itemId}.json`;
+      
+      // First, we need to get the file's SHA
+      const fileInfoUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+      
+      const infoResponse = await fetch(fileInfoUrl, {
+        headers: {
+          "Authorization": `token ${token}`
+        }
+      });
+      
+      if (!infoResponse.ok) {
+        if (infoResponse.status === 404) {
+          console.warn(`File ${filePath} not found on GitHub`);
+          return true; // Consider it a success if the file doesn't exist
+        }
+        throw new Error(`Failed to get file info: ${infoResponse.statusText}`);
+      }
+      
+      const fileInfo = await infoResponse.json();
+      
+      // Now delete the file using the SHA
+      const deleteResponse = await fetch(fileInfoUrl, {
+        method: 'DELETE',
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: `Delete inventory item: ${itemId}`,
+          sha: fileInfo.sha
+        })
+      });
+      
+      if (!deleteResponse.ok) {
+        throw new Error(`Failed to delete file: ${deleteResponse.statusText}`);
+      }
+      
+      console.log(`Successfully deleted ${filePath} from GitHub`);
+      return true;
+      
+    } catch (error) {
+      console.error("Error deleting file from GitHub:", error);
+      throw error;
+    }
+  };
   // Render sort indicator for table headers
   const renderSortIndicator = (field) => {
     if (sortField === field) {
@@ -632,8 +732,8 @@ const testGitHubAccess = async () => {
             <div className="flex gap-2">
               <button 
                 className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center"
-                onClick={deleteSelectedItems}
-              >
+                onClick={() => handleDeleteItem(item.manufacturerPart)}
+                >
                 <Trash className="w-4 h-4 mr-2" /> Delete
               </button>
               
@@ -760,103 +860,118 @@ const testGitHubAccess = async () => {
       )}
       
       {/* Inventory Table */}
-      {!isLoading && !error && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={selectAll}
-                    onChange={handleSelectAll}
-                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                  />
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("part")}
-                >
-                  Part # {renderSortIndicator("part")}
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("manufacturer")}
-                >
-                  Manufacturer {renderSortIndicator("manufacturer")}
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("description")}
-                >
-                  Description {renderSortIndicator("description")}
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("bin")}
-                >
-                  Bin {renderSortIndicator("bin")}
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("stock")}
-                >
-                  In-Stock {renderSortIndicator("stock")}
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort("onLoan")}
-                >
-                  On Loan {renderSortIndicator("onLoan")}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
-                    No inventory items found. Try adjusting your filters or adding new items.
-                  </td>
-                </tr>
-              ) : (
-                filteredItems.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.includes(item.manufacturerPart)}
-                        onChange={() => handleSelectItem(item.manufacturerPart)}
-                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-blue-600 hover:underline cursor-pointer">
-                      {item.manufacturerPart}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.manufacturer}</td>
-                    <td className="px-4 py-3">{item.description}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.bin}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.quantity}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.onLoan || 0}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-800">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button className="text-red-600 hover:text-red-800">
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+{!isLoading && !error && (
+  <div className="overflow-x-auto">
+    <table className="min-w-full divide-y divide-gray-200">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="px-4 py-3 text-left">
+            <input
+              type="checkbox"
+              checked={selectAll}
+              onChange={handleSelectAll}
+              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+          </th>
+          <th 
+            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => handleSort("part")}
+          >
+            Part {renderSortIndicator("part")}
+          </th>
+          <th 
+            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => handleSort("part")}
+          >
+            Part # {renderSortIndicator("part")}
+          </th>
+          <th 
+            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => handleSort("category")}
+          >
+            Category {renderSortIndicator("category")}
+          </th>
+          <th 
+            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => handleSort("description")}
+          >
+            Description {renderSortIndicator("description")}
+          </th>
+          <th 
+            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => handleSort("stock")}
+          >
+            In-Stock {renderSortIndicator("stock")}
+          </th>
+          <th 
+            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => handleSort("bin")}
+          >
+            Bin {renderSortIndicator("bin")}
+          </th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {filteredItems.length === 0 ? (
+          <tr>
+            <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+              No inventory items found. Try adjusting your filters or adding new items.
+            </td>
+          </tr>
+        ) : (
+          filteredItems.map((item, index) => (
+            <tr key={index} className="hover:bg-gray-50">
+              <td className="px-4 py-3 whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.includes(item.manufacturerPart)}
+                  onChange={() => handleSelectItem(item.manufacturerPart)}
+                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+  {item.partName ? (
+    <Link 
+      href={`/product/${encodeURIComponent(
+        `${item.partName.replace(/[^a-zA-Z0-9]/g, '-')}-${(item.manufacturerPart || '').replace(/[^a-zA-Z0-9]/g, '-')}`
+      )}`} 
+      className="text-blue-600 hover:underline cursor-pointer"
+    >
+      {item.partName}
+    </Link>
+  ) : (
+    (item.manufacturerPart?.split(' ')[0] || "N/A")
+  )}
+</td>
+              {/* // Inside your table row where the part number is displayed */}
+              <td className="px-4 py-3 whitespace-nowrap">{item.manufacturerPart}</td>
+              <td className="px-4 py-3 whitespace-nowrap">{item.category || "Uncategorized"}</td>
+              <td className="px-4 py-3">{item.description}</td>
+              <td className="px-4 py-3 whitespace-nowrap">{item.quantity}</td>
+              <td className="px-4 py-3 whitespace-nowrap">{item.bin}</td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="flex items-center space-x-2">
+                  <button className="text-blue-600 hover:text-blue-800">
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button 
+                    className="text-red-600 hover:text-red-800"
+                    onClick={() => handleDeleteItem(item.manufacturerPart)}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+)}
       
       {/* Stats Footer */}
       <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search,Home} from "lucide-react";
+import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home} from "lucide-react";
 import Link from "next/link";
+import githubConfigImport from '../config/githubConfig';
 
 const AddInventoryForm = () => {
   // Main form data state
@@ -29,453 +30,153 @@ const AddInventoryForm = () => {
     partName: ""
   });
   
-    // State for dropdown options
-    const [dropdownOptions, setDropdownOptions] = useState({
-      partNames: [],
-      manufacturers: [],
-      vendors: [],
-      categories: [
-        "IC", "Resistor", "Capacitor", "Transistor", "Diode", "LED", "Connector", 
-        "Switch", "Sensor", "Microcontroller", "PCB", "Battery", "Module", "Tool", "Other"
-      ]
-    });
+  // State for dropdown options
+  const [dropdownOptions, setDropdownOptions] = useState({
+    partNames: [],
+    manufacturers: [],
+    vendors: [],
+    categories: [
+      "IC", "Resistor", "Capacitor", "Transistor", "Diode", "LED", "Connector", 
+      "Switch", "Sensor", "Microcontroller", "PCB", "Battery", "Module", "Tool", "Other"
+    ]
+  });
     
-    // State for dropdown suggestions
-    const [suggestions, setSuggestions] = useState({
-      partName: [],
-      manufacturer: [],
-      vendor: []
-    });
+  // State for dropdown suggestions
+  const [suggestions, setSuggestions] = useState({
+    partName: [],
+    manufacturer: [],
+    vendor: []
+  });
     
-    // State for new entries
-    const [newEntries, setNewEntries] = useState({
-      partName: "",
-      manufacturer: "",
-      vendor: ""
-    });
+  // State for new entries
+  const [newEntries, setNewEntries] = useState({
+    partName: "",
+    manufacturer: "",
+    vendor: ""
+  });
     
-    // State for which field is currently being added to
-    const [addingField, setAddingField] = useState(null);
+  // State for which field is currently being added to
+  const [addingField, setAddingField] = useState(null);
     
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [githubConfig, setGithubConfig] = useState({
-      token: process.env.NEXT_PUBLIC_DATABASE_PAT,
-      repo: "inventory-app",
-      owner: "VISHNUMK50",
-      branch: "master",
-      path: "database"
-    });
-    const [showGithubConfig, setShowGithubConfig] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // GitHub config state - renamed to avoid conflict
+  const [githubConfig, setGithubConfig] = useState(githubConfigImport);
+  
+  const [showGithubConfig, setShowGithubConfig] = useState(false);
     
-    // New state to preview uploads
-    const [imagePreview, setImagePreview] = useState(null);
-    const [datasheetName, setDatasheetName] = useState(null);
+  // New state to preview uploads
+  const [imagePreview, setImagePreview] = useState(null);
+  const [datasheetName, setDatasheetName] = useState(null);
+  
+  // Load data from GitHub on component mount
+  useEffect(() => {
+    fetchDropdownOptionsFromGithub();
+  }, []);
     
-    // Load data from GitHub on component mount
-    useEffect(() => {
-      fetchDropdownOptionsFromGithub();
-    }, []);
+  // Filter suggestions when typing in fields
+  useEffect(() => {
+    if (formData.partName) {
+      const filteredPartNames = dropdownOptions.partNames.filter(name => 
+        name.toLowerCase().includes(formData.partName.toLowerCase())
+      );
+      setSuggestions(prev => ({ ...prev, partName: filteredPartNames }));
+    } else {
+      setSuggestions(prev => ({ ...prev, partName: [] }));
+    }
     
-    // Filter suggestions when typing in fields
-    useEffect(() => {
-      if (formData.partName) {
-        const filteredPartNames = dropdownOptions.partNames.filter(name => 
-          name.toLowerCase().includes(formData.partName.toLowerCase())
-        );
-        setSuggestions(prev => ({ ...prev, partName: filteredPartNames }));
-      } else {
-        setSuggestions(prev => ({ ...prev, partName: [] }));
-      }
+    if (formData.manufacturer) {
+      const filteredManufacturers = dropdownOptions.manufacturers.filter(name => 
+        name.toLowerCase().includes(formData.manufacturer.toLowerCase())
+      );
+      setSuggestions(prev => ({ ...prev, manufacturer: filteredManufacturers }));
+    } else {
+      setSuggestions(prev => ({ ...prev, manufacturer: [] }));
+    }
+    
+    if (formData.vendor) {
+      const filteredVendors = dropdownOptions.vendors.filter(name => 
+        name.toLowerCase().includes(formData.vendor.toLowerCase())
+      );
+      setSuggestions(prev => ({ ...prev, vendor: filteredVendors }));
+    } else {
+      setSuggestions(prev => ({ ...prev, vendor: [] }));
+    }
+  }, [formData.partName, formData.manufacturer, formData.vendor, dropdownOptions]);
+    
+  const fetchDropdownOptionsFromGithub = async () => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
       
-      if (formData.manufacturer) {
-        const filteredManufacturers = dropdownOptions.manufacturers.filter(name => 
-          name.toLowerCase().includes(formData.manufacturer.toLowerCase())
-        );
-        setSuggestions(prev => ({ ...prev, manufacturer: filteredManufacturers }));
-      } else {
-        setSuggestions(prev => ({ ...prev, manufacturer: [] }));
-      }
-      
-      if (formData.vendor) {
-        const filteredVendors = dropdownOptions.vendors.filter(name => 
-          name.toLowerCase().includes(formData.vendor.toLowerCase())
-        );
-        setSuggestions(prev => ({ ...prev, vendor: filteredVendors }));
-      } else {
-        setSuggestions(prev => ({ ...prev, vendor: [] }));
-      }
-    }, [formData.partName, formData.manufacturer, formData.vendor, dropdownOptions]);
-    
-    const fetchDropdownOptionsFromGithub = async () => {
-      try {
-        const { token, repo, owner, branch, path } = githubConfig;
-        
-        // Check if token and other required fields are available
-        if (!token || !repo || !owner) {
-          // Fall back to localStorage if GitHub config is not complete
-          loadFromLocalStorage();
-          return;
-        }
-        
-        // Path to the dropdown options JSON file
-        const optionsFilePath = `${path}/dropdownOptions.json`;
-        
-        // GitHub API URL for contents
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
-        
-        const response = await fetch(apiUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-        
-        if (response.status === 404) {
-          // File doesn't exist yet, use default options
-          loadFromLocalStorage();
-          return;
-        }
-        
-        if (!response.ok) {
-          throw new Error(`GitHub API error: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        // Decode content from base64
-        const content = atob(data.content);
-        const options = JSON.parse(content);
-        
-        // Update state with fetched options
-        setDropdownOptions(options);
-        
-      } catch (error) {
-        console.error("Error fetching dropdown options:", error);
-        // Fall back to localStorage
+      // Check if token and other required fields are available
+      if (!token || !repo || !owner) {
+        // Fall back to localStorage if GitHub config is not complete
         loadFromLocalStorage();
+        return;
       }
-    };
-    
-    const loadFromLocalStorage = () => {
-      const savedOptions = localStorage.getItem('dropdownOptions');
-      if (savedOptions) {
-        setDropdownOptions(JSON.parse(savedOptions));
-      }
-    };
-    
-    const saveDropdownOptionsToGithub = async () => {
-      try {
-        const { token, repo, owner, branch, path } = githubConfig;
-        
-        if (!token || !repo || !owner) {
-          // Save to localStorage if GitHub config is not complete
-          localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-          return;
-        }
-        
-        // Path to the dropdown options JSON file
-        const optionsFilePath = `${path}/dropdownOptions.json`;
-        
-        // GitHub API URL for contents
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
-        
-        // Always check for the latest version of the file
-        let sha = '';
-        try {
-          const checkResponse = await fetch(apiUrl, {
-            headers: {
-              "Authorization": `token ${token}`
-            }
-          });
-          
-          if (checkResponse.ok) {
-            const fileData = await checkResponse.json();
-            sha = fileData.sha;
-          }
-        } catch (error) {
-          console.log("Creating new dropdown options file");
-        }
-        
-        // Convert options to JSON and then to base64
-        const content = btoa(JSON.stringify(dropdownOptions, null, 2));
-        
-        // Prepare request body
-        const requestBody = {
-          message: "Update dropdown options",
-          content: content,
-          branch: branch
-        };
-        
-        // Always include sha if we have it
-        if (sha) {
-          requestBody.sha = sha;
-        }
-        
-        // Make PUT request to GitHub API
-        const response = await fetch(apiUrl, {
-          method: "PUT",
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`GitHub API error: ${errorData.message}`);
-        }
-        
-        console.log("Dropdown options saved to GitHub successfully");
-        
-        // Also save to localStorage as backup
-        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-        
-      } catch (error) {
-        console.error("Error saving dropdown options:", error);
-        // Save to localStorage as fallback
-        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-        
-        // Alert the user about the error
-        alert(`Error saving to GitHub: ${error.message}. Try again or check your GitHub settings.`);
-      }
-    };
-    
-    const handleGithubConfigChange = (e) => {
-      const { name, value } = e.target;
-      setGithubConfig({
-        ...githubConfig,
-        [name]: value
-      });
-    };
-    
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData({ ...formData, [name]: value });
-    
-    };
-    const processNewEntries = () => {
-      // Fields to check
-      const fieldsToCheck = ['partName', 'manufacturer', 'vendor'];
-      let hasUpdates = false;
       
-      // Create a copy of current dropdown options
-      const updatedOptions = {...dropdownOptions};
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
       
-      // Check each field
-      fieldsToCheck.forEach(field => {
-        const value = formData[field]?.trim();
-        if (value && !dropdownOptions[`${field}s`].includes(value) && 
-            !dropdownOptions[`${field}s`].some(item => 
-              item.toLowerCase() === value.toLowerCase()
-            )) {
-          // Add to dropdown options
-          updatedOptions[`${field}s`] = [...updatedOptions[`${field}s`], value];
-          hasUpdates = true;
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
+      
+      const response = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `token ${token}`
         }
       });
       
-      // Update state and save if there were changes
-      if (hasUpdates) {
-        setDropdownOptions(updatedOptions);
-        saveDropdownOptionsToGithub();
+      if (response.status === 404) {
+        // File doesn't exist yet, use default options
+        loadFromLocalStorage();
+        return;
       }
-    };
-    const handleSelectSuggestion = (field, value) => {
-      setFormData({ ...formData, [field]: value });
-      // Clear suggestions to close dropdown
-      setSuggestions({ ...suggestions, [field]: [] });
-    };
+      
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Decode content from base64
+      const content = atob(data.content);
+      const options = JSON.parse(content);
+      
+      // Update state with fetched options
+      setDropdownOptions(options);
+      
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      // Fall back to localStorage
+      loadFromLocalStorage();
+    }
+  };
     
-    const handleNewEntryChange = (e) => {
-      const { name, value } = e.target;
-      setNewEntries({ ...newEntries, [name]: value });
-    };
+  const loadFromLocalStorage = () => {
+    const savedOptions = localStorage.getItem('dropdownOptions');
+    if (savedOptions) {
+      setDropdownOptions(JSON.parse(savedOptions));
+    }
+  };
     
-    const addNewEntry = (field) => {
-      const value = newEntries[field].trim();
-      
-      if (value && !dropdownOptions[`${field}s`].includes(value)) {
-        // Add to dropdown options
-        const updatedOptions = {
-          ...dropdownOptions,
-          [`${field}s`]: [...dropdownOptions[`${field}s`], value]
-        };
-        
-        // Update state
-        setDropdownOptions(updatedOptions);
-        setFormData({ ...formData, [field]: value });
-        setNewEntries({ ...newEntries, [field]: "" });
-        setAddingField(null);
-        
-        // Save to GitHub
-        saveDropdownOptionsToGithub();
-      }
-    };
-    
-    const toggleAddField = (field) => {
-      setAddingField(addingField === field ? null : field);
-      if (addingField !== field) {
-        // Focus the input field when showing it
-        setTimeout(() => {
-          const inputField = document.getElementById(`new-${field}`);
-          if (inputField) inputField.focus();
-        }, 10);
-      }
-    };
-  
-    const handleImageUpload = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      // Update preview
-      const objectUrl = URL.createObjectURL(file);
-      setImagePreview(objectUrl);
-      
-      // Read file as base64
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        // Get base64 data without the prefix (e.g., "data:image/jpeg;base64,")
-        const base64String = event.target.result;
-        const base64Data = base64String.split(',')[1];
-        
-        setFormData({
-          ...formData,
-          image: file.name,
-          imageData: base64Data,
-          imageType: file.type
-        });
-      };
-      reader.readAsDataURL(file);
-    };
-  
-    const handleDatasheetUpload = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      // Update preview
-      setDatasheetName(file.name);
-      
-      // Read file as base64
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        // Get base64 data without the prefix
-        const base64String = event.target.result;
-        const base64Data = base64String.split(',')[1];
-        
-        setFormData({
-          ...formData,
-          datasheet: file.name,
-          datasheetData: base64Data,
-          datasheetType: file.type
-        });
-      };
-      reader.readAsDataURL(file);
-    };
-  
-    // Click outside handler to close dropdown
-    useEffect(() => {
-      function handleClickOutside(event) {
-        const dropdowns = document.querySelectorAll('.dropdown-suggestions');
-        
-        dropdowns.forEach(dropdown => {
-          if (!dropdown.contains(event.target) && 
-              !event.target.classList.contains('autocomplete-input')) {
-            // Clear all suggestions when clicking outside
-            setSuggestions({
-              partName: [],
-              manufacturer: [],
-              vendor: []
-            });
-          }
-        });
-      }
-      
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
-  
-    const saveToGithub = async () => {
+  const saveDropdownOptionsToGithub = async () => {
+    try {
       const { token, repo, owner, branch, path } = githubConfig;
       
       if (!token || !repo || !owner) {
-        alert("Please fill in all GitHub configuration fields");
-        return false;
+        // Save to localStorage if GitHub config is not complete
+        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+        return;
       }
       
-      try {
-        setIsSubmitting(true);
-        
-        // Generate a unique identifier based on part number and timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const sanitizedPartName = formData.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-        const itemIdentifier = `${sanitizedPartName}_${timestamp}`;
-        
-        // Prepare file paths
-        const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
-        
-        // Create a copy of formData to modify before saving
-        const dataToSave = { ...formData };
-        
-        // Remove the base64 data from the JSON file to avoid huge files
-        delete dataToSave.imageData;
-        delete dataToSave.datasheetData;
-        
-        // If we have image and datasheet files, update their paths to point to the GitHub URLs
-        if (formData.image && formData.imageData) {
-          const imageFilePath = `${path}/images/${itemIdentifier}_${formData.image}`;
-          dataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-          
-          // Save the image file
-          await saveFileToGithub(
-            formData.imageData,
-            imageFilePath,
-            `Add image for ${formData.partName}`
-          );
-        }
-        
-        if (formData.datasheet && formData.datasheetData) {
-          const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${formData.datasheet}`;
-          dataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-          
-          // Save the datasheet file
-          await saveFileToGithub(
-            formData.datasheetData,
-            datasheetFilePath,
-            `Add datasheet for ${formData.partName}`
-          );
-        }
-        
-        // Save the JSON data
-        const content = btoa(JSON.stringify(dataToSave, null, 2)); // Base64 encode
-        await saveFileToGithub(
-          content,
-          jsonFilePath,
-          `Add inventory item: ${formData.partName}`
-        );
-        
-        // Save updated dropdown options as well
-        await saveDropdownOptionsToGithub();
-        
-        return true;
-      } catch (error) {
-        console.error("Error saving to GitHub:", error);
-        alert(`Error saving to GitHub: ${error.message}`);
-        return false;
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-    
-    // Helper function to save a file to GitHub
-    const saveFileToGithub = async (content, filePath, commitMessage) => {
-      const { token, repo, owner, branch } = githubConfig;
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
       
-      // GitHub API URL
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
       
-      // First, try to get the current file to get the latest SHA
+      // Always check for the latest version of the file
       let sha = '';
       try {
         const checkResponse = await fetch(apiUrl, {
@@ -489,193 +190,496 @@ const AddInventoryForm = () => {
           sha = fileData.sha;
         }
       } catch (error) {
-        console.log("File doesn't exist yet, creating new file");
+        console.log("Creating new dropdown options file");
       }
       
-      // Make the API request
+      // Convert options to JSON and then to base64
+      const content = btoa(JSON.stringify(dropdownOptions, null, 2));
+      
+      // Prepare request body
+      const requestBody = {
+        message: "Update dropdown options",
+        content: content,
+        branch: branch
+      };
+      
+      // Always include sha if we have it
+      if (sha) {
+        requestBody.sha = sha;
+      }
+      
+      // Make PUT request to GitHub API
       const response = await fetch(apiUrl, {
         method: "PUT",
         headers: {
           "Authorization": `token ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          message: commitMessage,
-          content: content,
-          branch: branch,
-          sha: sha // Include the latest SHA
-        })
+        body: JSON.stringify(requestBody)
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`GitHub API error: ${error.message}`);
+        const errorData = await response.json();
+        throw new Error(`GitHub API error: ${errorData.message}`);
       }
       
-      return response.json();
-    };
-    const resetForm = () => {
-      // Reset form data
+      console.log("Dropdown options saved to GitHub successfully");
+      
+      // Also save to localStorage as backup
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+      
+    } catch (error) {
+      console.error("Error saving dropdown options:", error);
+      // Save to localStorage as fallback
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+      
+      // Alert the user about the error
+      alert(`Error saving to GitHub: ${error.message}. Try again or check your GitHub settings.`);
+    }
+  };
+    
+  // Single definition of the GitHub config change handler
+  const handleGithubConfigChange = (e) => {
+    const { name, value } = e.target;
+    setGithubConfig({
+      ...githubConfig,
+      [name]: value
+    });
+  };
+    
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const processNewEntries = () => {
+    // Fields to check
+    const fieldsToCheck = ['partName', 'manufacturer', 'vendor'];
+    let hasUpdates = false;
+    
+    // Create a copy of current dropdown options
+    const updatedOptions = {...dropdownOptions};
+    
+    // Check each field
+    fieldsToCheck.forEach(field => {
+      const value = formData[field]?.trim();
+      if (value && !dropdownOptions[`${field}s`].includes(value) && 
+          !dropdownOptions[`${field}s`].some(item => 
+            item.toLowerCase() === value.toLowerCase()
+          )) {
+        // Add to dropdown options
+        updatedOptions[`${field}s`] = [...updatedOptions[`${field}s`], value];
+        hasUpdates = true;
+      }
+    });
+    
+    // Update state and save if there were changes
+    if (hasUpdates) {
+      setDropdownOptions(updatedOptions);
+      saveDropdownOptionsToGithub();
+    }
+  };
+
+  const handleSelectSuggestion = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+    // Clear suggestions to close dropdown
+    setSuggestions({ ...suggestions, [field]: [] });
+  };
+    
+  const handleNewEntryChange = (e) => {
+    const { name, value } = e.target;
+    setNewEntries({ ...newEntries, [name]: value });
+  };
+    
+  const addNewEntry = (field) => {
+    const value = newEntries[field].trim();
+    
+    if (value && !dropdownOptions[`${field}s`].includes(value)) {
+      // Add to dropdown options
+      const updatedOptions = {
+        ...dropdownOptions,
+        [`${field}s`]: [...dropdownOptions[`${field}s`], value]
+      };
+      
+      // Update state
+      setDropdownOptions(updatedOptions);
+      setFormData({ ...formData, [field]: value });
+      setNewEntries({ ...newEntries, [field]: "" });
+      setAddingField(null);
+      
+      // Save to GitHub
+      saveDropdownOptionsToGithub();
+    }
+  };
+    
+  const toggleAddField = (field) => {
+    setAddingField(addingField === field ? null : field);
+    if (addingField !== field) {
+      // Focus the input field when showing it
+      setTimeout(() => {
+        const inputField = document.getElementById(`new-${field}`);
+        if (inputField) inputField.focus();
+      }, 10);
+    }
+  };
+  
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Update preview
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreview(objectUrl);
+    
+    // Read file as base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      // Get base64 data without the prefix (e.g., "data:image/jpeg;base64,")
+      const base64String = event.target.result;
+      const base64Data = base64String.split(',')[1];
+      
       setFormData({
-        image: "",
-        imageData: "",
-        imageType: "",
-        datasheet: "",
-        datasheetData: "",
-        datasheetType: "",
-        manufacturer: "",
-        manufacturerPart: "",
-        vendor: "",
-        vendorPart: "",
-        customerRef: "",
-        description: "",
-        bin: "",
-        quantity: "",
-        reorderPoint: "",
-        reorderQty: "",
-        costPrice: "",
-        salePrice: "",
-        category: "",
-        partName: ""
-      });
-      
-      // Clear previews
-      setImagePreview(null);
-      setDatasheetName(null);
-      
-      // Reset new entries
-      setNewEntries({
-        partName: "",
-        manufacturer: "",
-        vendor: ""
-      });
-      
-      // Clear suggestions
-      setSuggestions({
-        partName: [],
-        manufacturer: [],
-        vendor: []
+        ...formData,
+        image: file.name,
+        imageData: base64Data,
+        imageType: file.type
       });
     };
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      // Process any new entries in dropdown fields
-      processNewEntries();
-      console.log("Inventory Data Submitted:", formData);
+    reader.readAsDataURL(file);
+  };
+  
+  const handleDatasheetUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Update preview
+    setDatasheetName(file.name);
+    
+    // Read file as base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      // Get base64 data without the prefix
+      const base64String = event.target.result;
+      const base64Data = base64String.split(',')[1];
       
-      // If GitHub config is shown, save to GitHub
-      if (showGithubConfig) {
-        const success = await saveToGithub();
-        if (success) {
-          alert("Inventory item and associated files saved successfully to GitHub!");
-          resetForm(); // Reset form after successful save
-          // OR to refresh the page instead:
-          // window.location.reload();
+      setFormData({
+        ...formData,
+        datasheet: file.name,
+        datasheetData: base64Data,
+        datasheetType: file.type
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Click outside handler to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      const dropdowns = document.querySelectorAll('.dropdown-suggestions');
+      
+      dropdowns.forEach(dropdown => {
+        if (!dropdown.contains(event.target) && 
+            !event.target.classList.contains('autocomplete-input')) {
+          // Clear all suggestions when clicking outside
+          setSuggestions({
+            partName: [],
+            manufacturer: [],
+            vendor: []
+          });
         }
-      } else {
-        // Save dropdown options to localStorage at minimum
-        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-        alert("Inventory item saved successfully to local state!");
+      });
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  const saveToGithub = async () => {
+    const { token, repo, owner, branch, path } = githubConfig;
+    
+    if (!token || !repo || !owner) {
+      alert("Please fill in all GitHub configuration fields");
+      return false;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Generate a unique identifier based on part number and timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const sanitizedManufacturerPart = formData.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+      const sanitizedPartName = formData.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      
+      const itemIdentifier = `${sanitizedPartName}-${sanitizedManufacturerPart}`;
+      
+      // Prepare file paths
+      const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
+      
+      // Create a copy of formData to modify before saving
+      const dataToSave = { ...formData };
+      
+      // Remove the base64 data from the JSON file to avoid huge files
+      delete dataToSave.imageData;
+      delete dataToSave.datasheetData;
+      
+      // If we have image and datasheet files, update their paths to point to the GitHub URLs
+      if (formData.image && formData.imageData) {
+        const imageFilePath = `${path}/images/${itemIdentifier}_${formData.image}`;
+        dataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
+        
+        // Save the image file
+        await saveFileToGithub(
+          formData.imageData,
+          imageFilePath,
+          `Add image for ${formData.partName}`
+        );
+      }
+      
+      if (formData.datasheet && formData.datasheetData) {
+        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${formData.datasheet}`;
+        dataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
+        
+        // Save the datasheet file
+        await saveFileToGithub(
+          formData.datasheetData,
+          datasheetFilePath,
+          `Add datasheet for ${formData.partName}`
+        );
+      }
+      
+      // Save the JSON data
+      const content = btoa(JSON.stringify(dataToSave, null, 2)); // Base64 encode
+      await saveFileToGithub(
+        content,
+        jsonFilePath,
+        `Add inventory item: ${formData.partName}`
+      );
+      
+      // Save updated dropdown options as well
+      await saveDropdownOptionsToGithub();
+      
+      return true;
+    } catch (error) {
+      console.error("Error saving to GitHub:", error);
+      alert(`Error saving to GitHub: ${error.message}`);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+    
+  // Helper function to save a file to GitHub
+  const saveFileToGithub = async (content, filePath, commitMessage) => {
+    const { token, repo, owner, branch } = githubConfig;
+    
+    // GitHub API URL
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+    
+    // First, try to get the current file to get the latest SHA
+    let sha = '';
+    try {
+      const checkResponse = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `token ${token}`
+        }
+      });
+      
+      if (checkResponse.ok) {
+        const fileData = await checkResponse.json();
+        sha = fileData.sha;
+      }
+    } catch (error) {
+      console.log("File doesn't exist yet, creating new file");
+    }
+    
+    // Make the API request
+    const response = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        "Authorization": `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: commitMessage,
+        content: content,
+        branch: branch,
+        sha: sha // Include the latest SHA
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`GitHub API error: ${error.message}`);
+    }
+    
+    return response.json();
+  };
+
+  const resetForm = () => {
+    // Reset form data
+    setFormData({
+      image: "",
+      imageData: "",
+      imageType: "",
+      datasheet: "",
+      datasheetData: "",
+      datasheetType: "",
+      manufacturer: "",
+      manufacturerPart: "",
+      vendor: "",
+      vendorPart: "",
+      customerRef: "",
+      description: "",
+      bin: "",
+      quantity: "",
+      reorderPoint: "",
+      reorderQty: "",
+      costPrice: "",
+      salePrice: "",
+      category: "",
+      partName: ""
+    });
+    
+    // Clear previews
+    setImagePreview(null);
+    setDatasheetName(null);
+    
+    // Reset new entries
+    setNewEntries({
+      partName: "",
+      manufacturer: "",
+      vendor: ""
+    });
+    
+    // Clear suggestions
+    setSuggestions({
+      partName: [],
+      manufacturer: [],
+      vendor: []
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // Process any new entries in dropdown fields
+    processNewEntries();
+    console.log("Inventory Data Submitted:", formData);
+    
+    // If GitHub config is shown, save to GitHub
+      const success = await saveToGithub();
+      if (success) {
+        alert("Inventory item and associated files saved successfully to GitHub!");
         resetForm(); // Reset form after successful save
         // OR to refresh the page instead:
         // window.location.reload();
       }
-    };
+    else {
+      // Save dropdown options to localStorage at minimum
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+      alert("Inventory item saved successfully to local state!");
+      resetForm(); // Reset form after successful save
+      // OR to refresh the page instead:
+      // window.location.reload();
+    }
+  };
   
-    // Render autocomplete dropdown for a field
-    const renderAutocomplete = (field, label, required = false) => {
-      return (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {label} {required && <span className="text-red-500">*</span>}
-          </label>
-          <div className="relative">
-            {addingField === field ? (
+  // Render autocomplete dropdown for a field
+  const renderAutocomplete = (field, label, required = false) => {
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <div className="relative">
+          {addingField === field ? (
+            <div className="flex items-center">
+              <input
+                type="text"
+                id={`new-${field}`}
+                name={field}
+                value={newEntries[field]}
+                onChange={handleNewEntryChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={`Enter new ${field}`}
+              />
+              <button
+                type="button"
+                onClick={() => addNewEntry(field)}
+                className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
+              >
+                Add
+              </button>
+            </div>
+          ) : (
+            <div>
               <div className="flex items-center">
-                <input
-                  type="text"
-                  id={`new-${field}`}
-                  name={field}
-                  value={newEntries[field]}
-                  onChange={handleNewEntryChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={`Enter new ${field}`}
-                />
+                <div className="relative w-full">
+                  <input
+                    type="text"
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    required={required}
+                    className="autocomplete-input w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={`Type to search or select ${field}`}
+                    autoComplete="off"
+                  />
+                  {suggestions[field].length > 0 && (
+                    <div className="dropdown-suggestions absolute z-10 w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {suggestions[field].map((item, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                          onClick={() => handleSelectSuggestion(field, item)}
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
-                  onClick={() => addNewEntry(field)}
-                  className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
+                  onClick={() => toggleAddField(field)}
+                  className="px-3 py-2 bg-blue-100 text-blue-700 rounded-r-md hover:bg-blue-200 flex items-center"
                 >
-                  Add
+                  <PlusCircle className="h-4 w-4 mr-1" /> New
                 </button>
               </div>
-            ) : (
-              <div>
-                <div className="flex items-center">
-                  <div className="relative w-full">
-                    <input
-                      type="text"
-                      name={field}
-                      value={formData[field]}
-                      onChange={handleChange}
-                      required={required}
-                      className="autocomplete-input w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder={`Type to search or select ${field}`}
-                      autoComplete="off"
-                    />
-                    {suggestions[field].length > 0 && (
-                      <div className="dropdown-suggestions absolute z-10 w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                        {suggestions[field].map((item, index) => (
-                          <div
-                            key={index}
-                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                            onClick={() => handleSelectSuggestion(field, item)}
-                          >
-                            {item}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleAddField(field)}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-r-md hover:bg-blue-200 flex items-center"
-                  >
-                    <PlusCircle className="h-4 w-4 mr-1" /> New
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      );
-    };
-    const [scrolled, setScrolled] = useState(false);
+      </div>
+    );
+  };
+
+  const [scrolled, setScrolled] = useState(false);
   
-    // Add scroll event listener to track when to apply fixed positioning
-    useEffect(() => {
-      const handleScroll = () => {
-        // Get the header height to know when to trigger fixed position
-        const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
-        if (window.scrollY > mainHeaderHeight) {
-          setScrolled(true);
-        } else {
-          setScrolled(false);
-        }
-      };
-      
-      // Add scroll event listener
-      window.addEventListener('scroll', handleScroll);
-      
-      // Clean up
-      return () => {
-        window.removeEventListener('scroll', handleScroll);
-      };
-    }, []);
-    return (
-      
-      <div className="mx-auto bg-white shadow-xl overflow-hidden">
+  // Add scroll event listener to track when to apply fixed positioning
+  useEffect(() => {
+    const handleScroll = () => {
+      // Get the header height to know when to trigger fixed position
+      const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
+      if (window.scrollY > mainHeaderHeight) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  return (
+    <div className="mx-auto bg-white shadow-xl overflow-hidden">
       {/* Main header - with class for targeting */}
       <header className="main-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
         <div className="mx-auto py-4 px-6">
@@ -766,7 +770,7 @@ const AddInventoryForm = () => {
       {/* Add space to prevent content jump when the bar becomes fixed */}
       {scrolled && <div style={{ height: '64px' }}></div>}
         {/* handle submit */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form id="inventory-form" onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left column */}
             <div className="space-y-6">
