@@ -1,14 +1,17 @@
 {
   "partNames": [
     "eeprom ic",
-    "ASD"
+    "ASD",
+    "PNTEST4"
   ],
   "manufacturers": [
     "DAS",
-    "TEST"
+    "TEST",
+    "MTEST4"
   ],
   "vendors": [
-    "TEST"
+    "TEST",
+    "VTEST4"
   ],
   "categories": [
     "IC",
