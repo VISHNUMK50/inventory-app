@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, Edit, Trash, Download, AlertCircle, Package, Eye, PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
+import { Search, Edit, Trash, Download, AlertCircle, Package, Eye, FileSpreadsheet , PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
 import githubConfig from '../config/githubConfig';
 
@@ -637,38 +637,46 @@ const ManageInventory = () => {
   }, []);
 
   // Function to get image URL or return a placeholder
-  const getImageUrl = (item) => {
-    // Check if the item has an image property with a valid URL
-    if (item.image && item.image.startsWith('http')) {
-      return item.image;
-    }
+  // Update the getImageUrl function to support WebP images
+const getImageUrl = (item) => {
+  // Check if the item has an image property with a valid URL
+  if (item.image && item.image.startsWith('http')) {
+    return item.image;
+  }
 
-    // Return a placeholder based on the item's category
-    const category = (item.category || "").toLowerCase();
+  // Return a placeholder based on the item's category
+  const category = (item.category || "").toLowerCase();
 
-    if (category.includes("led") || category.includes("light")) {
-      return "/api/placeholder/48/48?text=LED";
-    } else if (category.includes("connector") || category.includes("wire")) {
-      return "/api/placeholder/48/48?text=CONN";
-    } else if (category.includes("ic") || category.includes("chip")) {
-      return "/api/placeholder/48/48?text=IC";
-    } else if (category.includes("tool")) {
-      return "/api/placeholder/48/48?text=TOOL";
-    } else if (category.includes("transistor")) {
-      return "/api/placeholder/48/48?text=TRAN";
-    } else {
-      return "/api/placeholder/48/48?text=PART";
-    }
-  };
+  if (category.includes("led") || category.includes("light")) {
+    return "/api/placeholder/48/48?text=LED";
+  } else if (category.includes("connector") || category.includes("wire")) {
+    return "/api/placeholder/48/48?text=CONN";
+  } else if (category.includes("ic") || category.includes("chip")) {
+    return "/api/placeholder/48/48?text=IC";
+  } else if (category.includes("tool")) {
+    return "/api/placeholder/48/48?text=TOOL";
+  } else if (category.includes("transistor")) {
+    return "/api/placeholder/48/48?text=TRAN";
+  } else {
+    return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+  }
+};
 
-  // ImagePreview component
-  const ImagePreview = ({ url, alt, handleClick }) => {
-    return (
-      <div
-        className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
-        onClick={handleClick}
-        title="Click to view larger image"
-      >
+// Update the ImagePreview component to support different image formats
+const ImagePreview = ({ url, alt, handleClick }) => {
+  return (
+    <div
+      className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
+      onClick={handleClick}
+      title="Click to view larger image"
+    >
+      <picture>
+        {/* Support WebP format if available */}
+        <source 
+          srcSet={url.replace(/\.(jpg|jpeg|png)$/i, '.webp')} 
+          type="image/webp" 
+        />
+        {/* Fallback to original image format */}
         <img
           src={url}
           alt={alt || "Product Image"}
@@ -676,29 +684,36 @@ const ManageInventory = () => {
           onError={(e) => {
             e.target.onerror = null;
             e.target.src = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
-          }
-          }
+          }}
         />
-      </div>
-    );
-  };
+      </picture>
+    </div>
+  );
+};
 
-  // Optional: Add a modal component for showing larger images
-  const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
-    if (!isOpen) return null;
+// Update the ImageModal component to support WebP format
+const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
+  if (!isOpen) return null;
 
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-        <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-          <div className="flex justify-end mb-2">
-            <button
-              className="text-gray-500 hover:text-gray-800"
-              onClick={onClose}
-            >
-              ✕
-            </button>
-          </div>
-          <div className="flex items-center justify-center">
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-end mb-2">
+          <button
+            className="text-gray-500 hover:text-gray-800"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex items-center justify-center">
+          <picture>
+            {/* Support WebP format if available */}
+            <source 
+              srcSet={imageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')} 
+              type="image/webp" 
+            />
+            {/* Fallback to original image format */}
             <img
               src={imageUrl}
               alt={altText}
@@ -708,14 +723,15 @@ const ManageInventory = () => {
                 e.target.src = "/api/placeholder/400/300?text=Image+Not+Available";
               }}
             />
-          </div>
-          <div className="mt-2 text-center text-sm text-gray-600 truncate">
-            {altText}
-          </div>
+          </picture>
+        </div>
+        <div className="mt-2 text-center text-sm text-gray-600 truncate">
+          {altText}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   // Add these state variables to your component
   const [modalOpen, setModalOpen] = useState(false);
@@ -727,9 +743,49 @@ const ManageInventory = () => {
     setModalOpen(true);
   };
 
-
-
-
+  const handleopendatasheet = (itemId) => {
+    try {
+      // Find the item in our existing inventory data
+      const item = inventoryItems.find(item => item.manufacturerPart === itemId);
+      if (!item) {
+        alert("Item not found in inventory data.");
+        return;
+      }
+      
+      // Check if datasheet URL exists
+      if (item.datasheet) {
+        // Create viewer URL
+        openPdfViewer(item.datasheet, itemId);
+      } else {
+        // If no datasheet in the item data, try a constructed URL based on common pattern
+        const constructedUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/master/database/datasheets/${itemId.replace(/\s+/g, '_')}.pdf`;
+        
+        // Test if the URL exists before opening
+        fetch(constructedUrl, { method: 'HEAD' })
+          .then(response => {
+            if (response.ok) {
+              openPdfViewer(constructedUrl, itemId);
+            } else {
+              alert("No datasheet available for this item.");
+            }
+          })
+          .catch(() => {
+            alert("No datasheet available for this item.");
+          });
+      }
+    } catch (error) {
+      console.error("Error in handleopendatasheet:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+  
+  // Helper function to open PDF in viewer
+  const openPdfViewer = (pdfUrl, itemId) => {
+    // Use Mozilla's PDF.js viewer (most reliable)
+    window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`, '_blank');
+    
+    
+  };
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
@@ -1033,7 +1089,7 @@ const ManageInventory = () => {
                           className="text-blue-600 hover:text-blue-800"
                           onClick={() => handleopendatasheet(item.manufacturerPart)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <FileSpreadsheet  className="h-4 w-4" />
 
                         </button>
                         <button
