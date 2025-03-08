@@ -4,9 +4,12 @@
     "ASD"
   ],
   "manufacturers": [
-    "DAS"
+    "DAS",
+    "TEST"
   ],
-  "vendors": [],
+  "vendors": [
+    "TEST"
+  ],
   "categories": [
     "IC",
     "Resistor",
