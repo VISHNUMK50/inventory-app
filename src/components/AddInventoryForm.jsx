@@ -409,7 +409,7 @@ const AddInventoryForm = () => {
       
       // Generate a unique identifier based on part number and timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const sanitizedManufacturerPart = formData.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+      const sanitizedManufacturerPart = formData.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
       const sanitizedPartName = formData.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
       
       const itemIdentifier = `${sanitizedPartName}-${sanitizedManufacturerPart}`;
