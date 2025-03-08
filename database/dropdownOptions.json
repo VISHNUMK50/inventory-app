@@ -3,21 +3,18 @@
     "eeprom ic",
     "ASD",
     "PNTEST4",
-    "PNTEST5",
-    "PNTEST6"
+    "PNTEST5"
   ],
   "manufacturers": [
     "DAS",
     "TEST",
     "MTEST4",
-    "MTEST5",
-    "MTEST6"
+    "MTEST5"
   ],
   "vendors": [
     "TEST",
     "VTEST4",
-    "VTEST5",
-    "VTEST6"
+    "VTEST5"
   ],
   "categories": [
     "IC",
@@ -36,7 +33,5 @@
     "Tool",
     "Other"
   ],
-  "manufacturerParts": [
-    "MPTEST6"
-  ]
+  "manufacturerParts": []
 }
