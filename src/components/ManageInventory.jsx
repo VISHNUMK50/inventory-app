@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, Edit, Trash, Download, AlertCircle, Package, Filter, RefreshCw, ChevronDown, Upload,Store, ClipboardList, Clipboard, Home } from "lucide-react";
+import { Search, Edit, Trash, Download, AlertCircle, Package, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
 import githubConfig from '../config/githubConfig';
 
@@ -10,18 +10,18 @@ const ManageInventory = () => {
   const [filteredItems, setFilteredItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
-  
+
   // State for sorting
   const [sortField, setSortField] = useState("part");
   const [sortDirection, setSortDirection] = useState("asc");
-  
+
   // State for filters
   const [filters, setFilters] = useState({
     category: "",
@@ -29,13 +29,13 @@ const ManageInventory = () => {
     minStock: "",
     maxStock: ""
   });
-  
+
   // Initialize state with the imported config
   const [config, setConfig] = useState(githubConfig);
-  
+
   // You can still update it if needed
   const updateConfig = (newConfig) => {
-    setConfig({...config, ...newConfig});
+    setConfig({ ...config, ...newConfig });
   };
 
   //hias
@@ -52,31 +52,31 @@ const ManageInventory = () => {
   }, [inventoryItems, searchTerm, filters, viewMode]);
 
   useEffect(() => {
-  console.log("Inventory items after fetch:", inventoryItems);
-  console.log("View mode:", viewMode);
-  if (inventoryItems.length > 0) {
-    applyFiltersAndSearch();
-  }
-}, [inventoryItems, searchTerm, filters, viewMode]);
-// Add this function before fetchInventoryItems
-const testGitHubAccess = async () => {
+    console.log("Inventory items after fetch:", inventoryItems);
+    console.log("View mode:", viewMode);
+    if (inventoryItems.length > 0) {
+      applyFiltersAndSearch();
+    }
+  }, [inventoryItems, searchTerm, filters, viewMode]);
+  // Add this function before fetchInventoryItems
+  const testGitHubAccess = async () => {
     try {
       console.log(`Testing access to: https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`);
-      
+
       const response = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`, {
         headers: {
           "Authorization": `Bearer ${githubConfig.token}`
         }
       });
-      
+
       console.log("Response status:", response.status);
       const data = await response.json();
       console.log("GitHub API response:", data);
-      
+
       if (!response.ok) {
         setError(`GitHub API error: ${response.status} - ${data.message || 'Unknown error'}`);
       }
-      
+
       return response.ok;
     } catch (error) {
       console.error("GitHub access test failed:", error);
@@ -88,12 +88,12 @@ const testGitHubAccess = async () => {
   const fetchInventoryItems = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     console.log("GitHub config:", githubConfig); // Log the current config
-    
+
     console.log('GitHub config check:', {
       hasToken: !!githubConfig.token,
-      tokenFirstChars: githubConfig.token ? 
+      tokenFirstChars: githubConfig.token ?
         githubConfig.token.substring(0, 4) + '...' : 'none'
     });
 
@@ -106,7 +106,7 @@ const testGitHubAccess = async () => {
       setIsLoading(false);
       return;
     }
-    
+
     // Add this block - Test GitHub API access
     const canAccessGitHub = await testGitHubAccess();
     if (!canAccessGitHub) {
@@ -117,11 +117,11 @@ const testGitHubAccess = async () => {
       setFilteredItems(sampleInventoryItems);
       setIsLoading(false);
       return;
-    }   
-    
+    }
+
     try {
       const { token, repo, owner, path } = githubConfig;
-      
+
       // If GitHub config is not complete, try localStorage
       if (!token || !repo || !owner) {
         const localItems = localStorage.getItem('inventoryItems');
@@ -137,30 +137,30 @@ const testGitHubAccess = async () => {
         setIsLoading(false);
         return;
       }
-      
+
       // Path to the jsons directory
       const jsonDirPath = `${path}/jsons`;
-      
+
       // GitHub API URL for contents
       const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
-      
+
       const response = await fetch(apiUrl, {
         headers: {
           "Authorization": `token ${token}`
         }
       });
-      
+
       if (response.status === 404) {
         // Directory doesn't exist
         throw new Error("Inventory directory not found");
       }
-      
+
       if (!response.ok) {
         throw new Error(`GitHub API error: ${response.statusText}`);
       }
-      
+
       const files = await response.json();
-      
+
       // Fetch content of each JSON file
       const itemPromises = files.map(async (file) => {
         if (file.type === "file" && file.name.endsWith(".json")) {
@@ -171,13 +171,13 @@ const testGitHubAccess = async () => {
         }
         return null;
       });
-      
+
       const items = (await Promise.all(itemPromises)).filter(item => item !== null);
-      
+
       // Set state with fetched items
       setInventoryItems(items.length > 0 ? items : sampleInventoryItems);
       setFilteredItems(items.length > 0 ? items : sampleInventoryItems);
-      
+
     } catch (error) {
       console.error("Error fetching inventory items:", error);
       setError(error.message);
@@ -192,48 +192,48 @@ const testGitHubAccess = async () => {
   // Apply filters and search to inventory items
   const applyFiltersAndSearch = () => {
     let result = [...inventoryItems];
-    
+
     // Apply active/inactive filter
     if (viewMode === "active") {
       result = result.filter(item => Number(item.quantity) > 0);
     } else if (viewMode === "inactive") {
       result = result.filter(item => Number(item.quantity) <= 0);
     }
-    
+
     // Apply search term
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      result = result.filter(item => 
+      result = result.filter(item =>
         (item.partName && item.partName.toLowerCase().includes(search)) ||
         (item.manufacturerPart && item.manufacturerPart.toLowerCase().includes(search)) ||
         (item.description && item.description.toLowerCase().includes(search))
       );
     }
-    
+
     // Apply category filter
     if (filters.category) {
       result = result.filter(item => item.category === filters.category);
     }
-    
+
     // Apply manufacturer filter
     if (filters.manufacturer) {
       result = result.filter(item => item.manufacturer === filters.manufacturer);
     }
-    
+
     // Apply min stock filter
     if (filters.minStock !== "") {
       result = result.filter(item => Number(item.quantity) >= Number(filters.minStock));
     }
-    
+
     // Apply max stock filter
     if (filters.maxStock !== "") {
       result = result.filter(item => Number(item.quantity) <= Number(filters.maxStock));
     }
-    
+
     // Apply sorting
     result.sort((a, b) => {
       let valA, valB;
-      
+
       // Determine values to compare based on sortField
       switch (sortField) {
         case "part":
@@ -265,7 +265,7 @@ const testGitHubAccess = async () => {
           valA = a.manufacturerPart || "";
           valB = b.manufacturerPart || "";
       }
-      
+
       // Compare values based on sort direction
       if (sortDirection === "asc") {
         return valA > valB ? 1 : valA < valB ? -1 : 0;
@@ -282,27 +282,27 @@ const testGitHubAccess = async () => {
     if (confirm(`Are you sure you want to delete this item?`)) {
       try {
         setIsLoading(true);
-        
+
         // Only attempt GitHub deletion if we have complete GitHub config
         if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
           await deleteFileFromGitHub(itemId);
         }
-        
+
         // After successful GitHub deletion or if we're using local storage, update the UI
         const newItems = inventoryItems.filter(
           item => item.manufacturerPart !== itemId
         );
-        
+
         setInventoryItems(newItems);
-        
+
         // If this item was also in selected items, remove it
         if (selectedItems.includes(itemId)) {
           setSelectedItems(selectedItems.filter(id => id !== itemId));
         }
-        
+
         // Also update localStorage if we're using it as a backup
         localStorage.setItem('inventoryItems', JSON.stringify(newItems));
-        
+
         alert(`Item deleted successfully`);
       } catch (error) {
         alert(`Error deleting item: ${error.message}`);
@@ -382,18 +382,18 @@ const testGitHubAccess = async () => {
   // Export selected items to CSV
   const exportToCSV = () => {
     // Get selected items or all filtered items if none selected
-    const itemsToExport = selectedItems.length > 0 
+    const itemsToExport = selectedItems.length > 0
       ? filteredItems.filter(item => selectedItems.includes(item.manufacturerPart))
       : filteredItems;
-    
+
     if (itemsToExport.length === 0) {
       alert("No items to export");
       return;
     }
-    
+
     // Create CSV header
     const headers = ["Part #", "Manufacturer", "Description", "Bin", "In-Stock", "On Loan"];
-    
+
     // Create CSV rows
     const rows = itemsToExport.map(item => [
       item.manufacturerPart || "",
@@ -403,13 +403,13 @@ const testGitHubAccess = async () => {
       item.quantity || "0",
       "0" // Placeholder for on loan
     ]);
-    
+
     // Combine headers and rows
     const csvContent = [
       headers.join(","),
       ...rows.map(row => row.join(","))
     ].join("\n");
-    
+
     // Create and download the CSV file
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -425,18 +425,18 @@ const testGitHubAccess = async () => {
   // Copy selected items to clipboard
   const copyToClipboard = () => {
     // Get selected items or all filtered items if none selected
-    const itemsToCopy = selectedItems.length > 0 
+    const itemsToCopy = selectedItems.length > 0
       ? filteredItems.filter(item => selectedItems.includes(item.manufacturerPart))
       : filteredItems;
-    
+
     if (itemsToCopy.length === 0) {
       alert("No items to copy");
       return;
     }
-    
+
     // Create text representation
     const headers = ["Part #", "Manufacturer", "Description", "Bin", "In-Stock"];
-    
+
     // Create text rows
     const rows = itemsToCopy.map(item => [
       item.manufacturerPart || "",
@@ -445,13 +445,13 @@ const testGitHubAccess = async () => {
       item.bin || "",
       item.quantity || "0"
     ]);
-    
+
     // Combine headers and rows with tab separation for better paste experience
     const textContent = [
       headers.join("\t"),
       ...rows.map(row => row.join("\t"))
     ].join("\n");
-    
+
     // Copy to clipboard
     navigator.clipboard.writeText(textContent)
       .then(() => alert("Inventory data copied to clipboard"))
@@ -459,44 +459,44 @@ const testGitHubAccess = async () => {
   };
 
   // Delete selected items (stub for now)
-// Update the deleteSelectedItems function to also delete from GitHub
-const deleteSelectedItems = async () => {
-  if (selectedItems.length === 0) {
-    alert("No items selected for deletion");
-    return;
-  }
-  
-  if (confirm(`Are you sure you want to delete ${selectedItems.length} item(s)?`)) {
-    try {
-      setIsLoading(true);
-      
-      // Only attempt GitHub deletion if we have complete GitHub config
-      if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
-        // Delete items one by one from GitHub
-        const deletePromises = selectedItems.map(itemId => deleteFileFromGitHub(itemId));
-        await Promise.all(deletePromises);
-      }
-      
-      // After successful GitHub deletion or if we're using local storage, update the UI
-      const newItems = inventoryItems.filter(
-        item => !selectedItems.includes(item.manufacturerPart)
-      );
-      
-      setInventoryItems(newItems);
-      setSelectedItems([]);
-      setSelectAll(false);
-      
-      // Also update localStorage if we're using it as a backup
-      localStorage.setItem('inventoryItems', JSON.stringify(newItems));
-      
-      alert(`Deleted ${selectedItems.length} item(s) successfully`);
-    } catch (error) {
-      alert(`Error deleting items: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+  // Update the deleteSelectedItems function to also delete from GitHub
+  const deleteSelectedItems = async () => {
+    if (selectedItems.length === 0) {
+      alert("No items selected for deletion");
+      return;
     }
-  }
-};
+
+    if (confirm(`Are you sure you want to delete ${selectedItems.length} item(s)?`)) {
+      try {
+        setIsLoading(true);
+
+        // Only attempt GitHub deletion if we have complete GitHub config
+        if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
+          // Delete items one by one from GitHub
+          const deletePromises = selectedItems.map(itemId => deleteFileFromGitHub(itemId));
+          await Promise.all(deletePromises);
+        }
+
+        // After successful GitHub deletion or if we're using local storage, update the UI
+        const newItems = inventoryItems.filter(
+          item => !selectedItems.includes(item.manufacturerPart)
+        );
+
+        setInventoryItems(newItems);
+        setSelectedItems([]);
+        setSelectAll(false);
+
+        // Also update localStorage if we're using it as a backup
+        localStorage.setItem('inventoryItems', JSON.stringify(newItems));
+
+        alert(`Deleted ${selectedItems.length} item(s) successfully`);
+      } catch (error) {
+        alert(`Error deleting items: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
   // Sample inventory data for testing
   const sampleInventoryItems = [
@@ -558,19 +558,19 @@ const deleteSelectedItems = async () => {
   const deleteFileFromGitHub = async (itemId) => {
     try {
       const { token, repo, owner, path } = githubConfig;
-      
+
       // Path to the specific JSON file
       const filePath = `${path}/jsons/${itemId}.json`;
-      
+
       // First, we need to get the file's SHA
       const fileInfoUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-      
+
       const infoResponse = await fetch(fileInfoUrl, {
         headers: {
           "Authorization": `token ${token}`
         }
       });
-      
+
       if (!infoResponse.ok) {
         if (infoResponse.status === 404) {
           console.warn(`File ${filePath} not found on GitHub`);
@@ -578,9 +578,9 @@ const deleteSelectedItems = async () => {
         }
         throw new Error(`Failed to get file info: ${infoResponse.statusText}`);
       }
-      
+
       const fileInfo = await infoResponse.json();
-      
+
       // Now delete the file using the SHA
       const deleteResponse = await fetch(fileInfoUrl, {
         method: 'DELETE',
@@ -593,14 +593,14 @@ const deleteSelectedItems = async () => {
           sha: fileInfo.sha
         })
       });
-      
+
       if (!deleteResponse.ok) {
         throw new Error(`Failed to delete file: ${deleteResponse.statusText}`);
       }
-      
+
       console.log(`Successfully deleted ${filePath} from GitHub`);
       return true;
-      
+
     } catch (error) {
       console.error("Error deleting file from GitHub:", error);
       throw error;
@@ -614,7 +614,7 @@ const deleteSelectedItems = async () => {
     return "";
   };
   const [scrolled, setScrolled] = useState(false);
-  
+
   // Add scroll event listener to track when to apply fixed positioning
   useEffect(() => {
     const handleScroll = () => {
@@ -626,10 +626,10 @@ const deleteSelectedItems = async () => {
         setScrolled(false);
       }
     };
-    
+
     // Add scroll event listener
     window.addEventListener('scroll', handleScroll);
-    
+
     // Clean up
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -664,13 +664,13 @@ const deleteSelectedItems = async () => {
 
       {/* Fixed position action bar with a placeholder for when it's fixed */}
       {scrolled && (
-        <div 
-          style={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            zIndex: 50 
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 50
           }}
           className="bg-gradient-to-r from-purple-600 to-indigo-700 shadow-md"
         >
@@ -697,22 +697,22 @@ const deleteSelectedItems = async () => {
       {/* Action Buttons and Search */}
       <div className="p-4 flex flex-wrap justify-between items-center gap-3 border-b border-gray-200">
         <div className="flex flex-wrap gap-2">
-          <button 
+          <button
             className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="w-4 h-4 mr-2" /> Filter
           </button>
-          
-          <button 
+
+          <button
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
             onClick={fetchInventoryItems}
           >
             <RefreshCw className="w-4 h-4 mr-2" /> Refresh
           </button>
-          
+
           <div className="relative">
-            <button 
+            <button
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
             >
               View <ChevronDown className="w-4 h-4 ml-1" />
@@ -727,24 +727,24 @@ const deleteSelectedItems = async () => {
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          
+
           {selectedItems.length > 0 && (
             <div className="flex gap-2">
-              <button 
+              <button
                 className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center"
                 onClick={() => handleDeleteItem(item.manufacturerPart)}
-                >
+              >
                 <Trash className="w-4 h-4 mr-2" /> Delete
               </button>
-              
-              <button 
+
+              <button
                 className="px-4 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center"
                 onClick={exportToCSV}
               >
                 <Download className="w-4 h-4 mr-2" /> Export
               </button>
-              
-              <button 
+
+              <button
                 className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center"
                 onClick={copyToClipboard}
               >
@@ -753,7 +753,7 @@ const deleteSelectedItems = async () => {
             </div>
           )}
         </div>
-        
+
         <div className="flex gap-2 items-center">
           <div className="relative">
             <input
@@ -765,7 +765,7 @@ const deleteSelectedItems = async () => {
             />
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
           </div>
-          
+
           <Link href="/add-product">
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
               + Add Product
@@ -773,7 +773,7 @@ const deleteSelectedItems = async () => {
           </Link>
         </div>
       </div>
-      
+
       {/* Filters Section */}
       {showFilters && (
         <div className="p-4 bg-gray-50 border-b border-gray-200">
@@ -792,7 +792,7 @@ const deleteSelectedItems = async () => {
                 ))}
               </select>
             </div>
-            
+
             <div className="w-full md:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
               <select
@@ -807,7 +807,7 @@ const deleteSelectedItems = async () => {
                 ))}
               </select>
             </div>
-            
+
             <div className="w-full md:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
               <input
@@ -819,7 +819,7 @@ const deleteSelectedItems = async () => {
                 min="0"
               />
             </div>
-            
+
             <div className="w-full md:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
               <input
@@ -831,7 +831,7 @@ const deleteSelectedItems = async () => {
                 min="0"
               />
             </div>
-            
+
             <div className="w-full md:w-auto flex items-end">
               <button
                 onClick={resetFilters}
@@ -843,7 +843,7 @@ const deleteSelectedItems = async () => {
           </div>
         </div>
       )}
-      
+
       {/* Loading and Error States */}
       {isLoading && (
         <div className="p-8 text-center">
@@ -851,122 +851,122 @@ const deleteSelectedItems = async () => {
           <p className="text-gray-600">Loading inventory data...</p>
         </div>
       )}
-      
+
       {error && !isLoading && (
         <div className="p-6 bg-red-50 flex items-center justify-center">
           <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
           <p className="text-red-700">Error loading inventory: {error}</p>
         </div>
       )}
-      
+
       {/* Inventory Table */}
-{!isLoading && !error && (
-  <div className="overflow-x-auto">
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="px-4 py-3 text-left">
-            <input
-              type="checkbox"
-              checked={selectAll}
-              onChange={handleSelectAll}
-              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-          </th>
-          <th 
-            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-            onClick={() => handleSort("part")}
-          >
-            Part {renderSortIndicator("part")}
-          </th>
-          <th 
-            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-            onClick={() => handleSort("part")}
-          >
-            Part # {renderSortIndicator("part")}
-          </th>
-          <th 
-            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-            onClick={() => handleSort("category")}
-          >
-            Category {renderSortIndicator("category")}
-          </th>
-          <th 
-            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-            onClick={() => handleSort("description")}
-          >
-            Description {renderSortIndicator("description")}
-          </th>
-          <th 
-            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-            onClick={() => handleSort("stock")}
-          >
-            In-Stock {renderSortIndicator("stock")}
-          </th>
-          <th 
-            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-            onClick={() => handleSort("bin")}
-          >
-            Bin {renderSortIndicator("bin")}
-          </th>
-          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Actions
-          </th>
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {filteredItems.length === 0 ? (
-          <tr>
-            <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
-              No inventory items found. Try adjusting your filters or adding new items.
-            </td>
-          </tr>
-        ) : (
-          filteredItems.map((item, index) => (
-            <tr key={index} className="hover:bg-gray-50">
-              <td className="px-4 py-3 whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={selectedItems.includes(item.manufacturerPart)}
-                  onChange={() => handleSelectItem(item.manufacturerPart)}
-                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <Link 
-                  href={`/product/${encodeURIComponent(item.manufacturerPart)}`}
-                  className="text-blue-600 hover:underline cursor-pointer"
+      {!isLoading && !error && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("part")}
                 >
-                  {item.partName || item.manufacturerPart || "N/A"}
-                </Link>
-              </td>
-              {/* // Inside your table row where the part number is displayed */}
-              <td className="px-4 py-3 whitespace-nowrap">{item.manufacturerPart}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{item.category || "Uncategorized"}</td>
-              <td className="px-4 py-3">{item.description}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{item.quantity}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{item.bin}</td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <div className="flex items-center space-x-2">
-                  <button className="text-blue-600 hover:text-blue-800">
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button 
-                    className="text-red-600 hover:text-red-800"
-                    onClick={() => handleDeleteItem(item.manufacturerPart)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
-  </div>
-)}
-      
+                  Part {renderSortIndicator("part")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("part")}
+                >
+                  Part # {renderSortIndicator("part")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("category")}
+                >
+                  Category {renderSortIndicator("category")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("description")}
+                >
+                  Description {renderSortIndicator("description")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("stock")}
+                >
+                  In-Stock {renderSortIndicator("stock")}
+                </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("bin")}
+                >
+                  Bin {renderSortIndicator("bin")}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                    No inventory items found. Try adjusting your filters or adding new items.
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(item.manufacturerPart)}
+                        onChange={() => handleSelectItem(item.manufacturerPart)}
+                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Link
+                        href={`/product/${encodeURIComponent(item.manufacturerPart)}`}
+                        className="text-blue-600 hover:underline cursor-pointer"
+                      >
+                        {item.partName || item.manufacturerPart || "N/A"}
+                      </Link>
+                    </td>
+                    {/* // Inside your table row where the part number is displayed */}
+                    <td className="px-4 py-3 whitespace-nowrap">{item.manufacturerPart}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{item.category || "Uncategorized"}</td>
+                    <td className="px-4 py-3">{item.description}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{item.quantity}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{item.bin}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button className="text-blue-600 hover:text-blue-800">
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() => handleDeleteItem(item.manufacturerPart)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* Stats Footer */}
       <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
         <div className="text-sm text-gray-600">
@@ -975,9 +975,9 @@ const deleteSelectedItems = async () => {
             <span> | <span className="font-medium">{selectedItems.length}</span> selected</span>
           )}
         </div>
-        <div className="text-sm text-gray-600"   suppressHydrationWarning // Add this prop
+        <div className="text-sm text-gray-600" suppressHydrationWarning // Add this prop
         >
-            Last updated: {new Date().toLocaleString('en-US', {
+          Last updated: {new Date().toLocaleString('en-US', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -985,7 +985,7 @@ const deleteSelectedItems = async () => {
             minute: '2-digit',
             second: '2-digit',
             hour12: true
-            })}
+          })}
         </div>
       </div>
     </div>
