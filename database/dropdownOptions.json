@@ -6,8 +6,7 @@
     "PNTEST5",
     "PTEST6",
     "PNTEST6",
-    "PNTEST7",
-    "PNTEST8"
+    "PNTEST7"
   ],
   "manufacturers": [
     "DAS",
@@ -15,16 +14,14 @@
     "MTEST4",
     "MTEST5",
     "MTEST6",
-    "MTEST7",
-    "MTEST8"
+    "MTEST7"
   ],
   "vendors": [
     "TEST",
     "VTEST4",
     "VTEST5",
     "VTEST6",
-    "VTEST7",
-    "VTEST8"
+    "VTEST7"
   ],
   "categories": [
     "IC",
@@ -45,7 +42,6 @@
   ],
   "manufacturerParts": [
     "MPTEST6",
-    "MPTEST7",
-    "MPTEST8"
+    "MPTEST7"
   ]
 }
