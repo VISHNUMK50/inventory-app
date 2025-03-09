@@ -86,6 +86,7 @@ const ManageInventory = () => {
   };
 
   // Fetch inventory items from GitHub or localStorage
+  // Fetch inventory items from GitHub or localStorage
   const fetchInventoryItems = async () => {
     setIsLoading(true);
     setError(null);
@@ -101,9 +102,6 @@ const ManageInventory = () => {
     if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
       console.error("GitHub configuration is incomplete");
       setError("GitHub configuration is incomplete");
-      // Use fallback data
-      setInventoryItems(sampleInventoryItems);
-      setFilteredItems(sampleInventoryItems);
       setIsLoading(false);
       return;
     }
@@ -113,9 +111,6 @@ const ManageInventory = () => {
     if (!canAccessGitHub) {
       console.error("Could not access GitHub API with provided credentials");
       setError("Could not access GitHub repository. Please check credentials.");
-      // Fall back to sample data
-      setInventoryItems(sampleInventoryItems);
-      setFilteredItems(sampleInventoryItems);
       setIsLoading(false);
       return;
     }
@@ -132,8 +127,7 @@ const ManageInventory = () => {
           setFilteredItems(items);
         } else {
           // If no items in localStorage, use sample data
-          setInventoryItems(sampleInventoryItems);
-          setFilteredItems(sampleInventoryItems);
+          setError("Could not access local data");
         }
         setIsLoading(false);
         return;
@@ -167,7 +161,15 @@ const ManageInventory = () => {
         if (file.type === "file" && file.name.endsWith(".json")) {
           const fileResponse = await fetch(file.download_url);
           if (fileResponse.ok) {
-            return await fileResponse.json();
+            const itemData = await fileResponse.json();
+
+            // Extract ID from filename if it follows the pattern id-PartName-ManufacturerPart.json
+            const fileNameMatch = file.name.match(/^(\d+)-.*\.json$/);
+            if (fileNameMatch && !itemData.id) {
+              itemData.id = fileNameMatch[1];
+            }
+
+            return itemData;
           }
         }
         return null;
@@ -175,16 +177,13 @@ const ManageInventory = () => {
 
       const items = (await Promise.all(itemPromises)).filter(item => item !== null);
 
-      // Set state with fetched items
-      setInventoryItems(items.length > 0 ? items : sampleInventoryItems);
-      setFilteredItems(items.length > 0 ? items : sampleInventoryItems);
+      // Fix: Set state with the actual array of items, not the length
+      setInventoryItems(items);
+      setFilteredItems(items);
 
     } catch (error) {
       console.error("Error fetching inventory items:", error);
       setError(error.message);
-      // Fall back to sample data
-      setInventoryItems(sampleInventoryItems);
-      setFilteredItems(sampleInventoryItems);
     } finally {
       setIsLoading(false);
     }
@@ -237,6 +236,10 @@ const ManageInventory = () => {
 
       // Determine values to compare based on sortField
       switch (sortField) {
+        case "id":
+          valA = a.id || "";
+          valB = b.id || "";
+          break;
         case "part":
           valA = a.manufacturerPart || "";
           valB = b.manufacturerPart || "";
@@ -279,37 +282,217 @@ const ManageInventory = () => {
     setFilteredItems(result);
   };
   // Add this function to handle single item deletion
+  // Updated delete single item function with better error handling
   const handleDeleteItem = async (itemId) => {
     if (confirm(`Are you sure you want to delete this item?`)) {
       try {
         setIsLoading(true);
+        let githubSuccess = true;
 
         // Only attempt GitHub deletion if we have complete GitHub config
         if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
-          await deleteFileFromGitHub(itemId);
+          try {
+            await deleteFileFromGitHub(itemId);
+            console.log(`Successfully deleted ${itemId} from GitHub`);
+          } catch (error) {
+            console.error("GitHub deletion failed:", error);
+            githubSuccess = false;
+
+            // Show error but allow proceeding with local deletion
+            if (!confirm(`Failed to delete from GitHub: ${error.message}. Continue with local deletion only?`)) {
+              setIsLoading(false);
+              return;
+            }
+          }
         }
 
-        // After successful GitHub deletion or if we're using local storage, update the UI
+        // After GitHub deletion (or if we're using local storage), update the UI
         const newItems = inventoryItems.filter(
           item => item.manufacturerPart !== itemId
         );
 
         setInventoryItems(newItems);
+        setFilteredItems(prevFiltered => prevFiltered.filter(
+          item => item.manufacturerPart !== itemId
+        ));
 
         // If this item was also in selected items, remove it
         if (selectedItems.includes(itemId)) {
-          setSelectedItems(selectedItems.filter(id => id !== itemId));
+          setSelectedItems(prevSelected => prevSelected.filter(id => id !== itemId));
         }
 
-        // Also update localStorage if we're using it as a backup
+        // Also update localStorage as a backup
         localStorage.setItem('inventoryItems', JSON.stringify(newItems));
 
-        alert(`Item deleted successfully`);
+        if (githubSuccess) {
+          alert(`Item deleted successfully`);
+        } else {
+          alert(`Item deleted from local storage only. GitHub deletion failed.`);
+        }
       } catch (error) {
+        console.error("Delete operation failed:", error);
         alert(`Error deleting item: ${error.message}`);
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  // Updated delete multiple items function with better error handling
+  const deleteSelectedItems = async () => {
+    if (selectedItems.length === 0) {
+      alert("No items selected for deletion");
+      return;
+    }
+
+    if (confirm(`Are you sure you want to delete ${selectedItems.length} item(s)?`)) {
+      try {
+        setIsLoading(true);
+        const results = { success: [], failed: [] };
+
+        // Only attempt GitHub deletion if we have complete GitHub config
+        if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
+          // Delete items one by one from GitHub and track results
+          for (const itemId of selectedItems) {
+            try {
+              await deleteFileFromGitHub(itemId);
+              results.success.push(itemId);
+            } catch (error) {
+              console.error(`Failed to delete ${itemId}:`, error);
+              results.failed.push(itemId);
+            }
+          }
+        } else {
+          // If no GitHub config, mark all as successful for local deletion
+          results.success = [...selectedItems];
+        }
+
+        // If some items failed GitHub deletion but we still want to continue with local
+        if (results.failed.length > 0) {
+          const continueLocal = confirm(
+            `Failed to delete ${results.failed.length} item(s) from GitHub. Continue with local deletion only?`
+          );
+
+          if (continueLocal) {
+            // Add the failed items to success for local deletion
+            results.success = [...new Set([...results.success, ...results.failed])];
+            results.failed = [];
+          }
+        }
+
+        // After deletion attempts, update the UI for successful deletions
+        if (results.success.length > 0) {
+          const newItems = inventoryItems.filter(
+            item => !results.success.includes(item.manufacturerPart)
+          );
+
+          setInventoryItems(newItems);
+          setFilteredItems(prevFiltered => prevFiltered.filter(
+            item => !results.success.includes(item.manufacturerPart)
+          ));
+
+          // Clear selection state
+          setSelectedItems([]);
+          setSelectAll(false);
+
+          // Update localStorage
+          localStorage.setItem('inventoryItems', JSON.stringify(newItems));
+        }
+
+        // Show appropriate message based on results
+        if (results.failed.length === 0) {
+          alert(`Successfully deleted ${results.success.length} item(s)`);
+        } else if (results.success.length === 0) {
+          alert(`Failed to delete any items. Please check GitHub configuration and permissions.`);
+        } else {
+          alert(`Deleted ${results.success.length} item(s). Failed to delete ${results.failed.length} item(s) from GitHub.`);
+        }
+      } catch (error) {
+        console.error("Delete operation failed:", error);
+        alert(`Error during deletion: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // Improved GitHub file deletion function with better error handling
+  const deleteFileFromGitHub = async (itemId) => {
+    if (!itemId) {
+      throw new Error("Invalid item ID for deletion");
+    }
+
+    try {
+      const { token, repo, owner, path } = githubConfig;
+
+      // Validate GitHub config
+      if (!token || !repo || !owner) {
+        throw new Error("Incomplete GitHub configuration");
+      }
+
+      // Find the complete item to get all necessary fields for filename
+      const item = inventoryItems.find(item => item.manufacturerPart === itemId);
+      if (!item) {
+        throw new Error("Item not found in inventory data");
+      }
+      // Use the correct file naming format
+      const fileName = `${item.id}-${item.partName}-${item.manufacturerPart}.json`.replace(/\s+/g, '_');
+
+      // Path to the specific JSON file
+      const filePath = `${path}/jsons/${fileName}`;
+      console.log(`Attempting to delete: ${filePath}`);
+
+      // First, we need to get the file's SHA
+      const fileInfoUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+
+      const infoResponse = await fetch(fileInfoUrl, {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json"
+        }
+      });
+
+      // Handle file not found case
+      if (infoResponse.status === 404) {
+        console.warn(`File ${filePath} not found on GitHub`);
+        return true; // Consider it a success if the file doesn't exist
+      }
+
+      // Handle other API errors
+      if (!infoResponse.ok) {
+        const errorData = await infoResponse.json().catch(() => ({}));
+        throw new Error(`GitHub API error ${infoResponse.status}: ${errorData.message || infoResponse.statusText}`);
+      }
+
+      const fileInfo = await infoResponse.json();
+      if (!fileInfo || !fileInfo.sha) {
+        throw new Error("Failed to get file SHA from GitHub");
+      }
+
+      // Now delete the file using the SHA
+      const deleteResponse = await fetch(fileInfoUrl, {
+        method: 'DELETE',
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json",
+          "Accept": "application/vnd.github.v3+json"
+        },
+        body: JSON.stringify({
+          message: `Delete inventory item: ${itemId}`,
+          sha: fileInfo.sha
+        })
+      });
+
+      if (!deleteResponse.ok) {
+        const errorData = await deleteResponse.json().catch(() => ({}));
+        throw new Error(`Delete failed with status ${deleteResponse.status}: ${errorData.message || deleteResponse.statusText}`);
+      }
+
+      console.log(`Successfully deleted ${filePath} from GitHub`);
+      return true;
+    } catch (error) {
+      console.error("Error in deleteFileFromGitHub:", error);
+      throw error; // Re-throw to allow handling in the caller
     }
   };
   // Handle sort click
@@ -459,154 +642,7 @@ const ManageInventory = () => {
       .catch(err => alert("Failed to copy: " + err));
   };
 
-  // Delete selected items (stub for now)
-  // Update the deleteSelectedItems function to also delete from GitHub
-  const deleteSelectedItems = async () => {
-    if (selectedItems.length === 0) {
-      alert("No items selected for deletion");
-      return;
-    }
 
-    if (confirm(`Are you sure you want to delete ${selectedItems.length} item(s)?`)) {
-      try {
-        setIsLoading(true);
-
-        // Only attempt GitHub deletion if we have complete GitHub config
-        if (githubConfig.token && githubConfig.repo && githubConfig.owner) {
-          // Delete items one by one from GitHub
-          const deletePromises = selectedItems.map(itemId => deleteFileFromGitHub(itemId));
-          await Promise.all(deletePromises);
-        }
-
-        // After successful GitHub deletion or if we're using local storage, update the UI
-        const newItems = inventoryItems.filter(
-          item => !selectedItems.includes(item.manufacturerPart)
-        );
-
-        setInventoryItems(newItems);
-        setSelectedItems([]);
-        setSelectAll(false);
-
-        // Also update localStorage if we're using it as a backup
-        localStorage.setItem('inventoryItems', JSON.stringify(newItems));
-
-        alert(`Deleted ${selectedItems.length} item(s) successfully`);
-      } catch (error) {
-        alert(`Error deleting items: ${error.message}`);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // Sample inventory data for testing
-  const sampleInventoryItems = [
-    {
-      manufacturerPart: "JST-XH 2.54mm Female-Female 2 Pin 25cm Wire",
-      manufacturer: "HUBTRONICS",
-      description: "XH2515 JST-XH 2.54mm Female-Female 2 Pin Reverse Proof Connector 25cm Wire",
-      bin: "5",
-      quantity: "5",
-      category: "Connector",
-      onLoan: "0"
-    },
-    {
-      manufacturerPart: "0603 Red Led",
-      manufacturer: "HUBTRONICS",
-      description: "19-21SURC/S530-A3/TR8 0603 Red SMD Led (Pack of 10)",
-      bin: "20",
-      quantity: "20",
-      category: "LED",
-      onLoan: "0"
-    },
-    {
-      manufacturerPart: "0603 Blue Led",
-      manufacturer: "HUBTRONICS",
-      description: "19-21/BHC-AN1P2/2T 0603 Blue SMD Led (Pack of 10)",
-      bin: "20",
-      quantity: "20",
-      category: "LED",
-      onLoan: "0"
-    },
-    {
-      manufacturerPart: "TTP229-BSF 6-18 Keys Capacitive Touch Pad",
-      manufacturer: "HUBTRONICS",
-      description: "TTP229-BSF 6-18 Keys Capacitive Touch Pad Detector IC SSOP-28",
-      bin: "5",
-      quantity: "5",
-      category: "IC",
-      onLoan: "0"
-    },
-    {
-      manufacturerPart: "Syringe Needle 18G 0.84mm Inner Dia",
-      manufacturer: "HUBTRONICS",
-      description: "Syringe Needle for Soldering Paste / Flux Dispenser - 18G 0.84mm Inner Dia",
-      bin: "1",
-      quantity: "1",
-      category: "Tool",
-      onLoan: "0"
-    },
-    {
-      manufacturerPart: "ULN2803A Darlington Transistor Arrays",
-      manufacturer: "HUBTRONICS",
-      description: "ULN2803A Darlington Transistor Arrays QFN-20-EP(4x4)",
-      bin: "5",
-      quantity: "5",
-      category: "Transistor",
-      onLoan: "0"
-    }
-  ];
-  const deleteFileFromGitHub = async (itemId) => {
-    try {
-      const { token, repo, owner, path } = githubConfig;
-
-      // Path to the specific JSON file
-      const filePath = `${path}/jsons/${itemId}.json`;
-
-      // First, we need to get the file's SHA
-      const fileInfoUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-
-      const infoResponse = await fetch(fileInfoUrl, {
-        headers: {
-          "Authorization": `token ${token}`
-        }
-      });
-
-      if (!infoResponse.ok) {
-        if (infoResponse.status === 404) {
-          console.warn(`File ${filePath} not found on GitHub`);
-          return true; // Consider it a success if the file doesn't exist
-        }
-        throw new Error(`Failed to get file info: ${infoResponse.statusText}`);
-      }
-
-      const fileInfo = await infoResponse.json();
-
-      // Now delete the file using the SHA
-      const deleteResponse = await fetch(fileInfoUrl, {
-        method: 'DELETE',
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: `Delete inventory item: ${itemId}`,
-          sha: fileInfo.sha
-        })
-      });
-
-      if (!deleteResponse.ok) {
-        throw new Error(`Failed to delete file: ${deleteResponse.statusText}`);
-      }
-
-      console.log(`Successfully deleted ${filePath} from GitHub`);
-      return true;
-
-    } catch (error) {
-      console.error("Error deleting file from GitHub:", error);
-      throw error;
-    }
-  };
   // Render sort indicator for table headers
   const renderSortIndicator = (field) => {
     if (sortField === field) {
@@ -843,7 +879,7 @@ const ManageInventory = () => {
                 <>
                   <button
                     className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center text-sm"
-                    onClick={() => handleDeleteItem(item.manufacturerPart)}
+                    onClick={deleteSelectedItems}
                   >
                     <Trash className="w-3 h-3 mr-1" /> Delete
                   </button>
@@ -983,9 +1019,14 @@ const ManageInventory = () => {
                     className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("id")}>
+                  ID {renderSortIndicator("id")}
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Image
                 </th>
+
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSort("partname")}
@@ -1030,7 +1071,7 @@ const ManageInventory = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
                     No inventory items found. Try adjusting your filters or adding new items.
                   </td>
                 </tr>
@@ -1045,6 +1086,8 @@ const ManageInventory = () => {
                         className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       />
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">{item.id || "N/A"}</td>
+
                     <td className="px-4 py-3 whitespace-nowrap">
                       <ImagePreview
                         url={getImageUrl(item)}

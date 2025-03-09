@@ -2,9 +2,10 @@
 import { useState, useEffect } from "react";
 import { use } from "react"; // Import React.use
 import Link from "next/link";
-import { ArrowLeft, Save, Package, RefreshCw, Edit, Trash, AlertCircle, ClipboardList, Home } from "lucide-react";
+import { ArrowLeft, Save, Package, FileText, Download, Eye, ShoppingCart, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
 import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
+import Addproductform from "@/components/Addproductform";
 
 export default function ProductDetail({ params }) {
   // Properly unwrap params using React.use()
@@ -55,24 +56,12 @@ export default function ProductDetail({ params }) {
             setProduct(foundProduct);
             setEditedProduct(foundProduct);
           } else {
-            // Fall back to sample data
-            const sampleProduct = sampleProducts.find(item => item.manufacturerPart === partNum);
-            if (sampleProduct) {
-              setProduct(sampleProduct);
-              setEditedProduct(sampleProduct);
-            } else {
-              setError("Product not found");
-            }
-          }
-        } else {
-          // Check sample data
-          const sampleProduct = sampleProducts.find(item => item.manufacturerPart === partNum);
-          if (sampleProduct) {
-            setProduct(sampleProduct);
-            setEditedProduct(sampleProduct);
-          } else {
             setError("Product not found");
           }
+
+        } else {
+          setError("sample data not found");
+
         }
         setIsLoading(false);
         return;
@@ -140,25 +129,15 @@ export default function ProductDetail({ params }) {
 
         // If we still couldn't find the product, fallback to sample data
         if (!productFound) {
-          const sampleProduct = sampleProducts.find(item => item.manufacturerPart === partNum);
-          if (sampleProduct) {
-            setProduct(sampleProduct);
-            setEditedProduct(sampleProduct);
-          } else {
-            setError("Product not found");
-          }
+          setError("Product not found");
+
         }
       }
     } catch (error) {
       console.error("Error fetching product:", error);
       setError(error.message);
 
-      // Try sample data as fallback
-      const sampleProduct = sampleProducts.find(item => item.manufacturerPart === partNum);
-      if (sampleProduct) {
-        setProduct(sampleProduct);
-        setEditedProduct(sampleProduct);
-      }
+
     } finally {
       setIsLoading(false);
     }
@@ -286,63 +265,7 @@ export default function ProductDetail({ params }) {
     }
   };
 
-  // Sample product data for testing
-  const sampleProducts = [
-    {
-      image: "",
-      datasheet: "https://example.com/datasheets/jst-connectors.pdf",
-      manufacturer: "HUBTRONICS",
-      manufacturerPart: "JST-XH 2.54mm Female-Female 2 Pin 25cm Wire",
-      vendor: "Amazon",
-      vendorPart: "AMZN-1234",
-      customerRef: "CONN-001",
-      description: "XH2515 JST-XH 2.54mm Female-Female 2 Pin Reverse Proof Connector 25cm Wire",
-      bin: "5",
-      quantity: "5",
-      reorderPoint: "2",
-      reorderQty: "10",
-      costPrice: "2.99",
-      salePrice: "4.99",
-      category: "Connector",
-      partName: "JST-Connector"
-    },
-    {
-      image: "",
-      datasheet: "https://example.com/datasheets/0603-led.pdf",
-      manufacturer: "HUBTRONICS",
-      manufacturerPart: "0603 Red Led",
-      vendor: "DigiKey",
-      vendorPart: "DK-5678",
-      customerRef: "LED-001",
-      description: "19-21SURC/S530-A3/TR8 0603 Red SMD Led (Pack of 10)",
-      bin: "20",
-      quantity: "20",
-      reorderPoint: "5",
-      reorderQty: "15",
-      costPrice: "1.49",
-      salePrice: "2.99",
-      category: "LED",
-      partName: "Red-LED"
-    },
-    {
-      image: "",
-      datasheet: "",
-      manufacturer: "AFS",
-      manufacturerPart: "ASF",
-      vendor: "",
-      vendorPart: "",
-      customerRef: "",
-      description: "",
-      bin: "",
-      quantity: "32",
-      reorderPoint: "",
-      reorderQty: "",
-      costPrice: "",
-      salePrice: "",
-      category: "IC",
-      partName: "AFSS"
-    }
-  ];
+
 
   // If still loading, show a loading spinner
   if (isLoading) {
@@ -522,295 +445,477 @@ export default function ProductDetail({ params }) {
       )}
 
       {/* Product Details */}
-      <div className="p-6">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-800">
-            {product && (product.partName || product.manufacturerPart || "Unknown Product")}
-          </h1>
-          <p className="text-gray-600">
-            {product && (product.description || "No description available")}
-          </p>
-        </div>
-
+      <div className="px-6 py-2">
         {/* Product Details Section */}
-        <div className="p-6">
-          {editMode ? (
-            /* Edit Form */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-gray-700">Basic Information</h2>
+        {editMode ? (
+          /* Edit Form */
+          <div className="rounded-lg">
+            {/* Product Identification Section */}
+            <div className="mb-6 grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-3">
+
+              <div className=" p-4 bg-blue-50 rounded-lg">
+
+                <h3 className="font-medium text-blue-800 mb-3 flex items-center">
+                  <Tag className="mr-2 h-5 w-5" /> Product Identification
+                </h3>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Part Name</label>
-                    <input
-                      type="text"
-                      name="partName"
-                      value={editedProduct.partName || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Part Name *</label>
+                    <div className="flex">
+                      <input
+                        type="text"
+                        name="partName"
+                        placeholder="Type to search or select partName"
+                        value={editedProduct.partName}
+                        onChange={handleInputChange}
+                        className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer Part</label>
-                    <input
-                      type="text"
-                      name="manufacturerPart"
-                      value={editedProduct.manufacturerPart || ""}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      name="category"
+                      value={editedProduct.category}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    >
+                      <option value="">Select a category</option>
+                      <option value="electronics">Electronics</option>
+                      <option value="mechanical">Mechanical</option>
+                    </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
-                    <input
-                      type="text"
-                      name="manufacturer"
-                      value={editedProduct.manufacturer || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Customer Reference</label>
                     <textarea
-                      name="description"
-                      value={editedProduct.description || ""}
+                      name="customerRef"
+                      placeholder="Customer part reference"
+                      value={editedProduct.customerRef}
                       onChange={handleInputChange}
                       rows="3"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     ></textarea>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <input
-                      type="text"
-                      name="category"
-                      value={editedProduct.category || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
                 </div>
               </div>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-gray-700">Inventory Details</h2>
-
-                <div className="space-y-4">
+              {/* Manufacturer Details Section */}
+              <div className="bg-pink-50 p-4 rounded-lg md:col-span-1 lg:col-span-2">
+                <h3 className="font-medium text-indigo-800 mb-3 flex items-center">
+                  <Folder className="mr-2 h-5 w-5" /> Manufacturer Details
+                </h3>
+                <div className=" grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity in Stock</label>
-                    <input
-                      type="number"
-                      name="quantity"
-                      value={editedProduct.quantity || "0"}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer *</label>
+                    <div className="flex">
+
+                      <input
+                        type="text"
+                        name="manufacturer"
+                        placeholder="Type to search or select manufacturer"
+                        value={editedProduct.manufacturer}
+                        onChange={handleInputChange}
+                        className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bin Location</label>
-                    <input
-                      type="text"
-                      name="bin"
-                      value={editedProduct.bin || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Point</label>
-                    <input
-                      type="text"
-                      name="reorderPoint"
-                      value={editedProduct.reorderPoint || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Quantity</label>
-                    <input
-                      type="text"
-                      name="reorderQty"
-                      value={editedProduct.reorderQty || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <h2 className="text-lg font-semibold mb-4 text-gray-700">Pricing & References</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cost Price</label>
-                    <input
-                      type="text"
-                      name="costPrice"
-                      value={editedProduct.costPrice || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
-                    <input
-                      type="text"
-                      name="salePrice"
-                      value={editedProduct.salePrice || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer Part # *</label>
+                    <div className="flex">
+                      <input
+                        type="text"
+                        name="manufacturerPart"
+                        placeholder="Type to search or select manufacturerPart"
+                        value={editedProduct.manufacturerPart}
+                        onChange={handleInputChange}
+                        className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                    <div className="flex">
+                      <input
+                        type="text"
+                        name="vendor"
+                        placeholder="Type to search or select vendor"
+                        value={editedProduct.vendor}
+                        onChange={handleInputChange}
+                        className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Product Link</label>
                     <input
                       type="text"
-                      name="vendor"
-                      value={editedProduct.vendor || ""}
+                      name="vendorProductLink"
+                      placeholder="https://vendor.com/product/123"
+                      value={editedProduct.vendorProductLink || ''}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Part #</label>
-                    <input
-                      type="text"
-                      name="vendorPart"
-                      value={editedProduct.vendorPart || ""}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      name="description"
+                      placeholder="Brief description of the part"
+                      value={editedProduct.description}
                       onChange={handleInputChange}
+                      rows="3"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    ></textarea>
                   </div>
+                </div>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Customer Reference</label>
-                    <input
-                      type="text"
-                      name="customerRef"
-                      value={editedProduct.customerRef || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+            </div>
+            {/* Pricing Information Section */}
+            <div className="mb-6 bg-green-50 p-4 rounded-lg">
+              <h3 className="font-medium text-green-800 mb-3 flex items-center">
+                <DollarSign className="mr-2 h-5 w-5" /> Pricing Information
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center">
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      <span>Cost Price</span>
+                    </div>
+                  </label>
+                  <input
+                    type="number"
+                    name="costPrice"
+                    placeholder="0.00"
+                    value={editedProduct.costPrice}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                    </svg>
+                    Sale Price
+                  </label>
+                  <input
+                    type="number"
+                    name="salePrice"
+                    placeholder="0.00"
+                    value={editedProduct.salePrice}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Inventory Details Section */}
+            <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+              <h2 className="flex items-center text-purple-700 font-medium mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                </svg>
+                Inventory Details
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    placeholder="0"
+                    value={editedProduct.quantity}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z" clipRule="evenodd" />
+                    </svg>
+                    Bin Location
+                  </label>
+                  <input
+                    type="text"
+                    name="bin"
+                    placeholder="A1-B2-C3"
+                    value={editedProduct.bin}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Point</label>
+                  <input
+                    type="number"
+                    name="reorderPoint"
+                    placeholder="5"
+                    value={editedProduct.reorderPoint}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Quantity</label>
+                  <input
+                    type="number"
+                    name="reorderQty"
+                    placeholder="10"
+                    value={editedProduct.reorderQty}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Files & Documentation Section */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h2 className="text-gray-700 font-medium mb-4">Files & Documentation</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Component Image</label>
+                  <div className="border border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-xs text-gray-500 mb-2">PNG, JPG, GIF up to 10MB</p>
+                    <button className="bg-blue-100 text-blue-600 px-4 py-1 rounded text-sm">Upload Image</button>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Datasheet URL</label>
-                    <input
-                      type="text"
-                      name="datasheet"
-                      value={editedProduct.datasheet || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Datasheet</label>
+                  <div className="border border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-xs text-gray-500 mb-2">PDF, DOC, XLS up to 10MB</p>
+                    <button className="bg-blue-100 text-blue-600 px-4 py-1 rounded text-sm">Upload Datasheet</button>
                   </div>
                 </div>
               </div>
             </div>
-          ) : (
-            /* View Mode */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          </div>
+        ) : (
+          /* View Mode */
+          <div className="mx-auto ">
+            {/* Product Header */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 pb-4 border-b">
               <div>
-                <h2 className="text-lg font-semibold mb-4 text-gray-700 flex items-center">
-                  <ClipboardList className="h-5 w-5 mr-2 text-blue-600" /> Basic Information
-                </h2>
-
-                <table className="min-w-full">
-                  <tbody>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Part Name</td>
-                      <td className="py-2 text-sm text-gray-800">{product.partName || "Not specified"}</td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Manufacturer Part</td>
-                      <td className="py-2 text-sm text-gray-800">{product.manufacturerPart || "Not specified"}</td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Manufacturer</td>
-                      <td className="py-2 text-sm text-gray-800">{product.manufacturer || "Not specified"}</td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Description</td>
-                      <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Category</td>
-                      <td className="py-2 text-sm text-gray-800">
-                        {product.category ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {product.category}
-                          </span>
-                        ) : (
-                          "Not specified"
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <h1 className="text-2xl font-bold text-gray-900">5mm Blue LED</h1>
+                {product.description ? (
+                  <p className="mt-1 text-gray-500">{product.description}</p>
+                ) : (
+                  <p className="mt-1 text-gray-500 italic">No description available</p>
+                )}
               </div>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-gray-700 flex items-center">
-                  <Package className="h-5 w-5 mr-2 text-blue-600" /> Inventory Details
-                </h2>
-
-                <table className="min-w-full">
-                  <tbody>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Quantity in Stock</td>
-                      <td className="py-2 text-sm text-gray-800">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${Number(product.quantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                          {product.quantity || "0"}
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Bin Location</td>
-                      <td className="py-2 text-sm text-gray-800">{product.bin || "Not specified"}</td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
-                      <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
-                      <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              {/* Status Badge */}
+              <div className="mt-4 md:mt-0 flex items-center">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${Number(product.quantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                  {Number(product.quantity) > 0 ? 'In Stock' : 'Out of Stock'}
+                </span>
               </div>
-              {/* 8888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888 */}
-              {/* Additional Information Section */}
-              <div className="md:col-span-2">
-                <h2 className="text-lg font-semibold mb-4 text-gray-700">Pricing & References</h2>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-md font-medium mb-2 text-gray-700">Pricing</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 space-y-6">
+              {/* Left Column - Image and Quick Stats */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                {/* Product Image */}
+                <div className="relative h-48 bg-gray-100 flex items-center justify-center border-b">
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.partName}
+                      className="object-contain h-full w-full p-2"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-gray-400">
+                      <Package className="h-16 w-16 mb-2" />
+                      <span className="text-sm">No image available</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Stats */}
+                <div className="p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-medium text-gray-500">Quantity</span>
+                    <span className="font-semibold text-lg">{product.quantity || "0"}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-medium text-gray-500">Category</span>
+                    {product.category ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {product.category}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Not specified</span>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-500">Manufacturer</span>
+                    <span className="font-medium">{product.manufacturer || "Not specified"}</span>
+                  </div>
+                </div>
+                {/* Datasheet Preview */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-blue-600" /> Datasheet
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    {product.datasheet ? (
+                      <div className="space-y-4">
+                        <div className="border rounded-lg overflow-hidden">
+                          <div className="bg-gray-100 h-48 flex items-center justify-center">
+                            <FileText className="h-16 w-16 text-gray-400" />
+                          </div>
+                          <div className="p-3 border-t">
+                            <div className="flex items-center justify-between">
+
+                              <span className="text-sm truncate">
+                                {product.datasheet ? product.datasheet.split('/').pop() : "Datasheet"}
+                              </span>                              <div className="flex space-x-2">
+                                <a
+                                  href={product.datasheet}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                  <Download className="mr-1 h-3 w-3" /> Download
+                                </a>
+                                <button
+                                  onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(product.datasheet)}`, '_blank')}
+                                  className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                  <Eye className="mr-1 h-3 w-3" /> View
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-6 text-gray-400 border border-dashed rounded-lg">
+                        <FileX className="h-12 w-12 mb-2" />
+                        <p className="text-sm">No datasheet available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+              </div>
+
+              {/* Middle Column - Basic Information and Inventory Details */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <ClipboardList className="h-5 w-5 mr-2 text-blue-600" /> Basic Information
+                    </h2>
+                  </div>
+                  <div className="p-4">
                     <table className="min-w-full">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Part Name</td>
+                          <td className="py-2 text-sm text-gray-800">{product.partName || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer Part</td>
+                          <td className="py-2 text-sm text-gray-800">{product.manufacturerPart || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer</td>
+                          <td className="py-2 text-sm text-gray-800">{product.manufacturer || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Description</td>
+                          <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <Package className="h-5 w-5 mr-2 text-blue-600" /> Inventory Details
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    <table className="min-w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Quantity in Stock</td>
+                          <td className="py-2 text-sm text-gray-800">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${Number(product.quantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                              {product.quantity || "0"}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Bin Location</td>
+                          <td className="py-2 text-sm text-gray-800">{product.bin || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
+                          <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
+                          <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Pricing & References + Datasheet Preview */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <DollarSign className="h-5 w-5 mr-2 text-blue-600" /> Pricing
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    <table className="min-w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
                           <td className="py-2 text-sm font-medium text-gray-600">Cost Price</td>
                           <td className="py-2 text-sm text-gray-800">
                             {product.costPrice ? `$${product.costPrice}` : "Not specified"}
                           </td>
                         </tr>
-                        <tr className="border-b border-gray-100">
+                        <tr>
                           <td className="py-2 text-sm font-medium text-gray-600">Sale Price</td>
                           <td className="py-2 text-sm text-gray-800">
                             {product.salePrice ? `$${product.salePrice}` : "Not specified"}
@@ -819,56 +924,43 @@ export default function ProductDetail({ params }) {
                       </tbody>
                     </table>
                   </div>
+                </div>
 
-                  <div>
-                    <h3 className="text-md font-medium mb-2 text-gray-700">References</h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <Eye className="h-5 w-5 mr-2 text-blue-600" /> References
+                    </h2>
+                  </div>
+                  <div className="p-4">
                     <table className="min-w-full">
-                      <tbody>
-                        <tr className="border-b border-gray-100">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
                           <td className="py-2 text-sm font-medium text-gray-600">Vendor</td>
                           <td className="py-2 text-sm text-gray-800">{product.vendor || "Not specified"}</td>
                         </tr>
-                        <tr className="border-b border-gray-100">
+                        <tr>
                           <td className="py-2 text-sm font-medium text-gray-600">Vendor Part #</td>
                           <td className="py-2 text-sm text-gray-800">{product.vendorPart || "Not specified"}</td>
                         </tr>
-                        <tr className="border-b border-gray-100">
+                        <tr>
                           <td className="py-2 text-sm font-medium text-gray-600">Customer Reference</td>
                           <td className="py-2 text-sm text-gray-800">{product.customerRef || "Not specified"}</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 text-sm font-medium text-gray-600">Datasheet</td>
-                          <td className="py-2 text-sm text-gray-800">
-                            {product.datasheet ? (
-                              <a
-                                href={product.datasheet}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 hover:underline"
-                              >
-                                View Datasheet
-                              </a>
-                            ) : (
-                              "Not available"
-                            )}
-                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
-
-
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
 
 
 
         {/* Status Section */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+        <div className="bg-gray-50 px-6 py-4 border-t rounded-lg border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <span className="text-sm text-gray-500">Last updated: {new Date().toLocaleString()}</span>
