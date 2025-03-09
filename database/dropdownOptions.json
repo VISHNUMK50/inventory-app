@@ -8,8 +8,7 @@
     "PNTEST6",
     "PNTEST7",
     "PNTEST8",
-    "GREEN LED",
-    "PNTEST10"
+    "GREEN LED"
   ],
   "manufacturers": [
     "DAS",
@@ -19,8 +18,7 @@
     "MTEST6",
     "MTEST7",
     "MTEST8",
-    "AUDIOS",
-    "MTEST10"
+    "AUDIOS"
   ],
   "vendors": [
     "TEST",
@@ -29,8 +27,7 @@
     "VTEST6",
     "VTEST7",
     "VTEST8",
-    "AUDIOS",
-    "VTEST10"
+    "AUDIOS"
   ],
   "categories": [
     "IC",
@@ -53,7 +50,6 @@
     "MPTEST6",
     "MPTEST7",
     "MPTEST8",
-    "GREEN_THT_5MMLED",
-    "MPTEST10"
+    "GREEN_THT_5MMLED"
   ]
 }
