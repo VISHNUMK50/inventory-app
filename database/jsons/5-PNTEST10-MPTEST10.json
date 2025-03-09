@@ -1,0 +1,22 @@
+{
+  "id": "5",
+  "createdAt": "2025-03-09T21:18:02.857Z",
+  "partName": "PNTEST10",
+  "manufacturer": "MTEST10",
+  "manufacturerPart": "MPTEST10",
+  "vendor": "VTEST10",
+  "vendorProductLink": "",
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/5-PNTEST10-MPTEST10_GREENLED.jpg",
+  "imageType": "image/jpeg",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/5-PNTEST10-MPTEST10_5mm-LED-Datasheet.pdf",
+  "datasheetType": "application/pdf",
+  "quantity": "10",
+  "customerRef": "",
+  "description": "",
+  "bin": "",
+  "reorderPoint": "",
+  "reorderQty": "",
+  "costPrice": "5",
+  "salePrice": "",
+  "category": "Resistor"
+}
