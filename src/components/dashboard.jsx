@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Package, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers } from "lucide-react";
+import { Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers } from "lucide-react";
 import Link from "next/link";
 
 const Dashboard = () => {
@@ -14,7 +13,13 @@ const Dashboard = () => {
     noStock: 0,
     lowStock: 0
   };
+  // Sample low stock items
 
+  const lowStockItems = [
+    { id: 1, name: "ATmega328P", category: "IC", current: 5, minimum: 10 },
+    { id: 2, name: "USB-C Connector", category: "Connector", current: 8, minimum: 15 },
+    { id: 3, name: "10uF Capacitor", category: "Capacitor", current: 22, minimum: 50 }
+  ];
   // Sample recent activity data
   const recentActivity = [
     { id: 1, action: "Added 25 units of ATmega328P", date: "Mar 5, 2025", user: "John D." },
@@ -23,19 +28,17 @@ const Dashboard = () => {
     { id: 4, action: "Received 100 units of LED 5mm Red", date: "Mar 2, 2025", user: "John D." }
   ];
 
-  // Sample low stock items
-  const lowStockItems = [
-    { id: 1, name: "ATmega328P", category: "IC", current: 5, minimum: 10 },
-    { id: 2, name: "USB-C Connector", category: "Connector", current: 8, minimum: 15 },
-    { id: 3, name: "10uF Capacitor", category: "Capacitor", current: 22, minimum: 50 }
+  // Sample low stock items that would appear in alerts
+  const inventoryAlerts = [
+    { id: 1, partNumber: "ATM328", manufacturer: "Microchip", inStock: 5, reorderPoint: 10 },
+    { id: 2, partNumber: "USB-C-01", manufacturer: "Amphenol", inStock: 8, reorderPoint: 15 },
+    { id: 3, partNumber: "CAP-10UF", manufacturer: "Kemet", inStock: 22, reorderPoint: 50 }
   ];
-  
+
   return (
-    <div className="max-w-full mx-auto bg-gray-50">
-      {/* Top navigation */}
+    <div className="mx-auto bg-white shadow-xl overflow-hidden">
       <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="  px-4 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Package className="h-8 w-8" />
               <span className="text-2xl font-bold">InventoryPro</span>
@@ -47,129 +50,141 @@ const Dashboard = () => {
               </button>
             </div>
           </div>
-        </div>
       </header>
-      
+
+      {/* Navigation breadcrumb */}
+      <div className="bg-gray-300 shadow-md py-1 px-4">
+        <h2 className="text-2xl font-bold text-black flex items-center">
+          <LayoutDashboard className="mr-2 h-5 w-5" /> Dashboard
+        </h2>
+      </div>
+
       {/* Main content */}
-      <div className="max-w-full mx-auto mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Inventory Dashboard</h1>
-        
+
+
+      <div className="container mx-auto px-4 py-4">
         {/* Quick action buttons */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <Link href="/manage-inventory" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-blue-600">
             <Package className="h-10 w-10 text-blue-600 mb-2" />
             <span className="font-medium">Manage Inventory</span>
           </Link>
-          
+
           <Link href="/add-product" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-green-600">
             <PlusCircle className="h-10 w-10 text-green-600 mb-2" />
             <span className="font-medium">Add a Product</span>
           </Link>
-          
+
           <Link href="/receive-products" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-purple-600">
             <Download className="h-10 w-10 text-purple-600 mb-2" />
             <span className="font-medium">Receive Products</span>
           </Link>
-          
+
           <Link href="/reports" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-yellow-600">
-            <BarChart3 className="h-10 w-10 text-yellow-600 mb-2" />
-            <span className="font-medium">Run Reports</span>
+            <ArrowLeftRight  className="h-10 w-10 text-yellow-600 mb-2" />
+            <span className="font-medium">Transactions</span>
           </Link>
-          
+
           <Link href="/create-order" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-red-600">
             <ShoppingCart className="h-10 w-10 text-red-600 mb-2" />
             <span className="font-medium">Create an Order</span>
           </Link>
         </div>
-        
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">At A Glance</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Stock Availability Card */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-blue-600 px-4 py-3">
-              <h3 className="text-lg font-medium text-white flex items-center">
-                <Archive className="h-5 w-5 mr-2" /> Stock Availability
-              </h3>
-            </div>
-            <div className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-gray-600">Total Count</span>
-                <span className="text-2xl font-bold">{inventoryStats.totalCount}</span>
+
+        {/* At A Glance Section */}
+        <div className="mb-6">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Stock Availability */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-blue-600 px-4 py-3">
+                <h3 className="text-lg font-medium text-white flex items-center">
+                  <Archive className="h-5 w-5 mr-2" /> Stock Availability
+                </h3>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">On Hand</span>
-                  <span className="font-medium">
-                    {inventoryStats.onHand} ({(inventoryStats.onHand / inventoryStats.totalCount * 100).toFixed(1)}%)
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${(inventoryStats.onHand / inventoryStats.totalCount * 100)}%` }}></div>
-                </div>
-                
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-gray-600">On Loan</span>
-                  <span className="font-medium">
-                    {inventoryStats.onLoan} ({(inventoryStats.onLoan / inventoryStats.totalCount * 100).toFixed(1)}%)
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${(inventoryStats.onLoan / inventoryStats.totalCount * 100)}%` }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Replenishment Card */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-red-600 px-4 py-3">
-              <h3 className="text-lg font-medium text-white flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2" /> Replenishment
-              </h3>
-            </div>
-            <div className="p-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">{inventoryStats.productLines}</p>
-                  <p className="text-gray-600 text-sm">Product Lines</p>
-                </div>
-                
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600">{inventoryStats.noStock}</p>
-                  <p className="text-gray-600 text-sm">No Stock</p>
-                </div>
-                
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
-                  <p className="text-gray-600 text-sm">Low Stock</p>
-                </div>
-              </div>
-              
-              {/* Display when there are low stock items */}
-              {lowStockItems.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
-                  <div className="space-y-2">
-                    {lowStockItems.map(item => (
-                      <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-xs text-gray-500">{item.category}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-red-600 font-medium">{item.current}/{item.minimum}</p>
-                          <p className="text-xs text-gray-500">Current/Min</p>
-                        </div>
+              <div className="p-4 bg-white">
+                <table className="w-full">
+                  <tbody>
+                    <tr>
+                      <td className="py-1">Total Count</td>
+                      <td className="py-1 font-bold text-right">{inventoryStats.totalCount}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1">On Hand</td>
+                      <td className="py-1 text-right">{inventoryStats.onHand} ({(inventoryStats.onHand / inventoryStats.totalCount * 100).toFixed(1)}%)</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1">On Loan</td>
+                      <td className="py-1 text-right">{inventoryStats.onLoan} ({(inventoryStats.onLoan / inventoryStats.totalCount * 100).toFixed(1)}%)</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="mt-6">
+                  <div className="flex justify-center">
+                    <div className="relative w-64 h-64">
+                      <div className="w-full h-full rounded-full bg-sky-500"></div>
+                      <div className="absolute inset-4 rounded-full bg-white flex items-center justify-center flex-col">
+                        <span className="font-bold text-xl">On Hand</span>
+                        <span className="font-bold text-3xl">{inventoryStats.onHand}</span>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
+            </div>
+
+            {/* Replenishment */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-red-600 px-4 py-3">
+                <h3 className="text-lg font-medium text-white flex items-center">
+                  <AlertTriangle className="h-5 w-5 mr-2" /> Replenishment
+                </h3>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-2xl font-bold text-blue-600">{inventoryStats.productLines}</p>
+                    <p className="text-gray-600 text-sm">Product Lines</p>
+                  </div>
+
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-2xl font-bold text-red-600">{inventoryStats.noStock}</p>
+                    <p className="text-gray-600 text-sm">No Stock</p>
+                  </div>
+
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
+                    <p className="text-gray-600 text-sm">Low Stock</p>
+                  </div>
+                </div>
+
+                {/* Display when there are low stock items */}
+                {lowStockItems.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
+                    <div className="space-y-2">
+                      {lowStockItems.map(item => (
+                        <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-xs text-gray-500">{item.category}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-red-600 font-medium">{item.current}/{item.minimum}</p>
+                            <p className="text-xs text-gray-500">Current/Min</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-        
+
+
         {/* Bottom section with activity and inventory breakdown */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Recent Activity */}
@@ -195,7 +210,7 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Inventory by Category */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="bg-gray-700 px-4 py-3">
@@ -212,7 +227,7 @@ const Dashboard = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '24%' }}></div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Resistors</span>
                   <span className="font-medium">56 items</span>
@@ -220,7 +235,7 @@ const Dashboard = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div className="bg-green-600 h-2.5 rounded-full" style={{ width: '31%' }}></div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Capacitors</span>
                   <span className="font-medium">38 items</span>
@@ -228,7 +243,7 @@ const Dashboard = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: '21%' }}></div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Connectors</span>
                   <span className="font-medium">27 items</span>
@@ -236,7 +251,7 @@ const Dashboard = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div className="bg-yellow-600 h-2.5 rounded-full" style={{ width: '15%' }}></div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Other</span>
                   <span className="font-medium">18 items</span>
@@ -245,7 +260,7 @@ const Dashboard = () => {
                   <div className="bg-red-600 h-2.5 rounded-full" style={{ width: '9%' }}></div>
                 </div>
               </div>
-              
+
               <div className="mt-4 text-center">
                 <Link href="/inventory-report" className="text-blue-600 hover:text-blue-800 font-medium">
                   View Full Inventory Report →
@@ -254,6 +269,9 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+      <div className="mt-auto text-xs text-gray-500 text-right mt-4">
+        Last update: 3/9/2025 5:10 PM
       </div>
     </div>
   );

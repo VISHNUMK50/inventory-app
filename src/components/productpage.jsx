@@ -4,6 +4,7 @@ import { use } from "react"; // Import React.use
 import Link from "next/link";
 import { ArrowLeft, Save, Package, RefreshCw, Edit, Trash, AlertCircle, ClipboardList, Home } from "lucide-react";
 import githubConfig from '../config/githubConfig';
+import Header from "@/components/Header";
 
 export default function ProductDetail({ params }) {
   // Properly unwrap params using React.use()
@@ -439,22 +440,8 @@ export default function ProductDetail({ params }) {
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="mx-auto py-4 px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Package className="h-8 w-8" />
-              <span className="text-2xl font-bold">InventoryPro</span>
-            </div>
-            <h2 className="text-3xl font-bold">Product Details</h2>
-            <div>
-              <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
-                <Home className="h-4 w-4 mr-2" /> Dashboard
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header title="Product Detail" />
+
 
       {/* Navigation and Action Buttons */}
       <div className="bg-gray-100 px-6 py-3 flex items-center justify-between border-b border-gray-200">
@@ -899,6 +886,8 @@ export default function ProductDetail({ params }) {
 
 
       </div>
+
+
     </div>
   );
 };

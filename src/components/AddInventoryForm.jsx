@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home } from "lucide-react";
-import Link from "next/link";
 import githubConfigImport from '../config/githubConfig';
+import Header from "@/components/Header";
+
 
 const AddInventoryForm = () => {
   // Main form data state
   const [formData, setFormData] = useState({
-    image: "",
+    image: "",  
     imageData: "",
     imageType: "",
     datasheet: "",
@@ -916,28 +917,8 @@ const AddInventoryForm = () => {
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       {/* Main header - with class for targeting */}
-      <header className="main-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="mx-auto py-4 px-6">
-          <div className="flex items justify-between">
-            <div className="flex items-center space-x-2">
-              <Package className="h-8 w-8" />
-              <span className="text-2xl font-bold">InventoryPro</span>
-            </div>
-            <h2 className="ml-60 text-3xl font-bold">
-              Inventory Management System
-            </h2>
-            <div className="flex items-center">
-              <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
-                <Home className="h-4 w-4 mr-2" /> Back to Dashboard
-              </Link>
-              <span className="mr-4">Welcome, Admin</span>
-              <button className="bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition">
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header title="Inventory Management System" />
+
 
       {/* Fixed action bar that appears on scroll */}
       <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-3 px-6`}>
@@ -1376,7 +1357,7 @@ const AddInventoryForm = () => {
           </div>
         </div>
 
-        
+
       </form>
     </div>
   );

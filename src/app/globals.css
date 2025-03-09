@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #d9cdcd;
+  --background: #781b1b;
   --foreground: #171717;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, Edit, Trash, Download, AlertCircle, Package, Eye, FileSpreadsheet , PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
+import { Search, Edit, Trash, Download, AlertCircle, Package, Eye, FileSpreadsheet, PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
 import githubConfig from '../config/githubConfig';
+import Header from "@/components/Header";
 
 const ManageInventory = () => {
   // State for inventory items
@@ -638,100 +639,100 @@ const ManageInventory = () => {
 
   // Function to get image URL or return a placeholder
   // Update the getImageUrl function to support WebP images
-const getImageUrl = (item) => {
-  // Check if the item has an image property with a valid URL
-  if (item.image && item.image.startsWith('http')) {
-    return item.image;
-  }
+  const getImageUrl = (item) => {
+    // Check if the item has an image property with a valid URL
+    if (item.image && item.image.startsWith('http')) {
+      return item.image;
+    }
 
-  // Return a placeholder based on the item's category
-  const category = (item.category || "").toLowerCase();
+    // Return a placeholder based on the item's category
+    const category = (item.category || "").toLowerCase();
 
-  if (category.includes("led") || category.includes("light")) {
-    return "/api/placeholder/48/48?text=LED";
-  } else if (category.includes("connector") || category.includes("wire")) {
-    return "/api/placeholder/48/48?text=CONN";
-  } else if (category.includes("ic") || category.includes("chip")) {
-    return "/api/placeholder/48/48?text=IC";
-  } else if (category.includes("tool")) {
-    return "/api/placeholder/48/48?text=TOOL";
-  } else if (category.includes("transistor")) {
-    return "/api/placeholder/48/48?text=TRAN";
-  } else {
-    return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
-  }
-};
+    if (category.includes("led") || category.includes("light")) {
+      return "/api/placeholder/48/48?text=LED";
+    } else if (category.includes("connector") || category.includes("wire")) {
+      return "/api/placeholder/48/48?text=CONN";
+    } else if (category.includes("ic") || category.includes("chip")) {
+      return "/api/placeholder/48/48?text=IC";
+    } else if (category.includes("tool")) {
+      return "/api/placeholder/48/48?text=TOOL";
+    } else if (category.includes("transistor")) {
+      return "/api/placeholder/48/48?text=TRAN";
+    } else {
+      return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+    }
+  };
 
-// Update the ImagePreview component to support different image formats
-const ImagePreview = ({ url, alt, handleClick }) => {
-  return (
-    <div
-      className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
-      onClick={handleClick}
-      title="Click to view larger image"
-    >
-      <picture>
-        {/* Support WebP format if available */}
-        <source 
-          srcSet={url.replace(/\.(jpg|jpeg|png)$/i, '.webp')} 
-          type="image/webp" 
-        />
-        {/* Fallback to original image format */}
-        <img
-          src={url}
-          alt={alt || "Product Image"}
-          className="object-contain h-10 w-10"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
-          }}
-        />
-      </picture>
-    </div>
-  );
-};
+  // Update the ImagePreview component to support different image formats
+  const ImagePreview = ({ url, alt, handleClick }) => {
+    return (
+      <div
+        className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
+        onClick={handleClick}
+        title="Click to view larger image"
+      >
+        <picture>
+          {/* Support WebP format if available */}
+          <source
+            srcSet={url.replace(/\.(jpg|jpeg|png)$/i, '.webp')}
+            type="image/webp"
+          />
+          {/* Fallback to original image format */}
+          <img
+            src={url}
+            alt={alt || "Product Image"}
+            className="object-contain h-10 w-10"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+            }}
+          />
+        </picture>
+      </div>
+    );
+  };
 
-// Update the ImageModal component to support WebP format
-const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
-  if (!isOpen) return null;
+  // Update the ImageModal component to support WebP format
+  const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
+    if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-end mb-2">
-          <button
-            className="text-gray-500 hover:text-gray-800"
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex items-center justify-center">
-          <picture>
-            {/* Support WebP format if available */}
-            <source 
-              srcSet={imageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')} 
-              type="image/webp" 
-            />
-            {/* Fallback to original image format */}
-            <img
-              src={imageUrl}
-              alt={altText}
-              className="max-h-[70vh] max-w-full object-contain"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "/api/placeholder/400/300?text=Image+Not+Available";
-              }}
-            />
-          </picture>
-        </div>
-        <div className="mt-2 text-center text-sm text-gray-600 truncate">
-          {altText}
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+        <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-end mb-2">
+            <button
+              className="text-gray-500 hover:text-gray-800"
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex items-center justify-center">
+            <picture>
+              {/* Support WebP format if available */}
+              <source
+                srcSet={imageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')}
+                type="image/webp"
+              />
+              {/* Fallback to original image format */}
+              <img
+                src={imageUrl}
+                alt={altText}
+                className="max-h-[70vh] max-w-full object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/api/placeholder/400/300?text=Image+Not+Available";
+                }}
+              />
+            </picture>
+          </div>
+          <div className="mt-2 text-center text-sm text-gray-600 truncate">
+            {altText}
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // Add these state variables to your component
   const [modalOpen, setModalOpen] = useState(false);
@@ -751,7 +752,7 @@ const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
         alert("Item not found in inventory data.");
         return;
       }
-      
+
       // Check if datasheet URL exists
       if (item.datasheet) {
         // Create viewer URL
@@ -759,7 +760,7 @@ const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
       } else {
         // If no datasheet in the item data, try a constructed URL based on common pattern
         const constructedUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/master/database/datasheets/${itemId.replace(/\s+/g, '_')}.pdf`;
-        
+
         // Test if the URL exists before opening
         fetch(constructedUrl, { method: 'HEAD' })
           .then(response => {
@@ -778,40 +779,22 @@ const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
       alert(`Error: ${error.message}`);
     }
   };
-  
+
   // Helper function to open PDF in viewer
   const openPdfViewer = (pdfUrl, itemId) => {
     // Use Mozilla's PDF.js viewer (most reliable)
     window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`, '_blank');
-    
-    
+
+
   };
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       {/* Main header - with class for targeting */}
-      <header className="main-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="mx-auto py-4 px-6">
-          <div className="flex items justify-between">
-            <div className="flex items-center space-x-2">
-              <Package className="h-8 w-8" />
-              <span className="text-2xl font-bold">InventoryPro</span>
-            </div>
-            <h2 className="ml-60 text-3xl font-bold">
-              Inventory Management System
-            </h2>
-            <div className="flex items-center">
-              <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
-                <Home className="h-4 w-4 mr-2" /> Back to Dashboard
-              </Link>
-              <span className="mr-4">Welcome, Admin</span>
-              <button className="bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition">
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+
+      <Header title="Inventory Management System" />
+
+
       {/* Fixed position action bar with a placeholder for when it's fixed */}
       <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-1 px-6`}>
 
@@ -1089,7 +1072,7 @@ const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
                           className="text-blue-600 hover:text-blue-800"
                           onClick={() => handleopendatasheet(item.manufacturerPart)}
                         >
-                          <FileSpreadsheet  className="h-4 w-4" />
+                          <FileSpreadsheet className="h-4 w-4" />
 
                         </button>
                         <button
@@ -1129,7 +1112,6 @@ const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
           })}
         </div>
       </div>
-      // Add the modal component to your JSX, just before the closing div of the component
       <ImageModal
         isOpen={modalOpen}
         imageUrl={selectedImage.url}
