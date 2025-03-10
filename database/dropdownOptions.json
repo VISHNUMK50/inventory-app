@@ -1,11 +1,13 @@
 {
   "partNames": [
     "PNJPG",
-    "PNPNG"
+    "PNPNG",
+    "TEST"
   ],
   "manufacturers": [
     "MJPG",
-    "MPNG"
+    "MPNG",
+    "TEST"
   ],
   "vendors": [
     "VJPG",
@@ -30,6 +32,7 @@
   ],
   "manufacturerParts": [
     "MPJPG",
-    "MPPNG"
+    "MPPNG",
+    "TEST"
   ]
 }
