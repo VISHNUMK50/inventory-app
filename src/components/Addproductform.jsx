@@ -772,6 +772,8 @@ const saveLastUsedIdToGithub = async (id) => {
       throw error;
     }
   };
+  let isSaving = false;
+
   const saveToGithub = async (dataToSave = null) => {
     const { token, repo, owner, branch, path } = githubConfig;
   
@@ -779,7 +781,12 @@ const saveLastUsedIdToGithub = async (id) => {
       alert("Please fill in all GitHub configuration fields");
       return false;
     }
-  
+    if (isSaving) {
+      console.log("Save already in progress, please wait");
+      return false;
+    }
+    
+    isSaving = true;
     try {
       setIsSubmitting(true);
   
@@ -911,6 +918,8 @@ const saveLastUsedIdToGithub = async (id) => {
       alert(`Error saving to GitHub: ${error.message}`);
       return false;
     } finally {
+      isSaving = false;
+
       setIsSubmitting(false);
     }
   };
