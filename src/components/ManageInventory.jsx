@@ -189,6 +189,15 @@ const ManageInventory = () => {
     }
   };
 
+// Add these state variables to your component
+const [modalOpen, setModalOpen] = useState(false);
+const [selectedImage, setSelectedImage] = useState({ url: '', alt: '' });
+
+// Add this function to handle image click
+const handleImageClick = (url, alt) => {
+  setSelectedImage({ url, alt });
+  setModalOpen(true);
+};
   // Apply filters and search to inventory items
   const applyFiltersAndSearch = () => {
     let result = [...inventoryItems];
@@ -413,8 +422,7 @@ const ManageInventory = () => {
       } finally {
         setIsLoading(false);
       }
-    }
-  };
+    }}
 
   // Improved GitHub file deletion function with better error handling
   const deleteFileFromGitHub = async (itemId) => {
@@ -672,6 +680,13 @@ const ManageInventory = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+const getPlaceholderFromGitHub = () => {
+  const { owner, repo } = githubConfig;
+  const placeholderUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/database/placeholder.svg`;
+  // console.log("Placeholder URL:", placeholderUrl);
+  return placeholderUrl;
+};
+
 
   // Function to get image URL or return a placeholder
   // Update the getImageUrl function to support WebP images
@@ -684,54 +699,96 @@ const ManageInventory = () => {
     // Return a placeholder based on the item's category
     const category = (item.category || "").toLowerCase();
 
-    if (category.includes("led") || category.includes("light")) {
-      return "/api/placeholder/48/48?text=LED";
-    } else if (category.includes("connector") || category.includes("wire")) {
-      return "/api/placeholder/48/48?text=CONN";
-    } else if (category.includes("ic") || category.includes("chip")) {
-      return "/api/placeholder/48/48?text=IC";
-    } else if (category.includes("tool")) {
-      return "/api/placeholder/48/48?text=TOOL";
-    } else if (category.includes("transistor")) {
-      return "/api/placeholder/48/48?text=TRAN";
-    } else {
-      return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
-    }
+    // if (category.includes("led") || category.includes("light")) {
+    //   return "/api/placeholder/48/48?text=LED";
+    // } else if (category.includes("connector") || category.includes("wire")) {
+    //   return "/api/placeholder/48/48?text=CONN";
+    // } else if (category.includes("ic") || category.includes("chip")) {
+    //   return "/api/placeholder/48/48?text=IC";
+    // } else if (category.includes("tool")) {
+    //   return "/api/placeholder/48/48?text=TOOL";
+    // } else if (category.includes("transistor")) {
+    //   return "/api/placeholder/48/48?text=TRAN";
+    // } else {
+    //   return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+    // }
+    return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+
   };
 
   // Update the ImagePreview component to support different image formats
-  const ImagePreview = ({ url, alt, handleClick }) => {
+  // Fixed ImagePreview component implementation
+const ImagePreview = ({ url, alt, handleClick }) => {
+  // Early return with placeholder if no URL is provided
+  if (!url) {
     return (
       <div
         className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
         onClick={handleClick}
         title="Click to view larger image"
       >
+        <img
+        src={getPlaceholderFromGitHub()}
+        alt={alt || "No Image Available"}
+          className="object-contain h-10 w-10"
+        />
+      </div>
+    );
+  }
+  
+  // Parse the URL to get file extension
+  const fileExtension = url.split('.').pop().toLowerCase();
+  
+  // Determine if the image is a supported format
+  const isSupported = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(fileExtension);
+  
+  return (
+    <div
+      className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
+      onClick={handleClick}
+      title="Click to view larger image"
+    >
+      {isSupported ? (
         <picture>
-          {/* Support WebP format if available */}
-          <source
-            srcSet={url.replace(/\.(jpg|jpeg|png)$/i, '.webp')}
-            type="image/webp"
-          />
-          {/* Fallback to original image format */}
+          {/* Only try WebP if the original isn't already WebP */}
+          {fileExtension !== 'webp' && fileExtension !== 'svg' && (
+            <source
+              srcSet={`${url.substring(0, url.lastIndexOf('.'))}.webp`}
+              type="image/webp"
+            />
+          )}
           <img
             src={url}
             alt={alt || "Product Image"}
             className="object-contain h-10 w-10"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+              e.target.src = getPlaceholderFromGitHub();
             }}
           />
         </picture>
-      </div>
-    );
-  };
+      ) : (
+        // Fallback for unsupported or unknown file types
+        <img
+          src={url}
+          alt={alt || "Product Image"}
+          className="object-contain h-10 w-10"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = getPlaceholderFromGitHub();
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-  // Update the ImageModal component to support WebP format
-  const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
-    if (!isOpen) return null;
-
+// Fixed ImageModal component with null checking
+const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
+  if (!isOpen) return null;
+  
+  // Handle case where imageUrl is undefined or null
+  if (!imageUrl) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
         <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -744,41 +801,78 @@ const ManageInventory = () => {
             </button>
           </div>
           <div className="flex items-center justify-center">
+            <img
+            src={getPlaceholderFromGitHub()}
+            alt="No Image Available"
+              className="max-h-[70vh] max-w-full object-contain"
+            />
+          </div>
+          <div className="mt-2 text-center text-sm text-gray-600 truncate">
+            {altText || "No image available"}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Parse the URL to get file extension
+  const fileExtension = imageUrl.split('.').pop().toLowerCase();
+  
+  // Determine if the image is a supported format
+  const isSupported = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(fileExtension);
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-end mb-2">
+          <button
+            className="text-gray-500 hover:text-gray-800"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex items-center justify-center">
+          {isSupported ? (
             <picture>
-              {/* Support WebP format if available */}
-              <source
-                srcSet={imageUrl.replace(/\.(jpg|jpeg|png)$/i, '.webp')}
-                type="image/webp"
-              />
-              {/* Fallback to original image format */}
+              {/* Only try WebP if the original isn't already WebP */}
+              {fileExtension !== 'webp' && fileExtension !== 'svg' && (
+                <source
+                  srcSet={`${imageUrl.substring(0, imageUrl.lastIndexOf('.'))}.webp`}
+                  type="image/webp"
+                />
+              )}
               <img
                 src={imageUrl}
                 alt={altText}
                 className="max-h-[70vh] max-w-full object-contain"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = "/api/placeholder/400/300?text=Image+Not+Available";
+                  e.target.src = getPlaceholderFromGitHub();
                 }}
               />
             </picture>
-          </div>
-          <div className="mt-2 text-center text-sm text-gray-600 truncate">
-            {altText}
-          </div>
+          ) : (
+            // Fallback for unsupported or unknown file types
+            <img
+              src={imageUrl}
+              alt={altText}
+              className="max-h-[70vh] max-w-full object-contain"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = getPlaceholderFromGitHub();
+              }}
+            />
+          )}
+        </div>
+        <div className="mt-2 text-center text-sm text-gray-600 truncate">
+          {altText}
         </div>
       </div>
-    );
-  };
-
-  // Add these state variables to your component
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState({ url: '', alt: '' });
-
-  // Add this function to handle image click
-  const handleImageClick = (url, alt) => {
-    setSelectedImage({ url, alt });
-    setModalOpen(true);
-  };
+    </div>
+  );
+};
+  
 
   const handleopendatasheet = (itemId) => {
     try {
@@ -1088,7 +1182,7 @@ const ManageInventory = () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{item.id || "N/A"}</td>
 
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 ">
                       <ImagePreview
                         url={getImageUrl(item)}
                         alt={item.partName || item.manufacturerPart}

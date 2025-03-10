@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { use } from "react"; // Import React.use
 import Link from "next/link";
-import { ArrowLeft, Save, Package, FileText, Download, Eye, ShoppingCart, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
+import { ArrowLeft, Save, Package, FileText, Download, Eye, ShoppingCart, FileX ,RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
 import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
 import Addproductform from "@/components/Addproductform";
@@ -721,7 +721,7 @@ export default function ProductDetail({ params }) {
             {/* Product Header */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 pb-4 border-b">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">5mm Blue LED</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{product.partName}</h1>
                 {product.description ? (
                   <p className="mt-1 text-gray-500">{product.description}</p>
                 ) : (
