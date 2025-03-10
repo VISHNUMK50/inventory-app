@@ -1,0 +1,22 @@
+{
+  "id": "5",
+  "createdAt": "2025-03-10T17:32:53.678Z",
+  "partName": "yellow led",
+  "manufacturer": "TEST",
+  "manufacturerPart": "TEST",
+  "vendor": "",
+  "vendorProductLink": "",
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/5-yellow_led-TEST_10mm yellow-500x500.jpg",
+  "imageType": "image/jpeg",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/5-yellow_led-TEST_5mm_Blue_LED-AUDIOS_5mm-LED-Datasheet (3).pdf",
+  "datasheetType": "application/pdf",
+  "quantity": "10",
+  "customerRef": "",
+  "description": "",
+  "bin": "",
+  "reorderPoint": "",
+  "reorderQty": "",
+  "costPrice": "",
+  "salePrice": "",
+  "category": ""
+}
