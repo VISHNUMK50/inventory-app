@@ -2,12 +2,36 @@
 import { useState, useEffect } from "react";
 import { use } from "react"; // Import React.use
 import Link from "next/link";
-import { ArrowLeft, Save, Package, FileText, Download, Eye, ShoppingCart, FileX ,RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
+import { ArrowLeft, Save, Package, Clipboard ,FileText, Download, Eye, ShoppingCart, FileX, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
 import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
 import Addproductform from "@/components/Addproductform";
 
 export default function ProductDetail({ params }) {
+  const [formData, setFormData] = useState({
+    id: "",
+    createdAt: "",
+    partName: "",
+    manufacturer: "",
+    manufacturerPart: "",
+    vendor: "",
+    vendorProductLink: "",
+    image: "",
+    imageData: "",
+    imageType: "",
+    datasheet: "",
+    datasheetData: "",
+    datasheetType: "",
+    quantity: "",
+    customerRef: "",
+    description: "",
+    bin: "",
+    reorderPoint: "",
+    reorderQty: "",
+    costPrice: "",
+    salePrice: "",
+    category: ""
+  });
   // Properly unwrap params using React.use()
   const unwrappedParams = use(params);
   const partName = unwrappedParams?.partName ? decodeURIComponent(unwrappedParams.partName) : null;
@@ -19,11 +43,26 @@ export default function ProductDetail({ params }) {
   const [editedProduct, setEditedProduct] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  // New state to preview uploads
+  const [imagePreview, setImagePreview] = useState(null);
+  const [datasheetName, setDatasheetName] = useState(null);
 
   // Initialize editedProduct when product is loaded
   useEffect(() => {
     if (product) {
       setEditedProduct(product);
+      
+      // Initialize image preview if product has an image URL
+      if (product.image) {
+        setImagePreview(product.image);
+      }
+      
+      // Initialize datasheet name if product has a datasheet
+      if (product.datasheet) {
+        // Extract filename from URL
+        const filename = product.datasheet.split('/').pop();
+        setDatasheetName(filename);
+      }
     }
   }, [product]);
 
@@ -58,10 +97,8 @@ export default function ProductDetail({ params }) {
           } else {
             setError("Product not found");
           }
-
         } else {
           setError("sample data not found");
-
         }
         setIsLoading(false);
         return;
@@ -130,14 +167,11 @@ export default function ProductDetail({ params }) {
         // If we still couldn't find the product, fallback to sample data
         if (!productFound) {
           setError("Product not found");
-
         }
       }
     } catch (error) {
       console.error("Error fetching product:", error);
       setError(error.message);
-
-
     } finally {
       setIsLoading(false);
     }
@@ -152,15 +186,183 @@ export default function ProductDetail({ params }) {
     }));
   };
 
-  // Save changes to product
-  // In your existing saveChanges function, add GitHub save functionality
+  // Updated image upload handler for edit mode
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    // Update preview
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreview(objectUrl);
+  
+    // Read file as base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      // Get base64 data without the prefix (e.g., "data:image/jpeg;base64,")
+      const base64String = event.target.result;
+      const base64Data = base64String.split(',')[1];
+  
+      // Update the editedProduct with image information
+      setEditedProduct(prev => ({
+        ...prev,
+        image: file.name,
+        imageData: base64Data,
+        imageType: file.type,
+        // Flag to indicate this is a new image that needs to be uploaded
+        imageModified: true
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Updated datasheet upload handler for edit mode
+  const handleDatasheetUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    // Update preview name
+    setDatasheetName(file.name);
+  
+    // Read file as base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      // Get base64 data without the prefix
+      const base64String = event.target.result;
+      const base64Data = base64String.split(',')[1];
+  
+      // Update the editedProduct with datasheet information
+      setEditedProduct(prev => ({
+        ...prev,
+        datasheet: file.name,
+        datasheetData: base64Data,
+        datasheetType: file.type,
+        // Flag to indicate this is a new datasheet that needs to be uploaded
+        datasheetModified: true
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Helper function to save files to GitHub
+  const saveFileToGithub = async (base64Data, filePath, commitMessage) => {
+    const { token, repo, owner } = githubConfig;
+    
+    // First check if file exists
+    const fileCheckUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+    let existingSha = null;
+    
+    try {
+      const checkResponse = await fetch(fileCheckUrl, {
+        headers: {
+          "Authorization": `token ${token}`
+        }
+      });
+      
+      if (checkResponse.ok) {
+        const fileInfo = await checkResponse.json();
+        existingSha = fileInfo.sha;
+      }
+    } catch (error) {
+      console.log("File does not exist yet, will create new");
+    }
+    
+    // Prepare request body
+    const requestBody = {
+      message: commitMessage,
+      content: base64Data,
+    };
+    
+    // Include SHA if file exists
+    if (existingSha) {
+      requestBody.sha = existingSha;
+    }
+    
+    // Make PUT request to GitHub API
+    const saveResponse = await fetch(fileCheckUrl, {
+      method: 'PUT',
+      headers: {
+        "Authorization": `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!saveResponse.ok) {
+      const errorData = await saveResponse.json();
+      throw new Error(`GitHub save error: ${errorData.message}`);
+    }
+    
+    const saveResult = await saveResponse.json();
+    return saveResult;
+  };
+
+  // Updated save changes function
   const saveChanges = async () => {
     setIsSaving(true);
     setSaveError(null);
 
     try {
+      const { token, repo, owner, path, branch = 'main' } = githubConfig;
+      
+      // Create a copy of the edited product to modify
+      const productToSave = { ...editedProduct };
+      
+      // Upload image if it was modified
+      if (productToSave.imageModified && productToSave.imageData) {
+        // Create sanitized identifiers for filenames
+        const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+        const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+        const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+        
+        // Set the image path
+        const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
+        
+        // Save the image to GitHub
+        await saveFileToGithub(
+          productToSave.imageData,
+          imageFilePath,
+          `Update image for ${productToSave.partName} (ID: ${productToSave.id})`
+        );
+        
+        // Update the image URL in the product data
+        productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
+        
+        // Remove the base64 data and flag to avoid storing it in JSON
+        delete productToSave.imageData;
+        delete productToSave.imageModified;
+      }
+      
+      // Upload datasheet if it was modified
+      if (productToSave.datasheetModified && productToSave.datasheetData) {
+        // Create sanitized identifiers for filenames
+        const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+        const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+        const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+        
+        // Set the datasheet path
+        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
+        
+        // Save the datasheet to GitHub
+        await saveFileToGithub(
+          productToSave.datasheetData,
+          datasheetFilePath,
+          `Update datasheet for ${productToSave.partName} (ID: ${productToSave.id})`
+        );
+        
+        // Update the datasheet URL in the product data
+        productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
+        
+        // Remove the base64 data and flag to avoid storing it in JSON
+        delete productToSave.datasheetData;
+        delete productToSave.datasheetModified;
+      }
+      
+      // Remove any lingering imageType/datasheetType that shouldn't be in the final JSON
+      delete productToSave.imageType;
+      delete productToSave.datasheetType;
+
       // First update local state
-      setProduct(editedProduct);
+      setProduct(productToSave);
 
       // Save to localStorage for persistence in demo mode
       const localItems = localStorage.getItem('inventoryItems');
@@ -169,28 +371,36 @@ export default function ProductDetail({ params }) {
         const index = items.findIndex(item =>
           item.manufacturerPart === product.manufacturerPart ||
           item.partName === product.partName ||
-          item.id === product.id
-
+          item.id === product.id ||
+          item.image === product.image ||
+          item.datasheet === product.datasheet
         );
 
         if (index !== -1) {
-          items[index] = editedProduct;
+          items[index] = productToSave;
           localStorage.setItem('inventoryItems', JSON.stringify(items));
         } else {
-          localStorage.setItem('inventoryItems', JSON.stringify([...items, editedProduct]));
+          localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
         }
       } else {
-        localStorage.setItem('inventoryItems', JSON.stringify([editedProduct]));
+        localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
       }
 
-      // Now let's save to GitHub
-      const { token, repo, owner, path } = githubConfig;
-
-      // Only attempt GitHub save if config is valid
+      // Now save the JSON file to GitHub
       if (token && repo && owner) {
         const jsonDirPath = `${path}/jsons`;
 
-        // First, check if the file exists by listing the directory
+        // Create sanitized filename
+        const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+        const sanitizedPartName = product.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+        const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
+        const filePath = `${jsonDirPath}/${fileName}`;
+
+        // Prepare file content
+        const fileContent = JSON.stringify(productToSave, null, 2);
+        const encodedContent = btoa(unescape(encodeURIComponent(fileContent)));
+
+        // Check if file exists by listing the directory
         const dirListUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
         const dirResponse = await fetch(dirListUrl, {
           headers: {
@@ -203,36 +413,19 @@ export default function ProductDetail({ params }) {
         }
 
         const files = await dirResponse.json();
-        // Create sanitized filename
-
-        const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-        const sanitizedPartName = product.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
-
-        const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
-
-        // const sanitizedPartName = product.manufacturerPart.replace(/[^a-zA-Z0-9-_]/g, '_');
-        // const fileName = `${sanitizedPartName}.json`;
-
-        // Check if file exists
         let existingFile = files.find(file => file.name === fileName);
-        let filePath = `${jsonDirPath}/${fileName}`;
-        let fileExists = !!existingFile;
-        let existingSha = fileExists ? existingFile.sha : null;
-
-        // Prepare file content
-        const fileContent = JSON.stringify(editedProduct, null, 2);
-        const encodedContent = btoa(unescape(encodeURIComponent(fileContent)));
+        let existingSha = existingFile ? existingFile.sha : null;
 
         // Prepare request body
         const requestBody = {
-          message: fileExists
-            ? `Update product: ${editedProduct.manufacturerPart}`
-            : `Add new product: ${editedProduct.manufacturerPart}`,
+          message: existingFile
+            ? `Update product: ${productToSave.manufacturerPart}`
+            : `Add new product: ${productToSave.manufacturerPart}`,
           content: encodedContent,
         };
 
         // If updating existing file, include the sha
-        if (fileExists && existingSha) {
+        if (existingFile && existingSha) {
           requestBody.sha = existingSha;
         }
 
@@ -266,8 +459,6 @@ export default function ProductDetail({ params }) {
       setIsSaving(false);
     }
   };
-
-
 
   // If still loading, show a loading spinner
   if (isLoading) {
@@ -689,29 +880,103 @@ export default function ProductDetail({ params }) {
             </div>
 
             {/* Files & Documentation Section */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h2 className="text-gray-700 font-medium mb-4">Files & Documentation</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mb-4 bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-xl font-medium text-gray-800 mb-3">Files & Documentation</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Component Image</label>
-                  <div className="border border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="text-xs text-gray-500 mb-2">PNG, JPG, GIF up to 10MB</p>
-                    <button className="bg-blue-100 text-blue-600 px-4 py-1 rounded text-sm">Upload Image</button>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Component Image
+                  </label>
+                  <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      {imagePreview ? (
+                        <div>
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="mx-auto h-32 w-auto object-contain mb-2"
+                          />
+                          <p className="text-xs text-gray-500">{editedProduct.image}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            stroke="currentColor"
+                            fill="none"
+                            viewBox="0 0 48 48"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                      )}
+                      <div>
+                        <label
+                          htmlFor="image-upload"
+                          className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                        >
+                          <span>{imagePreview ? "Change Image" : "Upload Image"}</span>
+                          <input
+                            id="image-upload"
+                            name="image"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="sr-only"
+
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
+                {/* Datasheet Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Datasheet</label>
-                  <div className="border border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <p className="text-xs text-gray-500 mb-2">PDF, DOC, XLS up to 10MB</p>
-                    <button className="bg-blue-100 text-blue-600 px-4 py-1 rounded text-sm">Upload Datasheet</button>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Datasheet
+                  </label>
+                  <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      {datasheetName ? (
+                        <div>
+                          <Clipboard className="mx-auto h-12 w-12 text-blue-500" />
+                          <p className="text-xs font-medium text-gray-900 mt-2">
+                            {datasheetName}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <Folder className="mx-auto h-12 w-12 text-gray-400" />
+                          <p className="text-xs text-gray-500">PDF, DOC, XLS up to 10MB</p>
+                        </div>
+                      )}
+                      <div>
+                        <label
+                          htmlFor="datasheet-upload"
+                          className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                        >
+                          <span>{datasheetName ? "Change File" : "Upload Datasheet"}</span>
+                          <input
+                            id="datasheet-upload"
+                            name="datasheet"
+                            type="file"
+                            onChange={handleDatasheetUpload}
+                            className="sr-only"
+                            // value={editedProduct.datasheet}
+
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -829,7 +1094,7 @@ export default function ProductDetail({ params }) {
                     )}
                   </div>
                 </div>
-                
+
               </div>
 
               {/* Middle Column - Basic Information and Inventory Details */}
