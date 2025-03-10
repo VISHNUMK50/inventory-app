@@ -1,18 +1,15 @@
 {
   "partNames": [
     "PNJPG",
-    "PNPNG",
-    "PNWEBP"
+    "PNPNG"
   ],
   "manufacturers": [
     "MJPG",
-    "MPNG",
-    "MWEBP"
+    "MPNG"
   ],
   "vendors": [
     "VJPG",
-    "VPNG",
-    "VWEBP"
+    "VPNG"
   ],
   "categories": [
     "IC",
@@ -33,7 +30,6 @@
   ],
   "manufacturerParts": [
     "MPJPG",
-    "MPPNG",
-    "MPWEBP"
+    "MPPNG"
   ]
 }
