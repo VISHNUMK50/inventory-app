@@ -1,13 +1,7 @@
 {
-  "partNames": [
-    "PNJPG"
-  ],
-  "manufacturers": [
-    "MJPG"
-  ],
-  "vendors": [
-    "VJPG"
-  ],
+  "partNames": [],
+  "manufacturers": [],
+  "vendors": [],
   "categories": [
     "IC",
     "Resistor",
@@ -25,7 +19,5 @@
     "Tool",
     "Other"
   ],
-  "manufacturerParts": [
-    "MPJPG"
-  ]
+  "manufacturerParts": []
 }
