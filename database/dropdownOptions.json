@@ -1,15 +1,18 @@
 {
   "partNames": [
     "PNJPG",
-    "PNPNG"
+    "PNPNG",
+    "PNSVG"
   ],
   "manufacturers": [
     "MJPG",
-    "MPNG"
+    "MPNG",
+    "MSVG"
   ],
   "vendors": [
     "VJPG",
-    "VPNG"
+    "VPNG",
+    "VSVG"
   ],
   "categories": [
     "IC",
@@ -30,6 +33,7 @@
   ],
   "manufacturerParts": [
     "MPJPG",
-    "MPPNG"
+    "MPPNG",
+    "MPSVG"
   ]
 }
