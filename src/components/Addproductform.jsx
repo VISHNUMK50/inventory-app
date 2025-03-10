@@ -647,80 +647,32 @@ const Addproductform = () => {
 
 // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-  const saveLastUsedIdToGithub = async (id) => {
-    try {
-      const { token, repo, owner, branch, path } = githubConfig;
+const saveLastUsedIdToGithub = async (id) => {
+  try {
+    const { token, repo, owner, branch, path } = githubConfig;
 
-      if (!token || !repo || !owner) {
-        // Save to localStorage if GitHub config is incomplete
-        localStorage.setItem('lastUsedId', id.toString());
-        return;
-      }
-
-      // Path to the ID tracker file
-      const idTrackerPath = `${path}/lastUsedId.json`;
-
-      // GitHub API URL for contents
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`;
-
-      // Check for the latest version of the file
-      let sha = '';
-      try {
-        const checkResponse = await fetch(apiUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-
-        if (checkResponse.ok) {
-          const fileData = await checkResponse.json();
-          sha = fileData.sha;
-        }
-      } catch (error) {
-        console.log("Creating new ID tracker file");
-      }
-
-      // Convert ID data to JSON and then to base64
-      const content = btoa(JSON.stringify({ lastUsedId: id }, null, 2));
-
-      // Prepare request body
-      const requestBody = {
-        message: "Update last used ID",
-        content: content,
-        branch: branch
-      };
-
-      // Include sha if we have it
-      if (sha) {
-        requestBody.sha = sha;
-      }
-
-      // Make PUT request to GitHub API
-      const response = await fetch(apiUrl, {
-        method: "PUT",
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`GitHub API error: ${errorData.message}`);
-      }
-
-      console.log("Last used ID saved to GitHub successfully");
-
-      // Also save to localStorage as backup
+    if (!token || !repo || !owner) {
       localStorage.setItem('lastUsedId', id.toString());
-
-    } catch (error) {
-      console.error("Error saving last used ID:", error);
-      // Save to localStorage as fallback
-      localStorage.setItem('lastUsedId', id.toString());
+      return;
     }
-  };
+
+    // Create a minimal data object with just the ID
+    const minimalData = {
+      id: id,
+      partName: "ID Update", // This is just for the commit message
+      manufacturerPart: "ID-Update" // This is just for identifier
+    };
+
+    // Use the main saveToGithub function with our minimal data
+    await saveToGithub(minimalData);
+    
+    // Also save to localStorage as backup
+    localStorage.setItem('lastUsedId', id.toString());
+  } catch (error) {
+    console.error("Error saving last used ID:", error);
+    localStorage.setItem('lastUsedId', id.toString());
+  }
+};
 
 // save drop down option
   const saveDropdownOptionsToGithub = async () => {
@@ -803,74 +755,21 @@ const Addproductform = () => {
    // New function that accepts options parameter
    const saveOptionsToGithub = async (options) => {
     try {
-      const { token, repo, owner, branch, path } = githubConfig;
-
-      if (!token || !repo || !owner) {
-        // Save to localStorage if GitHub config is not complete
-        localStorage.setItem('dropdownOptions', JSON.stringify(options));
-        return;
-      }
-
-      // Path to the dropdown options JSON file
-      const optionsFilePath = `${path}/dropdownOptions.json`;
-
-      // GitHub API URL for contents
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
-
-      // Always check for the latest version of the file
-      let sha = '';
-      try {
-        const checkResponse = await fetch(apiUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-
-        if (checkResponse.ok) {
-          const fileData = await checkResponse.json();
-          sha = fileData.sha;
-        }
-      } catch (error) {
-        console.log("Creating new dropdown options file");
-      }
-
-      // Convert options to JSON and then to base64
-      const content = btoa(JSON.stringify(options, null, 2));
-
-      // Prepare request body
-      const requestBody = {
-        message: "Update dropdown options",
-        content: content,
-        branch: branch
-      };
-
-      // Always include sha if we have it
-      if (sha) {
-        requestBody.sha = sha;
-      }
-
-      // Make PUT request to GitHub API
-      const response = await fetch(apiUrl, {
-        method: "PUT",
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`GitHub API error: ${errorData.message}`);
-      }
-
-      console.log("Dropdown options saved to GitHub successfully");
-
-      // Also save to localStorage as backup
+      // Store options in localStorage for use in saveToGithub
       localStorage.setItem('dropdownOptions', JSON.stringify(options));
-
+      
+      // Create a minimal data object for the save
+      const minimalData = {
+        id: Date.now(), // Use timestamp as ID
+        partName: "Options Update", // This is just for the commit message
+        manufacturerPart: "Options-Update" // This is just for identifier
+      };
+      
+      // Use the main saveToGithub function
+      await saveToGithub(minimalData);
     } catch (error) {
-      throw error; // Re-throw the error to be handled by the caller
+      console.error("Error saving options:", error);
+      throw error;
     }
   };
   const saveToGithub = async (dataToSave = null) => {
@@ -1166,6 +1065,7 @@ const Addproductform = () => {
     return response.json();
   };
 
+// @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 
