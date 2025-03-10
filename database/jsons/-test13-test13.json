@@ -1,0 +1,22 @@
+{
+  "id": "",
+  "createdAt": "",
+  "partName": "test13",
+  "manufacturer": "test13",
+  "manufacturerPart": "test13",
+  "vendor": "test13",
+  "vendorProductLink": "test13",
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/-test13-test13_10mm yellow-500x500.jpg",
+  "imageType": "image/jpeg",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/-test13-test13_5mm_Blue_LED-AUDIOS_5mm-LED-Datasheet (1).pdf",
+  "datasheetType": "application/pdf",
+  "quantity": "66",
+  "customerRef": "test13",
+  "description": "test13",
+  "bin": "1",
+  "reorderPoint": "3",
+  "reorderQty": "100",
+  "costPrice": "33",
+  "salePrice": "54",
+  "category": "LED"
+}
