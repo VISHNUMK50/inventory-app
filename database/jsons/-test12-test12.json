@@ -1,0 +1,22 @@
+{
+  "id": "",
+  "createdAt": "",
+  "partName": "test12",
+  "manufacturer": "test12",
+  "manufacturerPart": "test12",
+  "vendor": "test12",
+  "vendorProductLink": "test12",
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/-test12-test12_10mm yellow-500x500.jpg",
+  "imageType": "image/jpeg",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/-test12-test12_5mm_Blue_LED-AUDIOS_5mm-LED-Datasheet (3).pdf",
+  "datasheetType": "application/pdf",
+  "quantity": "100",
+  "customerRef": "test12",
+  "description": "test12",
+  "bin": "1",
+  "reorderPoint": "2",
+  "reorderQty": "50",
+  "costPrice": "50",
+  "salePrice": "60",
+  "category": "Capacitor"
+}
