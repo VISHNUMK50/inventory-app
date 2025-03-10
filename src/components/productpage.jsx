@@ -168,7 +168,9 @@ export default function ProductDetail({ params }) {
         const items = JSON.parse(localItems);
         const index = items.findIndex(item =>
           item.manufacturerPart === product.manufacturerPart ||
-          item.partName === product.partName
+          item.partName === product.partName ||
+          item.id === product.id
+
         );
 
         if (index !== -1) {
@@ -206,7 +208,7 @@ export default function ProductDetail({ params }) {
         const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
         const sanitizedPartName = product.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
 
-        const fileName = `${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
+        const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
 
         // const sanitizedPartName = product.manufacturerPart.replace(/[^a-zA-Z0-9-_]/g, '_');
         // const fileName = `${sanitizedPartName}.json`;
