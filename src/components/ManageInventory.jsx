@@ -315,7 +315,8 @@ const ManageInventory = () => {
           }
         }
 
-        // After GitHub deletion (or if we're using local storage), update the UI
+        // After GitHub deletion (or if we're using 
+        //  storage), update the UI
         const newItems = inventoryItems.filter(
           item => item.manufacturerPart !== itemId
         );

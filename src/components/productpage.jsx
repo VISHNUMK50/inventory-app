@@ -244,221 +244,233 @@ export default function ProductDetail({ params }) {
   };
 
   // Helper function to save files to GitHub
-  const saveFileToGithub = async (base64Data, filePath, commitMessage) => {
-    const { token, repo, owner } = githubConfig;
+  // Function to create a Git tree with multiple file updates
+const createGitTreeWithFiles = async (fileChanges) => {
+  const { token, repo, owner, branch = 'main' } = githubConfig;
+  
+  // First, get the reference to the latest commit on the branch
+  const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  
+  if (!refResponse.ok) {
+    throw new Error(`Failed to get branch reference: ${refResponse.statusText}`);
+  }
+  
+  const refData = await refResponse.json();
+  const latestCommitSha = refData.object.sha;
+  
+  // Get the commit object to retrieve the tree
+  const commitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  
+  if (!commitResponse.ok) {
+    throw new Error(`Failed to get commit: ${commitResponse.statusText}`);
+  }
+  
+  const commitData = await commitResponse.json();
+  const baseTreeSha = commitData.tree.sha;
+  
+  // Create the new tree with all file changes
+  const treeItems = fileChanges.map(file => ({
+    path: file.path,
+    mode: "100644",  // Regular file mode
+    type: "blob",
+    content: file.content
+  }));
+  
+  const newTreeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
+    method: 'POST',
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      base_tree: baseTreeSha,
+      tree: treeItems
+    })
+  });
+  
+  if (!newTreeResponse.ok) {
+    throw new Error(`Failed to create tree: ${newTreeResponse.statusText}`);
+  }
+  
+  const newTreeData = await newTreeResponse.json();
+  
+  // Create a new commit with the new tree
+  const newCommitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
+    method: 'POST',
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: "Update product information and assets",
+      tree: newTreeData.sha,
+      parents: [latestCommitSha]
+    })
+  });
+  
+  if (!newCommitResponse.ok) {
+    throw new Error(`Failed to create commit: ${newCommitResponse.statusText}`);
+  }
+  
+  const newCommitData = await newCommitResponse.json();
+  
+  // Update the reference to point to the new commit
+  const updateRefResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+    method: 'PATCH',
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sha: newCommitData.sha,
+      force: false
+    })
+  });
+  
+  if (!updateRefResponse.ok) {
+    throw new Error(`Failed to update reference: ${updateRefResponse.statusText}`);
+  }
+  
+  return newCommitData;
+};
+
+// Updated saveChanges function to use a single commit
+const saveChanges = async () => {
+  setIsSaving(true);
+  setSaveError(null);
+
+  try {
+    const { token, repo, owner, path, branch = 'main' } = githubConfig;
     
-    // First check if file exists
-    const fileCheckUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-    let existingSha = null;
+    // Create a copy of the edited product to modify
+    const productToSave = { ...editedProduct };
     
-    try {
-      const checkResponse = await fetch(fileCheckUrl, {
-        headers: {
-          "Authorization": `token ${token}`
-        }
+    // Prepare an array to hold all file changes
+    const fileChanges = [];
+    
+    // Prepare image change if it was modified
+    if (productToSave.imageModified && productToSave.imageData) {
+      // Create sanitized identifiers for filenames
+      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+      
+      // Set the image path
+      const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
+      
+      // Add image file to changes array
+      fileChanges.push({
+        path: imageFilePath,
+        content: atob(productToSave.imageData) // Convert base64 to raw content
       });
       
-      if (checkResponse.ok) {
-        const fileInfo = await checkResponse.json();
-        existingSha = fileInfo.sha;
-      }
-    } catch (error) {
-      console.log("File does not exist yet, will create new");
+      // Update the image URL in the product data
+      productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
+      
+      // Remove the base64 data and flag to avoid storing it in JSON
+      delete productToSave.imageData;
+      delete productToSave.imageModified;
     }
     
-    // Prepare request body
-    const requestBody = {
-      message: commitMessage,
-      content: base64Data,
-    };
-    
-    // Include SHA if file exists
-    if (existingSha) {
-      requestBody.sha = existingSha;
+    // Prepare datasheet change if it was modified
+    if (productToSave.datasheetModified && productToSave.datasheetData) {
+      // Create sanitized identifiers for filenames
+      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+      
+      // Set the datasheet path
+      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
+      
+      // Add datasheet file to changes array
+      fileChanges.push({
+        path: datasheetFilePath,
+        content: atob(productToSave.datasheetData) // Convert base64 to raw content
+      });
+      
+      // Update the datasheet URL in the product data
+      productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
+      
+      // Remove the base64 data and flag to avoid storing it in JSON
+      delete productToSave.datasheetData;
+      delete productToSave.datasheetModified;
     }
     
-    // Make PUT request to GitHub API
-    const saveResponse = await fetch(fileCheckUrl, {
-      method: 'PUT',
-      headers: {
-        "Authorization": `token ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    if (!saveResponse.ok) {
-      const errorData = await saveResponse.json();
-      throw new Error(`GitHub save error: ${errorData.message}`);
-    }
-    
-    const saveResult = await saveResponse.json();
-    return saveResult;
-  };
+    // Remove any lingering imageType/datasheetType that shouldn't be in the final JSON
+    delete productToSave.imageType;
+    delete productToSave.datasheetType;
 
-  // Updated save changes function
-  const saveChanges = async () => {
-    setIsSaving(true);
-    setSaveError(null);
+    // First update local state
+    setProduct(productToSave);
 
-    try {
-      const { token, repo, owner, path, branch = 'main' } = githubConfig;
-      
-      // Create a copy of the edited product to modify
-      const productToSave = { ...editedProduct };
-      
-      // Upload image if it was modified
-      if (productToSave.imageModified && productToSave.imageData) {
-        // Create sanitized identifiers for filenames
-        const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-        const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
-        const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-        
-        // Set the image path
-        const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
-        
-        // Save the image to GitHub
-        await saveFileToGithub(
-          productToSave.imageData,
-          imageFilePath,
-          `Update image for ${productToSave.partName} (ID: ${productToSave.id})`
-        );
-        
-        // Update the image URL in the product data
-        productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-        
-        // Remove the base64 data and flag to avoid storing it in JSON
-        delete productToSave.imageData;
-        delete productToSave.imageModified;
-      }
-      
-      // Upload datasheet if it was modified
-      if (productToSave.datasheetModified && productToSave.datasheetData) {
-        // Create sanitized identifiers for filenames
-        const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-        const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
-        const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-        
-        // Set the datasheet path
-        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
-        
-        // Save the datasheet to GitHub
-        await saveFileToGithub(
-          productToSave.datasheetData,
-          datasheetFilePath,
-          `Update datasheet for ${productToSave.partName} (ID: ${productToSave.id})`
-        );
-        
-        // Update the datasheet URL in the product data
-        productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-        
-        // Remove the base64 data and flag to avoid storing it in JSON
-        delete productToSave.datasheetData;
-        delete productToSave.datasheetModified;
-      }
-      
-      // Remove any lingering imageType/datasheetType that shouldn't be in the final JSON
-      delete productToSave.imageType;
-      delete productToSave.datasheetType;
+    // Save to localStorage for persistence in demo mode
+    const localItems = localStorage.getItem('inventoryItems');
+    if (localItems) {
+      const items = JSON.parse(localItems);
+      const index = items.findIndex(item =>
+        item.manufacturerPart === product.manufacturerPart ||
+        item.partName === product.partName ||
+        item.id === product.id ||
+        item.image === product.image ||
+        item.datasheet === product.datasheet
+      );
 
-      // First update local state
-      setProduct(productToSave);
-
-      // Save to localStorage for persistence in demo mode
-      const localItems = localStorage.getItem('inventoryItems');
-      if (localItems) {
-        const items = JSON.parse(localItems);
-        const index = items.findIndex(item =>
-          item.manufacturerPart === product.manufacturerPart ||
-          item.partName === product.partName ||
-          item.id === product.id ||
-          item.image === product.image ||
-          item.datasheet === product.datasheet
-        );
-
-        if (index !== -1) {
-          items[index] = productToSave;
-          localStorage.setItem('inventoryItems', JSON.stringify(items));
-        } else {
-          localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
-        }
+      if (index !== -1) {
+        items[index] = productToSave;
+        localStorage.setItem('inventoryItems', JSON.stringify(items));
       } else {
-        localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
+        localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
       }
-
-      // Now save the JSON file to GitHub
-      if (token && repo && owner) {
-        const jsonDirPath = `${path}/jsons`;
-
-        // Create sanitized filename
-        const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-        const sanitizedPartName = product.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
-        const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
-        const filePath = `${jsonDirPath}/${fileName}`;
-
-        // Prepare file content
-        const fileContent = JSON.stringify(productToSave, null, 2);
-        const encodedContent = btoa(unescape(encodeURIComponent(fileContent)));
-
-        // Check if file exists by listing the directory
-        const dirListUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
-        const dirResponse = await fetch(dirListUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-
-        if (!dirResponse.ok) {
-          throw new Error(`GitHub API error: ${dirResponse.statusText} (${dirResponse.status})`);
-        }
-
-        const files = await dirResponse.json();
-        let existingFile = files.find(file => file.name === fileName);
-        let existingSha = existingFile ? existingFile.sha : null;
-
-        // Prepare request body
-        const requestBody = {
-          message: existingFile
-            ? `Update product: ${productToSave.manufacturerPart}`
-            : `Add new product: ${productToSave.manufacturerPart}`,
-          content: encodedContent,
-        };
-
-        // If updating existing file, include the sha
-        if (existingFile && existingSha) {
-          requestBody.sha = existingSha;
-        }
-
-        // Make PUT request to GitHub API
-        const saveUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-        const saveResponse = await fetch(saveUrl, {
-          method: 'PUT',
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (!saveResponse.ok) {
-          const errorData = await saveResponse.json();
-          throw new Error(`GitHub save error: ${errorData.message}`);
-        }
-
-        console.log("Successfully saved to GitHub");
-      }
-
-      // Success!
-      setEditMode(false);
-      alert("Product updated successfully");
-
-    } catch (error) {
-      console.error("Error saving product:", error);
-      setSaveError(error.message);
-    } finally {
-      setIsSaving(false);
+    } else {
+      localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
     }
-  };
+
+    // Now prepare the JSON file and add it to our changes
+    if (token && repo && owner) {
+      const jsonDirPath = `${path}/jsons`;
+
+      // Create sanitized filename
+      const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
+      const sanitizedPartName = product.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
+      const filePath = `${jsonDirPath}/${fileName}`;
+
+      // Prepare file content
+      const fileContent = JSON.stringify(productToSave, null, 2);
+      
+      // Add JSON file to changes array
+      fileChanges.push({
+        path: filePath,
+        content: fileContent
+      });
+
+      // Only proceed with the commit if we have changes to make
+      if (fileChanges.length > 0) {
+        // Create a single commit with all changes
+        await createGitTreeWithFiles(fileChanges);
+        console.log("Successfully saved all changes to GitHub in a single commit");
+      }
+    }
+
+    // Success!
+    setEditMode(false);
+    alert("Product updated successfully");
+
+  } catch (error) {
+    console.error("Error saving product:", error);
+    setSaveError(error.message);
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // If still loading, show a loading spinner
   if (isLoading) {
