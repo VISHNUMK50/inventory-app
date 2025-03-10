@@ -790,7 +790,7 @@ const saveLastUsedIdToGithub = async (id) => {
     try {
       setIsSubmitting(true);
       const data = dataToSave || {...formData, quantity: currentQuantityValue};
-
+  
       // Use provided data or fall back to form state
       // const data = dataToSave || formData;
   
@@ -808,7 +808,7 @@ const saveLastUsedIdToGithub = async (id) => {
   
       // Prepare file updates (to be done in a single batch)
       const fileUpdates = [];
-
+  
       // Prepare image file update if exists
       if (data.image && data.imageData) {
         const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
@@ -854,19 +854,15 @@ const saveLastUsedIdToGithub = async (id) => {
           const idFileData = await idFileResponse.json();
           const idContent = JSON.parse(atob(idFileData.content));
           
-          // Only update if the new ID is greater than the stored one
-          if (idContent.lastUsedId && data.id > idContent.lastUsedId) {
-            lastUsedId = data.id;
-          } else {
-            lastUsedId = idContent.lastUsedId;
-          }
+          // FIXED: Always use the larger of the two IDs
+          lastUsedId = Math.max(data.id, idContent.lastUsedId || 0);
         }
       } catch (error) {
-        console.log("ID file not found, will create new one");
-        // Continue with current ID
+        console.log("ID file not found, will create new one with current ID:", data.id);
+        // Continue with current ID (data.id is already assigned to lastUsedId)
       }
       
-      // Update the lastUsedId file with current or retrieved ID
+      // Update the lastUsedId file with the maximum ID found
       const idContent = btoa(JSON.stringify({ lastUsedId: lastUsedId }, null, 2));
       fileUpdates.push({
         path: idTrackerPath,
@@ -908,7 +904,7 @@ const saveLastUsedIdToGithub = async (id) => {
   
       // Create a single commit with all file changes
       await batchCommitToGithub(fileUpdates, `Add inventory item: ${data.partName} (ID: ${data.id}) with all related files`);
-
+  
       // Update localStorage with the latest values
       localStorage.setItem('lastUsedId', lastUsedId.toString());
       localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
@@ -920,11 +916,9 @@ const saveLastUsedIdToGithub = async (id) => {
       return false;
     } finally {
       isSaving = false;
-
       setIsSubmitting(false);
     }
   };
-  
   // New function to handle batch commits
   const batchCommitToGithub = async (fileUpdates, commitMessage) => {
     const { token, repo, owner, branch } = githubConfig;
