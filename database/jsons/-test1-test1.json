@@ -1,0 +1,22 @@
+{
+  "id": "",
+  "createdAt": "",
+  "partName": "test1",
+  "manufacturer": "test1",
+  "manufacturerPart": "test1",
+  "vendor": "",
+  "vendorProductLink": "",
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/-test1-test1_GREENLED.jpg",
+  "imageType": "image/jpeg",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/-test1-test1_5mm_Blue_LED-AUDIOS_5mm-LED-Datasheet (3).pdf",
+  "datasheetType": "application/pdf",
+  "quantity": "0",
+  "customerRef": "",
+  "description": "",
+  "bin": "",
+  "reorderPoint": "",
+  "reorderQty": "",
+  "costPrice": "",
+  "salePrice": "",
+  "category": ""
+}
