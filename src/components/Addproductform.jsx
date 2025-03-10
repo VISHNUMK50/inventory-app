@@ -136,80 +136,7 @@ const Addproductform = () => {
     fetchLastUsedId(); // Add this line
   }, []);
 
-  const saveLastUsedIdToGithub = async (id) => {
-    try {
-      const { token, repo, owner, branch, path } = githubConfig;
 
-      if (!token || !repo || !owner) {
-        // Save to localStorage if GitHub config is incomplete
-        localStorage.setItem('lastUsedId', id.toString());
-        return;
-      }
-
-      // Path to the ID tracker file
-      const idTrackerPath = `${path}/lastUsedId.json`;
-
-      // GitHub API URL for contents
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`;
-
-      // Check for the latest version of the file
-      let sha = '';
-      try {
-        const checkResponse = await fetch(apiUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-
-        if (checkResponse.ok) {
-          const fileData = await checkResponse.json();
-          sha = fileData.sha;
-        }
-      } catch (error) {
-        console.log("Creating new ID tracker file");
-      }
-
-      // Convert ID data to JSON and then to base64
-      const content = btoa(JSON.stringify({ lastUsedId: id }, null, 2));
-
-      // Prepare request body
-      const requestBody = {
-        message: "Update last used ID",
-        content: content,
-        branch: branch
-      };
-
-      // Include sha if we have it
-      if (sha) {
-        requestBody.sha = sha;
-      }
-
-      // Make PUT request to GitHub API
-      const response = await fetch(apiUrl, {
-        method: "PUT",
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`GitHub API error: ${errorData.message}`);
-      }
-
-      console.log("Last used ID saved to GitHub successfully");
-
-      // Also save to localStorage as backup
-      localStorage.setItem('lastUsedId', id.toString());
-
-    } catch (error) {
-      console.error("Error saving last used ID:", error);
-      // Save to localStorage as fallback
-      localStorage.setItem('lastUsedId', id.toString());
-    }
-  };
 
   // State for dropdown options - Added manufacturerParts
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -373,83 +300,7 @@ const Addproductform = () => {
     }
   };
 
-  const saveDropdownOptionsToGithub = async () => {
-    try {
-      const { token, repo, owner, branch, path } = githubConfig;
 
-      if (!token || !repo || !owner) {
-        // Save to localStorage if GitHub config is not complete
-        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-        return;
-      }
-
-      // Path to the dropdown options JSON file
-      const optionsFilePath = `${path}/dropdownOptions.json`;
-
-      // GitHub API URL for contents
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
-
-      // Always check for the latest version of the file
-      let sha = '';
-      try {
-        const checkResponse = await fetch(apiUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-
-        if (checkResponse.ok) {
-          const fileData = await checkResponse.json();
-          sha = fileData.sha;
-        }
-      } catch (error) {
-        console.log("Creating new dropdown options file");
-      }
-
-      // Convert options to JSON and then to base64
-      const content = btoa(JSON.stringify(dropdownOptions, null, 2));
-
-      // Prepare request body
-      const requestBody = {
-        message: "Update dropdown options",
-        content: content,
-        branch: branch
-      };
-
-      // Always include sha if we have it
-      if (sha) {
-        requestBody.sha = sha;
-      }
-
-      // Make PUT request to GitHub API
-      const response = await fetch(apiUrl, {
-        method: "PUT",
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`GitHub API error: ${errorData.message}`);
-      }
-
-      console.log("Dropdown options saved to GitHub successfully");
-
-      // Also save to localStorage as backup
-      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-
-    } catch (error) {
-      console.error("Error saving dropdown options:", error);
-      // Save to localStorage as fallback
-      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-
-      // Alert the user about the error
-      alert(`Error saving to GitHub: ${error.message}. Try again or check your GitHub settings.`);
-    }
-  };
 
   // Single definition of the GitHub config change handler
   const handleGithubConfigChange = (e) => {
@@ -507,7 +358,7 @@ const Addproductform = () => {
       setAddingField(null);
 
       // Save to GitHub and localStorage
-      saveDropdownOptionsToGithub();
+      saveToGithub();
     }
   };
 
@@ -636,7 +487,7 @@ const Addproductform = () => {
       // Instead of immediately trying to save, use the updated options directly
       try {
         // Create a modified version of saveDropdownOptionsToGithub that accepts options
-        await saveOptionsToGithub(updatedOptions);
+        await saveToGithub();
       } catch (error) {
         console.error("Error saving dropdown options:", error);
         // Save to localStorage as fallback
@@ -647,79 +498,7 @@ const Addproductform = () => {
     return hasUpdates; // Return whether updates were made
   };
 
-  // New function that accepts options parameter
-  const saveOptionsToGithub = async (options) => {
-    try {
-      const { token, repo, owner, branch, path } = githubConfig;
-
-      if (!token || !repo || !owner) {
-        // Save to localStorage if GitHub config is not complete
-        localStorage.setItem('dropdownOptions', JSON.stringify(options));
-        return;
-      }
-
-      // Path to the dropdown options JSON file
-      const optionsFilePath = `${path}/dropdownOptions.json`;
-
-      // GitHub API URL for contents
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
-
-      // Always check for the latest version of the file
-      let sha = '';
-      try {
-        const checkResponse = await fetch(apiUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-
-        if (checkResponse.ok) {
-          const fileData = await checkResponse.json();
-          sha = fileData.sha;
-        }
-      } catch (error) {
-        console.log("Creating new dropdown options file");
-      }
-
-      // Convert options to JSON and then to base64
-      const content = btoa(JSON.stringify(options, null, 2));
-
-      // Prepare request body
-      const requestBody = {
-        message: "Update dropdown options",
-        content: content,
-        branch: branch
-      };
-
-      // Always include sha if we have it
-      if (sha) {
-        requestBody.sha = sha;
-      }
-
-      // Make PUT request to GitHub API
-      const response = await fetch(apiUrl, {
-        method: "PUT",
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`GitHub API error: ${errorData.message}`);
-      }
-
-      console.log("Dropdown options saved to GitHub successfully");
-
-      // Also save to localStorage as backup
-      localStorage.setItem('dropdownOptions', JSON.stringify(options));
-
-    } catch (error) {
-      throw error; // Re-throw the error to be handled by the caller
-    }
-  };
+ 
 
   // Function to check if an item already exists
   const checkItemExists = async () => {
@@ -843,7 +622,7 @@ const Addproductform = () => {
         setLastUsedId(newId);
 
         // Save the updated ID to GitHub and localStorage
-        await saveLastUsedIdToGithub(newId);
+        await saveToGithub();
       }
 
       // Save to GitHub using our local copy which has the updated fields
@@ -866,71 +645,367 @@ const Addproductform = () => {
     }
   };
 
+// @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+  const saveLastUsedIdToGithub = async (id) => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
+
+      if (!token || !repo || !owner) {
+        // Save to localStorage if GitHub config is incomplete
+        localStorage.setItem('lastUsedId', id.toString());
+        return;
+      }
+
+      // Path to the ID tracker file
+      const idTrackerPath = `${path}/lastUsedId.json`;
+
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`;
+
+      // Check for the latest version of the file
+      let sha = '';
+      try {
+        const checkResponse = await fetch(apiUrl, {
+          headers: {
+            "Authorization": `token ${token}`
+          }
+        });
+
+        if (checkResponse.ok) {
+          const fileData = await checkResponse.json();
+          sha = fileData.sha;
+        }
+      } catch (error) {
+        console.log("Creating new ID tracker file");
+      }
+
+      // Convert ID data to JSON and then to base64
+      const content = btoa(JSON.stringify({ lastUsedId: id }, null, 2));
+
+      // Prepare request body
+      const requestBody = {
+        message: "Update last used ID",
+        content: content,
+        branch: branch
+      };
+
+      // Include sha if we have it
+      if (sha) {
+        requestBody.sha = sha;
+      }
+
+      // Make PUT request to GitHub API
+      const response = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`GitHub API error: ${errorData.message}`);
+      }
+
+      console.log("Last used ID saved to GitHub successfully");
+
+      // Also save to localStorage as backup
+      localStorage.setItem('lastUsedId', id.toString());
+
+    } catch (error) {
+      console.error("Error saving last used ID:", error);
+      // Save to localStorage as fallback
+      localStorage.setItem('lastUsedId', id.toString());
+    }
+  };
+
+// save drop down option
+  const saveDropdownOptionsToGithub = async () => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
+
+      if (!token || !repo || !owner) {
+        // Save to localStorage if GitHub config is not complete
+        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+        return;
+      }
+
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
+
+      // Always check for the latest version of the file
+      let sha = '';
+      try {
+        const checkResponse = await fetch(apiUrl, {
+          headers: {
+            "Authorization": `token ${token}`
+          }
+        });
+
+        if (checkResponse.ok) {
+          const fileData = await checkResponse.json();
+          sha = fileData.sha;
+        }
+      } catch (error) {
+        console.log("Creating new dropdown options file");
+      }
+
+      // Convert options to JSON and then to base64
+      const content = btoa(JSON.stringify(dropdownOptions, null, 2));
+
+      // Prepare request body
+      const requestBody = {
+        message: "Update dropdown options",
+        content: content,
+        branch: branch
+      };
+
+      // Always include sha if we have it
+      if (sha) {
+        requestBody.sha = sha;
+      }
+
+      // Make PUT request to GitHub API
+      const response = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`GitHub API error: ${errorData.message}`);
+      }
+
+      console.log("Dropdown options saved to GitHub successfully");
+
+      // Also save to localStorage as backup
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+
+    } catch (error) {
+      console.error("Error saving dropdown options:", error);
+      // Save to localStorage as fallback
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+
+      // Alert the user about the error
+      alert(`Error saving to GitHub: ${error.message}. Try again or check your GitHub settings.`);
+    }
+  };
+   // New function that accepts options parameter
+   const saveOptionsToGithub = async (options) => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
+
+      if (!token || !repo || !owner) {
+        // Save to localStorage if GitHub config is not complete
+        localStorage.setItem('dropdownOptions', JSON.stringify(options));
+        return;
+      }
+
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
+
+      // Always check for the latest version of the file
+      let sha = '';
+      try {
+        const checkResponse = await fetch(apiUrl, {
+          headers: {
+            "Authorization": `token ${token}`
+          }
+        });
+
+        if (checkResponse.ok) {
+          const fileData = await checkResponse.json();
+          sha = fileData.sha;
+        }
+      } catch (error) {
+        console.log("Creating new dropdown options file");
+      }
+
+      // Convert options to JSON and then to base64
+      const content = btoa(JSON.stringify(options, null, 2));
+
+      // Prepare request body
+      const requestBody = {
+        message: "Update dropdown options",
+        content: content,
+        branch: branch
+      };
+
+      // Always include sha if we have it
+      if (sha) {
+        requestBody.sha = sha;
+      }
+
+      // Make PUT request to GitHub API
+      const response = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`GitHub API error: ${errorData.message}`);
+      }
+
+      console.log("Dropdown options saved to GitHub successfully");
+
+      // Also save to localStorage as backup
+      localStorage.setItem('dropdownOptions', JSON.stringify(options));
+
+    } catch (error) {
+      throw error; // Re-throw the error to be handled by the caller
+    }
+  };
   const saveToGithub = async (dataToSave = null) => {
     const { token, repo, owner, branch, path } = githubConfig;
-
+  
     if (!token || !repo || !owner) {
       alert("Please fill in all GitHub configuration fields");
       return false;
     }
-
+  
     try {
       setIsSubmitting(true);
-
+  
       // Use provided data or fall back to form state
       const data = dataToSave || formData;
-
+  
       // Generate a unique identifier based on part number and timestamp
       const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
       const sanitizedPartName = data.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
       const itemIdentifier = `${data.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-
-      // Prepare file paths
-      const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
-
+  
       // Create a copy of data to modify before saving
       const finalDataToSave = { ...data };
-
+  
       // Remove the base64 data from the JSON file to avoid huge files
       delete finalDataToSave.imageData;
       delete finalDataToSave.datasheetData;
-
-      // If we have image and datasheet files, update their paths to point to the GitHub URLs
+  
+      // Prepare file updates (to be done in a single batch)
+      const fileUpdates = [];
+      
+      // Prepare image file update if exists
       if (data.image && data.imageData) {
         const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
         finalDataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-
-        // Save the image file
-        await saveFileToGithub(
-          data.imageData,
-          imageFilePath,
-          `Add image for ${data.partName} (ID: ${data.id})`
-        );
+        
+        fileUpdates.push({
+          path: imageFilePath,
+          content: data.imageData
+        });
       }
-
+  
+      // Prepare datasheet file update if exists
       if (data.datasheet && data.datasheetData) {
         const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${data.datasheet}`;
         finalDataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-
-        // Save the datasheet file
-        await saveFileToGithub(
-          data.datasheetData,
-          datasheetFilePath,
-          `Add datasheet for ${data.partName} (ID: ${data.id})`
-        );
+        
+        fileUpdates.push({
+          path: datasheetFilePath,
+          content: data.datasheetData
+        });
       }
-
-      // Save the JSON data with ID in commit message
-      const content = btoa(JSON.stringify(finalDataToSave, null, 2)); // Base64 encode
-      await saveFileToGithub(
-        content,
-        jsonFilePath,
-        `Add inventory item: ${data.partName} (ID: ${data.id})`
-      );
-
-      // Explicitly make sure dropdown options are saved and WAIT for it to complete
-      await saveDropdownOptionsToGithub();
-
+  
+      // Prepare JSON data update
+      const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
+      const jsonContent = btoa(JSON.stringify(finalDataToSave, null, 2)); // Base64 encode
+      fileUpdates.push({
+        path: jsonFilePath,
+        content: jsonContent
+      });
+      
+      // Fetch the current last used ID from GitHub
+      let lastUsedId = data.id; // Default to current ID
+      const idTrackerPath = `${path}/lastUsedId.json`;
+      
+      try {
+        const idFileResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`, {
+          headers: {
+            "Authorization": `token ${token}`
+          }
+        });
+        
+        if (idFileResponse.ok) {
+          const idFileData = await idFileResponse.json();
+          const idContent = JSON.parse(atob(idFileData.content));
+          
+          // Only update if the new ID is greater than the stored one
+          if (idContent.lastUsedId && data.id > idContent.lastUsedId) {
+            lastUsedId = data.id;
+          } else {
+            lastUsedId = idContent.lastUsedId;
+          }
+        }
+      } catch (error) {
+        console.log("ID file not found, will create new one");
+        // Continue with current ID
+      }
+      
+      // Update the lastUsedId file with current or retrieved ID
+      const idContent = btoa(JSON.stringify({ lastUsedId: lastUsedId }, null, 2));
+      fileUpdates.push({
+        path: idTrackerPath,
+        content: idContent
+      });
+      
+      // Get current dropdown options
+      let dropdownOptions = {};
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+      
+      try {
+        // First try to get from localStorage
+        const localOptions = localStorage.getItem('dropdownOptions');
+        if (localOptions) {
+          dropdownOptions = JSON.parse(localOptions);
+        } else {
+          // If not in localStorage, try to get from GitHub
+          const optionsResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`, {
+            headers: {
+              "Authorization": `token ${token}`
+            }
+          });
+          
+          if (optionsResponse.ok) {
+            const optionsData = await optionsResponse.json();
+            dropdownOptions = JSON.parse(atob(optionsData.content));
+          }
+        }
+      } catch (error) {
+        console.log("Dropdown options not found, will create new file");
+      }
+      
+      // Update dropdown options file
+      const optionsContent = btoa(JSON.stringify(dropdownOptions, null, 2));
+      fileUpdates.push({
+        path: optionsFilePath,
+        content: optionsContent
+      });
+  
+      // Create a single commit with all file changes
+      await batchCommitToGithub(fileUpdates, `Add inventory item: ${data.partName} (ID: ${data.id}) with all related files`);
+      
+      // Update localStorage with the latest values
+      localStorage.setItem('lastUsedId', lastUsedId.toString());
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+  
       return true;
     } catch (error) {
       console.error("Error saving to GitHub:", error);
@@ -939,6 +1014,109 @@ const Addproductform = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+  
+  // New function to handle batch commits
+  const batchCommitToGithub = async (fileUpdates, commitMessage) => {
+    const { token, repo, owner, branch } = githubConfig;
+    
+    // Get current tree SHA
+    const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+      headers: {
+        "Authorization": `token ${token}`
+      }
+    });
+    
+    if (!refResponse.ok) {
+      throw new Error(`Failed to get branch reference: ${await refResponse.text()}`);
+    }
+    
+    const refData = await refResponse.json();
+    const commitSha = refData.object.sha;
+    
+    // Get the commit to get the tree SHA
+    const commitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${commitSha}`, {
+      headers: {
+        "Authorization": `token ${token}`
+      }
+    });
+    
+    const commitData = await commitResponse.json();
+    const treeSha = commitData.tree.sha;
+    
+    // Create blobs for each file
+    const newBlobs = await Promise.all(fileUpdates.map(async (file) => {
+      const blobResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+        method: "POST",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          content: file.content,
+          encoding: "base64"
+        })
+      });
+      
+      const blobData = await blobResponse.json();
+      
+      return {
+        path: file.path,
+        mode: "100644", // Regular file mode
+        type: "blob",
+        sha: blobData.sha
+      };
+    }));
+    
+    // Create a new tree
+    const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
+      method: "POST",
+      headers: {
+        "Authorization": `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        base_tree: treeSha,
+        tree: newBlobs
+      })
+    });
+    
+    const treeData = await treeResponse.json();
+    
+    // Create a commit
+    const newCommitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
+      method: "POST",
+      headers: {
+        "Authorization": `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: commitMessage,
+        tree: treeData.sha,
+        parents: [commitSha]
+      })
+    });
+    
+    const newCommitData = await newCommitResponse.json();
+    
+    // Update the reference
+    const updateRefResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sha: newCommitData.sha,
+        force: false
+      })
+    });
+    
+    if (!updateRefResponse.ok) {
+      throw new Error(`Failed to update reference: ${await updateRefResponse.text()}`);
+    }
+    
+    return newCommitData;
   };
 
   // Helper function to save a file to GitHub
