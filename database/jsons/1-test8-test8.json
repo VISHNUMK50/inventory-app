@@ -1,0 +1,22 @@
+{
+  "id": "1",
+  "createdAt": "2025-03-10T19:08:02.969Z",
+  "partName": "test8",
+  "manufacturer": "test8",
+  "manufacturerPart": "test8",
+  "vendor": "test8",
+  "vendorProductLink": "test8",
+  "image": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/images/1-test8-test8_GREENLED.jpg",
+  "imageType": "image/jpeg",
+  "datasheet": "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/datasheets/1-test8-test8_5mm_Blue_LED-AUDIOS_5mm-LED-Datasheet (2).pdf",
+  "datasheetType": "application/pdf",
+  "quantity": "100",
+  "customerRef": "test8",
+  "description": "stest8",
+  "bin": "2",
+  "reorderPoint": "10",
+  "reorderQty": "100",
+  "costPrice": "10",
+  "salePrice": "20",
+  "category": "Capacitor"
+}
