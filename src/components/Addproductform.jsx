@@ -807,7 +807,8 @@ const saveLastUsedIdToGithub = async (id) => {
   
       // Prepare file updates (to be done in a single batch)
       const fileUpdates = [];
-      
+      const data = dataToSave || {...formData, quantity: currentQuantityValue};
+
       // Prepare image file update if exists
       if (data.image && data.imageData) {
         const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
@@ -907,7 +908,7 @@ const saveLastUsedIdToGithub = async (id) => {
   
       // Create a single commit with all file changes
       await batchCommitToGithub(fileUpdates, `Add inventory item: ${data.partName} (ID: ${data.id}) with all related files`);
-      
+
       // Update localStorage with the latest values
       localStorage.setItem('lastUsedId', lastUsedId.toString());
       localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
