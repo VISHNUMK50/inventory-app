@@ -789,9 +789,10 @@ const saveLastUsedIdToGithub = async (id) => {
     isSaving = true;
     try {
       setIsSubmitting(true);
-  
+      const data = dataToSave || {...formData, quantity: currentQuantityValue};
+
       // Use provided data or fall back to form state
-      const data = dataToSave || formData;
+      // const data = dataToSave || formData;
   
       // Generate a unique identifier based on part number and timestamp
       const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
@@ -807,7 +808,6 @@ const saveLastUsedIdToGithub = async (id) => {
   
       // Prepare file updates (to be done in a single batch)
       const fileUpdates = [];
-      const data = dataToSave || {...formData, quantity: currentQuantityValue};
 
       // Prepare image file update if exists
       if (data.image && data.imageData) {
