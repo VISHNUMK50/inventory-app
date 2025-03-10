@@ -774,151 +774,152 @@ const saveLastUsedIdToGithub = async (id) => {
   };
   let isSaving = false;
 /// save to github
-const saveToGithub = async (dataToSave = null) => {
-  const { token, repo, owner, branch, path } = githubConfig;
-
-  if (!token || !repo || !owner) {
-    alert("Please fill in all GitHub configuration fields");
-    return false;
-  }
-  if (isSaving) {
-    console.log("Save already in progress, please wait");
-    return false;
-  }
+  const saveToGithub = async (dataToSave = null) => {
+    const { token, repo, owner, branch, path } = githubConfig;
   
-  isSaving = true;
-  try {
-    setIsSubmitting(true);
-    
-    // FIXED: Don't reference currentQuantityValue if it doesn't exist
-    // Use only the dataToSave parameter if provided, otherwise use formData directly
-    const data = dataToSave || formData;
-
-    // Generate a unique identifier based on part number and timestamp
-    const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
-    const sanitizedPartName = data.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
-    const itemIdentifier = `${data.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-
-    // Create a copy of data to modify before saving
-    const finalDataToSave = { ...data };
-
-    // Remove the base64 data from the JSON file to avoid huge files
-    delete finalDataToSave.imageData;
-    delete finalDataToSave.datasheetData;
-
-    // Prepare file updates (to be done in a single batch)
-    const fileUpdates = [];
-
-    // Prepare image file update if exists
-    if (data.image && data.imageData) {
-      const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
-      finalDataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-      
-      fileUpdates.push({
-        path: imageFilePath,
-        content: data.imageData
-      });
+    if (!token || !repo || !owner) {
+      alert("Please fill in all GitHub configuration fields");
+      return false;
     }
-
-    // Prepare datasheet file update if exists
-    if (data.datasheet && data.datasheetData) {
-      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${data.datasheet}`;
-      finalDataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-      
-      fileUpdates.push({
-        path: datasheetFilePath,
-        content: data.datasheetData
-      });
+    if (isSaving) {
+      console.log("Save already in progress, please wait");
+      return false;
     }
-
-    // Prepare JSON data update
-    const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
-    const jsonContent = btoa(JSON.stringify(finalDataToSave, null, 2)); // Base64 encode
-    fileUpdates.push({
-      path: jsonFilePath,
-      content: jsonContent
-    });
     
-    // Fetch the current last used ID from GitHub
-    let lastUsedId = data.id; // Default to current ID
-    const idTrackerPath = `${path}/lastUsedId.json`;
-    
+    isSaving = true;
     try {
-      const idFileResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`, {
-        headers: {
-          "Authorization": `token ${token}`
-        }
-      });
-      
-      if (idFileResponse.ok) {
-        const idFileData = await idFileResponse.json();
-        const idContent = JSON.parse(atob(idFileData.content));
+      setIsSubmitting(true);
+      const data = dataToSave || formData
+      // {...formData, quantity: currentQuantityValue};
+  
+      // Use provided data or fall back to form state
+      // const data = dataToSave || formData;
+  
+      // Generate a unique identifier based on part number and timestamp
+      const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
+      const sanitizedPartName = data.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const itemIdentifier = `${data.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+  
+      // Create a copy of data to modify before saving
+      const finalDataToSave = { ...data };
+  
+      // Remove the base64 data from the JSON file to avoid huge files
+      delete finalDataToSave.imageData;
+      delete finalDataToSave.datasheetData;
+  
+      // Prepare file updates (to be done in a single batch)
+      const fileUpdates = [];
+  
+      // Prepare image file update if exists
+      if (data.image && data.imageData) {
+        const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
+        finalDataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
         
-        // FIXED: Always use the larger of the two IDs
-        lastUsedId = Math.max(data.id, idContent.lastUsedId || 0);
+        fileUpdates.push({
+          path: imageFilePath,
+          content: data.imageData
+        });
       }
-    } catch (error) {
-      console.log("ID file not found, will create new one with current ID:", data.id);
-      // Continue with current ID (data.id is already assigned to lastUsedId)
-    }
-    
-    // Update the lastUsedId file with the maximum ID found
-    const idContent = btoa(JSON.stringify({ lastUsedId: lastUsedId }, null, 2));
-    fileUpdates.push({
-      path: idTrackerPath,
-      content: idContent
-    });
-    
-    // Get current dropdown options
-    let dropdownOptions = {};
-    const optionsFilePath = `${path}/dropdownOptions.json`;
-    
-    try {
-      // First try to get from localStorage
-      const localOptions = localStorage.getItem('dropdownOptions');
-      if (localOptions) {
-        dropdownOptions = JSON.parse(localOptions);
-      } else {
-        // If not in localStorage, try to get from GitHub
-        const optionsResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`, {
+  
+      // Prepare datasheet file update if exists
+      if (data.datasheet && data.datasheetData) {
+        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${data.datasheet}`;
+        finalDataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
+        
+        fileUpdates.push({
+          path: datasheetFilePath,
+          content: data.datasheetData
+        });
+      }
+  
+      // Prepare JSON data update
+      const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
+      const jsonContent = btoa(JSON.stringify(finalDataToSave, null, 2)); // Base64 encode
+      fileUpdates.push({
+        path: jsonFilePath,
+        content: jsonContent
+      });
+      
+      // Fetch the current last used ID from GitHub
+      let lastUsedId = data.id; // Default to current ID
+      const idTrackerPath = `${path}/lastUsedId.json`;
+      
+      try {
+        const idFileResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`, {
           headers: {
             "Authorization": `token ${token}`
           }
         });
         
-        if (optionsResponse.ok) {
-          const optionsData = await optionsResponse.json();
-          dropdownOptions = JSON.parse(atob(optionsData.content));
+        if (idFileResponse.ok) {
+          const idFileData = await idFileResponse.json();
+          const idContent = JSON.parse(atob(idFileData.content));
+          
+          // FIXED: Always use the larger of the two IDs
+          lastUsedId = Math.max(data.id, idContent.lastUsedId || 0);
         }
+      } catch (error) {
+        console.log("ID file not found, will create new one with current ID:", data.id);
+        // Continue with current ID (data.id is already assigned to lastUsedId)
       }
+      
+      // Update the lastUsedId file with the maximum ID found
+      const idContent = btoa(JSON.stringify({ lastUsedId: lastUsedId }, null, 2));
+      fileUpdates.push({
+        path: idTrackerPath,
+        content: idContent
+      });
+      
+      // Get current dropdown options
+      let dropdownOptions = {};
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+      
+      try {
+        // First try to get from localStorage
+        const localOptions = localStorage.getItem('dropdownOptions');
+        if (localOptions) {
+          dropdownOptions = JSON.parse(localOptions);
+        } else {
+          // If not in localStorage, try to get from GitHub
+          const optionsResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`, {
+            headers: {
+              "Authorization": `token ${token}`
+            }
+          });
+          
+          if (optionsResponse.ok) {
+            const optionsData = await optionsResponse.json();
+            dropdownOptions = JSON.parse(atob(optionsData.content));
+          }
+        }
+      } catch (error) {
+        console.log("Dropdown options not found, will create new file");
+      }
+      
+      // Update dropdown options file
+      const optionsContent = btoa(JSON.stringify(dropdownOptions, null, 2));
+      fileUpdates.push({
+        path: optionsFilePath,
+        content: optionsContent
+      });
+  
+      // Create a single commit with all file changes
+      await batchCommitToGithub(fileUpdates, `Add inventory item: ${data.partName} (ID: ${data.id}) with all related files`);
+  
+      // Update localStorage with the latest values
+      localStorage.setItem('lastUsedId', lastUsedId.toString());
+      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+  
+      return true;
     } catch (error) {
-      console.log("Dropdown options not found, will create new file");
+      console.error("Error saving to GitHub:", error);
+      alert(`Error saving to GitHub: ${error.message}`);
+      return false;
+    } finally {
+      isSaving = false;
+      setIsSubmitting(false);
     }
-    
-    // Update dropdown options file
-    const optionsContent = btoa(JSON.stringify(dropdownOptions, null, 2));
-    fileUpdates.push({
-      path: optionsFilePath,
-      content: optionsContent
-    });
-
-    // Create a single commit with all file changes
-    await batchCommitToGithub(fileUpdates, `Add inventory item: ${data.partName} (ID: ${data.id}) with all related files`);
-
-    // Update localStorage with the latest values
-    localStorage.setItem('lastUsedId', lastUsedId.toString());
-    localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-
-    return true;
-  } catch (error) {
-    console.error("Error saving to GitHub:", error);
-    alert(`Error saving to GitHub: ${error.message}`);
-    return false;
-  } finally {
-    isSaving = false;
-    setIsSubmitting(false);
-  }
-};
+  };
   // New function to handle batch commits
   const batchCommitToGithub = async (fileUpdates, commitMessage) => {
     const { token, repo, owner, branch } = githubConfig;
