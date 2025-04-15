@@ -1,33 +1,15 @@
 {
   "partNames": [
-    "eeprom ic",
-    "ASD",
-    "PNTEST4",
-    "PNTEST5",
-    "PTEST6",
-    "PNTEST6",
-    "PNTEST7",
-    "PNTEST8",
-    "GREEN LED"
+    "PNJPG",
+    "PNPNG"
   ],
   "manufacturers": [
-    "DAS",
-    "TEST",
-    "MTEST4",
-    "MTEST5",
-    "MTEST6",
-    "MTEST7",
-    "MTEST8",
-    "AUDIOS"
+    "MJPG",
+    "MPNG"
   ],
   "vendors": [
-    "TEST",
-    "VTEST4",
-    "VTEST5",
-    "VTEST6",
-    "VTEST7",
-    "VTEST8",
-    "AUDIOS"
+    "VJPG",
+    "VPNG"
   ],
   "categories": [
     "IC",
@@ -47,9 +29,7 @@
     "Other"
   ],
   "manufacturerParts": [
-    "MPTEST6",
-    "MPTEST7",
-    "MPTEST8",
-    "GREEN_THT_5MMLED"
+    "MPJPG",
+    "MPPNG"
   ]
 }
