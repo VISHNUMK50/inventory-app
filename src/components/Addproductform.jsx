@@ -34,28 +34,28 @@ const Addproductform = () => {
   const resetForm = () => {
     // Reset form data
     setFormData({
-        id: "",  // Add this line
-        partName: "",
-        createdAt: "",
-        manufacturer: "",
-        manufacturerPart: "",
-        vendor: "",
-        vendorProductLink: "", // Changed from vendorPart
-        image: "",
-        imageData: "",
-        imageType: "",
-        datasheet: "",
-        datasheetData: "",
-        datasheetType: "",
-        quantity: "",
-        customerRef: "",
-        description: "",
-        bin: "",
-        reorderPoint: "",
-        reorderQty: "",
-        costPrice: "",
-        salePrice: "",
-        category: ""
+      id: "",  // Add this line
+      partName: "",
+      createdAt: "",
+      manufacturer: "",
+      manufacturerPart: "",
+      vendor: "",
+      vendorProductLink: "", // Changed from vendorPart
+      image: "",
+      imageData: "",
+      imageType: "",
+      datasheet: "",
+      datasheetData: "",
+      datasheetType: "",
+      quantity: "",
+      customerRef: "",
+      description: "",
+      bin: "",
+      reorderPoint: "",
+      reorderQty: "",
+      costPrice: "",
+      salePrice: "",
+      category: ""
     });
 
     // Clear previews
@@ -64,59 +64,59 @@ const Addproductform = () => {
 
     // Reset new entries
     setNewEntries({
-        partName: "",
-        manufacturer: "",
-        vendor: "",
-        manufacturerPart: ""
+      partName: "",
+      manufacturer: "",
+      vendor: "",
+      manufacturerPart: ""
     });
 
     // Clear suggestions
     setSuggestions({
-        partName: [],
-        manufacturer: [],
-        vendor: [],
-        manufacturerPart: []
+      partName: [],
+      manufacturer: [],
+      vendor: [],
+      manufacturerPart: []
     });
 
     // Reset active state
     setActiveDropdown(null);
-};
+  };
   // New state for tracking the last used ID
   const [lastUsedId, setLastUsedId] = useState(0);
   const fetchLastUsedId = async () => {
     try {
       const { token, repo, owner, path } = githubConfig;
-  
+
       if (!token || !repo || !owner) {
         const savedId = localStorage.getItem('lastUsedId');
         setLastUsedId(savedId ? parseInt(savedId) : 0);
         return;
       }
-  
+
       const idTrackerPath = `${path}/lastUsedId.json`;
       const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`;
-  
+
       const response = await fetch(apiUrl, {
         headers: {
           "Authorization": `token ${token}`
         }
       });
-  
+
       if (response.status === 404) {
         setLastUsedId(0);
         return;
       }
-  
+
       if (!response.ok) {
         throw new Error(`GitHub API error: ${response.statusText}`);
       }
-  
+
       const data = await response.json();
       const content = JSON.parse(atob(data.content));
       const fetchedId = parseInt(content.lastUsedId) || 0;
       setLastUsedId(fetchedId);
       localStorage.setItem('lastUsedId', fetchedId.toString());
-  
+
     } catch (error) {
       console.error("Error fetching last used ID:", error);
       const savedId = localStorage.getItem('lastUsedId');
@@ -492,7 +492,7 @@ const Addproductform = () => {
     return hasUpdates; // Return whether updates were made
   };
 
- 
+
 
   // Function to check if an item already exists
   const checkItemExists = async () => {
@@ -557,14 +557,14 @@ const Addproductform = () => {
   // Updated handleSubmit function with merge logic
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.partName || !formData.manufacturer || !formData.manufacturerPart) {
       alert("Please fill all required fields: Part Name, Manufacturer, and Manufacturer Part#");
       return;
     }
-  
+
     setIsSubmitting(true);
-  
+
     try {
       await processNewEntries();
       const existingItem = await checkItemExists();
@@ -595,17 +595,17 @@ const Addproductform = () => {
         // This is a new item
         const newId = lastUsedId + 1;
         const timestamp = new Date().toISOString();
-  
+
         dataToSubmit = {
           ...dataToSubmit,
           id: newId.toString(),
           createdAt: timestamp
         };
-  
+
         // Update last used ID before saving the item
         await saveLastUsedIdToGithub(newId);
       }
-  
+
       const success = await saveToGithub(dataToSubmit);
       if (success) {
         alert("Inventory item and associated files saved successfully to GitHub!");
@@ -623,30 +623,30 @@ const Addproductform = () => {
     }
   };
 
-// @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-const saveLastUsedIdToGithub = async (newId) => {
-  try {
-    const { token, repo, owner, path } = githubConfig;
+  const saveLastUsedIdToGithub = async (newId) => {
+    try {
+      const { token, repo, owner, path } = githubConfig;
 
-    if (!token || !repo || !owner) {
+      if (!token || !repo || !owner) {
+        localStorage.setItem('lastUsedId', newId.toString());
+        return;
+      }
+
+      const idTrackerPath = `${path}/lastUsedId.json`;
+      const content = btoa(JSON.stringify({ lastUsedId: newId }));
+
+      await saveFileToGithub(content, idTrackerPath, `Update last used ID to ${newId}`);
       localStorage.setItem('lastUsedId', newId.toString());
-      return;
+      setLastUsedId(newId);
+    } catch (error) {
+      console.error("Error saving last used ID:", error);
+      localStorage.setItem('lastUsedId', newId.toString());
     }
+  };
 
-    const idTrackerPath = `${path}/lastUsedId.json`;
-    const content = btoa(JSON.stringify({ lastUsedId: newId }));
-
-    await saveFileToGithub(content, idTrackerPath, `Update last used ID to ${newId}`);
-    localStorage.setItem('lastUsedId', newId.toString());
-    setLastUsedId(newId);
-  } catch (error) {
-    console.error("Error saving last used ID:", error);
-    localStorage.setItem('lastUsedId', newId.toString());
-  }
-};
-
-// save drop down option
+  // save drop down option
   const saveDropdownOptionsToGithub = async () => {
     try {
       const { token, repo, owner, branch, path } = githubConfig;
@@ -724,19 +724,19 @@ const saveLastUsedIdToGithub = async (newId) => {
       alert(`Error saving to GitHub: ${error.message}. Try again or check your GitHub settings.`);
     }
   };
-   // New function that accepts options parameter
-   const saveOptionsToGithub = async (options) => {
+  // New function that accepts options parameter
+  const saveOptionsToGithub = async (options) => {
     try {
       // Store options in localStorage for use in saveToGithub
       localStorage.setItem('dropdownOptions', JSON.stringify(options));
-      
+
       // Create a minimal data object for the save
       const minimalData = {
         id: Date.now(), // Use timestamp as ID
         partName: "Options Update", // This is just for the commit message
         manufacturerPart: "Options-Update" // This is just for identifier
       };
-      
+
       // Use the main saveToGithub function
       await saveToGithub(minimalData);
     } catch (error) {
@@ -745,7 +745,7 @@ const saveLastUsedIdToGithub = async (newId) => {
     }
   };
   let isSaving = false;
-/// save to github
+  /// save to github
   const saveToGithub = async (dataToSave = null) => {
     const { token, repo, owner, branch, path } = githubConfig;
   
@@ -761,11 +761,17 @@ const saveLastUsedIdToGithub = async (newId) => {
     isSaving = true;
     try {
       setIsSubmitting(true);
-      const data = dataToSave || formData
-      // {...formData, quantity: currentQuantityValue};
-  
-      // Use provided data or fall back to form state
-      // const data = dataToSave || formData;
+      const data = dataToSave || formData;
+
+      // Get the current lastUsedId from state
+      let currentId = parseInt(data.id) || 0;
+      let newLastUsedId = Math.max(lastUsedId, currentId);
+
+      // If this is a new item (not an update), increment the ID
+      if (!dataToSave) {
+        newLastUsedId = lastUsedId + 1;
+        data.id = newLastUsedId.toString();
+      }
   
       // Generate a unique identifier based on part number and timestamp
       const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
@@ -775,112 +781,55 @@ const saveLastUsedIdToGithub = async (newId) => {
       // Create a copy of data to modify before saving
       const finalDataToSave = { ...data };
   
-      // Remove the base64 data from the JSON file to avoid huge files
+      // Remove the base64 data from the JSON file
       delete finalDataToSave.imageData;
       delete finalDataToSave.datasheetData;
   
-      // Prepare file updates (to be done in a single batch)
+      // Prepare file updates array
       const fileUpdates = [];
   
-      // Prepare image file update if exists
+      // Add image file if exists
       if (data.image && data.imageData) {
         const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
         finalDataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-        
         fileUpdates.push({
           path: imageFilePath,
           content: data.imageData
         });
       }
   
-      // Prepare datasheet file update if exists
+      // Add datasheet file if exists
       if (data.datasheet && data.datasheetData) {
         const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${data.datasheet}`;
         finalDataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-        
         fileUpdates.push({
           path: datasheetFilePath,
           content: data.datasheetData
         });
       }
   
-      // Prepare JSON data update
+      // Add the JSON data file
       const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
-      const jsonContent = btoa(JSON.stringify(finalDataToSave, null, 2)); // Base64 encode
+      const jsonContent = btoa(JSON.stringify(finalDataToSave, null, 2));
       fileUpdates.push({
         path: jsonFilePath,
         content: jsonContent
       });
       
-      // Fetch the current last used ID from GitHub
-      let lastUsedId = data.id; // Default to current ID
+      // Update the lastUsedId file
       const idTrackerPath = `${path}/lastUsedId.json`;
-      
-      try {
-        const idFileResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-        
-        if (idFileResponse.ok) {
-          const idFileData = await idFileResponse.json();
-          const idContent = JSON.parse(atob(idFileData.content));
-          
-          // FIXED: Always use the larger of the two IDs
-          lastUsedId = Math.max(data.id, idContent.lastUsedId || 0);
-        }
-      } catch (error) {
-        console.log("ID file not found, will create new one with current ID:", data.id);
-        // Continue with current ID (data.id is already assigned to lastUsedId)
-      }
-      
-      // Update the lastUsedId file with the maximum ID found
-      const idContent = btoa(JSON.stringify({ lastUsedId: lastUsedId }, null, 2));
+      const idContent = btoa(JSON.stringify({ lastUsedId: newLastUsedId }, null, 2));
       fileUpdates.push({
         path: idTrackerPath,
         content: idContent
       });
       
-      // Get current dropdown options
-      let dropdownOptions = {};
-      const optionsFilePath = `${path}/dropdownOptions.json`;
-      
-      try {
-        // First try to get from localStorage
-        const localOptions = localStorage.getItem('dropdownOptions');
-        if (localOptions) {
-          dropdownOptions = JSON.parse(localOptions);
-        } else {
-          // If not in localStorage, try to get from GitHub
-          const optionsResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`, {
-            headers: {
-              "Authorization": `token ${token}`
-            }
-          });
-          
-          if (optionsResponse.ok) {
-            const optionsData = await optionsResponse.json();
-            dropdownOptions = JSON.parse(atob(optionsData.content));
-          }
-        }
-      } catch (error) {
-        console.log("Dropdown options not found, will create new file");
-      }
-      
-      // Update dropdown options file
-      const optionsContent = btoa(JSON.stringify(dropdownOptions, null, 2));
-      fileUpdates.push({
-        path: optionsFilePath,
-        content: optionsContent
-      });
-  
       // Create a single commit with all file changes
       await batchCommitToGithub(fileUpdates, `Add inventory item: ${data.partName} (ID: ${data.id}) with all related files`);
   
-      // Update localStorage with the latest values
-      localStorage.setItem('lastUsedId', lastUsedId.toString());
-      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+      // Update local state and storage
+      setLastUsedId(newLastUsedId);
+      localStorage.setItem('lastUsedId', newLastUsedId.toString());
   
       return true;
     } catch (error) {
@@ -891,35 +840,35 @@ const saveLastUsedIdToGithub = async (newId) => {
       isSaving = false;
       setIsSubmitting(false);
     }
-  };
+};
   // New function to handle batch commits
   const batchCommitToGithub = async (fileUpdates, commitMessage) => {
     const { token, repo, owner, branch } = githubConfig;
-    
+
     // Get current tree SHA
     const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
       headers: {
         "Authorization": `token ${token}`
       }
     });
-    
+
     if (!refResponse.ok) {
       throw new Error(`Failed to get branch reference: ${await refResponse.text()}`);
     }
-    
+
     const refData = await refResponse.json();
     const commitSha = refData.object.sha;
-    
+
     // Get the commit to get the tree SHA
     const commitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${commitSha}`, {
       headers: {
         "Authorization": `token ${token}`
       }
     });
-    
+
     const commitData = await commitResponse.json();
     const treeSha = commitData.tree.sha;
-    
+
     // Create blobs for each file
     const newBlobs = await Promise.all(fileUpdates.map(async (file) => {
       const blobResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
@@ -933,9 +882,9 @@ const saveLastUsedIdToGithub = async (newId) => {
           encoding: "base64"
         })
       });
-      
+
       const blobData = await blobResponse.json();
-      
+
       return {
         path: file.path,
         mode: "100644", // Regular file mode
@@ -943,7 +892,7 @@ const saveLastUsedIdToGithub = async (newId) => {
         sha: blobData.sha
       };
     }));
-    
+
     // Create a new tree
     const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
       method: "POST",
@@ -956,9 +905,9 @@ const saveLastUsedIdToGithub = async (newId) => {
         tree: newBlobs
       })
     });
-    
+
     const treeData = await treeResponse.json();
-    
+
     // Create a commit
     const newCommitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
       method: "POST",
@@ -972,9 +921,9 @@ const saveLastUsedIdToGithub = async (newId) => {
         parents: [commitSha]
       })
     });
-    
+
     const newCommitData = await newCommitResponse.json();
-    
+
     // Update the reference
     const updateRefResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
       method: "PATCH",
@@ -987,11 +936,11 @@ const saveLastUsedIdToGithub = async (newId) => {
         force: false
       })
     });
-    
+
     if (!updateRefResponse.ok) {
       throw new Error(`Failed to update reference: ${await updateRefResponse.text()}`);
     }
-    
+
     return newCommitData;
   };
 
@@ -1042,7 +991,7 @@ const saveLastUsedIdToGithub = async (newId) => {
     return response.json();
   };
 
-// @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 

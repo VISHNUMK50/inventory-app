@@ -1,7 +1,13 @@
-## bugs
+## bugs AND CHANGES NEEDED
 
-- last used id not updated
-- last used id not fetch
+
+- ADD LOADING ACTION
+- HEADER SCROLL LOCK
+- LINK HOME ON LOGO
+
 - dropdown option not updated
 
 ## resolved bugs
+
+- last used id not updated
+- last used id not fetch
