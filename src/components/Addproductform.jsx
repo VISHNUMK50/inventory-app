@@ -86,51 +86,45 @@ const Addproductform = () => {
   const fetchLastUsedId = async () => {
     try {
       const { token, repo, owner, path } = githubConfig;
-
+  
       if (!token || !repo || !owner) {
-        // Check localStorage if GitHub config is incomplete
         const savedId = localStorage.getItem('lastUsedId');
         setLastUsedId(savedId ? parseInt(savedId) : 0);
         return;
       }
-
-      // Path to the ID tracker file
+  
       const idTrackerPath = `${path}/lastUsedId.json`;
-
-      // GitHub API URL for contents
       const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${idTrackerPath}`;
-
+  
       const response = await fetch(apiUrl, {
         headers: {
           "Authorization": `token ${token}`
         }
       });
-
+  
       if (response.status === 404) {
-        // File doesn't exist yet, start with ID 0
         setLastUsedId(0);
         return;
       }
-
+  
       if (!response.ok) {
         throw new Error(`GitHub API error: ${response.statusText}`);
       }
-
+  
       const data = await response.json();
-
-      // Decode content from base64
-      const content = atob(data.content);
-      const idData = JSON.parse(content);
-
-      setLastUsedId(idData.lastUsedId || 0);
-
+      const content = JSON.parse(atob(data.content));
+      const fetchedId = parseInt(content.lastUsedId) || 0;
+      setLastUsedId(fetchedId);
+      localStorage.setItem('lastUsedId', fetchedId.toString());
+  
     } catch (error) {
       console.error("Error fetching last used ID:", error);
-      // Fall back to localStorage
       const savedId = localStorage.getItem('lastUsedId');
       setLastUsedId(savedId ? parseInt(savedId) : 0);
     }
   };
+
+
   useEffect(() => {
     fetchDropdownOptionsFromGithub();
     fetchLastUsedId(); // Add this line
@@ -563,23 +557,17 @@ const Addproductform = () => {
   // Updated handleSubmit function with merge logic
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate required fields
+    
     if (!formData.partName || !formData.manufacturer || !formData.manufacturerPart) {
       alert("Please fill all required fields: Part Name, Manufacturer, and Manufacturer Part#");
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     try {
-      // First process any new entries and wait for completion
       await processNewEntries();
-
-      // Check if a matching item already exists
       const existingItem = await checkItemExists();
-
-      // Create a local copy of the formData that we'll update and use for saving
       let dataToSubmit = { ...formData };
 
       // If the item exists and matches critical fields, update the quantity
@@ -604,38 +592,28 @@ const Addproductform = () => {
 
         alert(`This item already exists! Adding ${newQty} to the existing quantity of ${existingQty}.`);
       } else {
-        // This is a new item, assign a new ID and timestamp
+        // This is a new item
         const newId = lastUsedId + 1;
-        const timestamp = new Date().toISOString(); // ISO format timestamp
-
-        // Update our local copy with ID and timestamp
+        const timestamp = new Date().toISOString();
+  
         dataToSubmit = {
           ...dataToSubmit,
           id: newId.toString(),
           createdAt: timestamp
         };
-
-        // Also update the form state (for UI consistency)
-        setFormData(dataToSubmit);
-
-        // Update the last used ID
-        setLastUsedId(newId);
-
-        // Save the updated ID to GitHub and localStorage
-        await saveToGithub();
+  
+        // Update last used ID before saving the item
+        await saveLastUsedIdToGithub(newId);
       }
-
-      // Save to GitHub using our local copy which has the updated fields
+  
       const success = await saveToGithub(dataToSubmit);
       if (success) {
         alert("Inventory item and associated files saved successfully to GitHub!");
-        resetForm(); // Reset form after successful save
-      }
-      else {
-        // Save dropdown options to localStorage at minimum
+        resetForm();
+      } else {
         localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
         alert("Inventory item saved successfully to local state!");
-        resetForm(); // Reset form after successful save
+        resetForm();
       }
     } catch (error) {
       console.error("Error during submission:", error);
@@ -647,30 +625,24 @@ const Addproductform = () => {
 
 // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-const saveLastUsedIdToGithub = async (id) => {
+const saveLastUsedIdToGithub = async (newId) => {
   try {
-    const { token, repo, owner, branch, path } = githubConfig;
+    const { token, repo, owner, path } = githubConfig;
 
     if (!token || !repo || !owner) {
-      localStorage.setItem('lastUsedId', id.toString());
+      localStorage.setItem('lastUsedId', newId.toString());
       return;
     }
 
-    // Create a minimal data object with just the ID
-    const minimalData = {
-      id: id,
-      partName: "ID Update", // This is just for the commit message
-      manufacturerPart: "ID-Update" // This is just for identifier
-    };
+    const idTrackerPath = `${path}/lastUsedId.json`;
+    const content = btoa(JSON.stringify({ lastUsedId: newId }));
 
-    // Use the main saveToGithub function with our minimal data
-    await saveToGithub(minimalData);
-    
-    // Also save to localStorage as backup
-    localStorage.setItem('lastUsedId', id.toString());
+    await saveFileToGithub(content, idTrackerPath, `Update last used ID to ${newId}`);
+    localStorage.setItem('lastUsedId', newId.toString());
+    setLastUsedId(newId);
   } catch (error) {
     console.error("Error saving last used ID:", error);
-    localStorage.setItem('lastUsedId', id.toString());
+    localStorage.setItem('lastUsedId', newId.toString());
   }
 };
 
