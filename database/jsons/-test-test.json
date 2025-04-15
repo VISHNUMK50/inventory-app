@@ -1,0 +1,22 @@
+{
+  "id": "",
+  "createdAt": "",
+  "partName": "test",
+  "manufacturer": "test",
+  "manufacturerPart": "test",
+  "vendor": "test",
+  "vendorProductLink": "test",
+  "image": "",
+  "imageType": "",
+  "datasheet": "",
+  "datasheetType": "",
+  "quantity": "0",
+  "customerRef": "test",
+  "description": "test",
+  "bin": "",
+  "reorderPoint": "",
+  "reorderQty": "",
+  "costPrice": "",
+  "salePrice": "",
+  "category": "Module"
+}
