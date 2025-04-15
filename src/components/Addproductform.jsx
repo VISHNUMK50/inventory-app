@@ -334,25 +334,31 @@ const Addproductform = () => {
 
   const addNewEntry = (field) => {
     const value = newEntries[field].trim();
-
+  
     if (value && !dropdownOptions[`${field}s`].includes(value)) {
       // Create a new array by spreading to ensure React detects change
       const updatedFieldArray = [...dropdownOptions[`${field}s`], value];
-
+  
       // Create a new object for the updated options
       const updatedOptions = {
         ...dropdownOptions,
         [`${field}s`]: updatedFieldArray
       };
-
+  
       // Update state with the new object
       setDropdownOptions(updatedOptions);
+      
+      // Update form data with the new value
       setFormData({ ...formData, [field]: value });
+      
+      // Clear the new entry input
       setNewEntries({ ...newEntries, [field]: "" });
+      
+      // Reset adding field state
       setAddingField(null);
-
-      // Save to GitHub and localStorage
-      saveToGithub();
+  
+      // Save updated options to GitHub
+      saveDropdownOptionsToGithub(updatedOptions);
     }
   };
 
@@ -556,72 +562,53 @@ const Addproductform = () => {
 
   // Updated handleSubmit function with merge logic
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!formData.partName || !formData.manufacturer || !formData.manufacturerPart) {
-      alert("Please fill all required fields: Part Name, Manufacturer, and Manufacturer Part#");
-      return;
+  if (!formData.partName || !formData.manufacturer || !formData.manufacturerPart) {
+    alert("Please fill all required fields: Part Name, Manufacturer, and Manufacturer Part#");
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    // Create an object to track which fields have new values
+    const newValues = {
+      partNames: formData.partName,
+      manufacturers: formData.manufacturer,
+      vendors: formData.vendor,
+      manufacturerParts: formData.manufacturerPart
+    };
+
+    // Check each field and update dropdownOptions if it's a new value
+    let hasNewValues = false;
+    const updatedOptions = { ...dropdownOptions };
+
+    Object.entries(newValues).forEach(([key, value]) => {
+      if (value && !dropdownOptions[key].includes(value)) {
+        updatedOptions[key] = [...dropdownOptions[key], value];
+        hasNewValues = true;
+      }
+    });
+
+    // If we have new values, update dropdownOptions and save to GitHub
+    if (hasNewValues) {
+      setDropdownOptions(updatedOptions);
+      await saveDropdownOptionsToGithub(updatedOptions);
     }
 
-    setIsSubmitting(true);
+    // Continue with the rest of your submit logic...
+    await processNewEntries();
+    const existingItem = await checkItemExists();
+    // ... rest of your existing submit logic ...
 
-    try {
-      await processNewEntries();
-      const existingItem = await checkItemExists();
-      let dataToSubmit = { ...formData };
-
-      // If the item exists and matches critical fields, update the quantity
-      if (existingItem &&
-        existingItem.partName === formData.partName &&
-        existingItem.manufacturer === formData.manufacturer &&
-        existingItem.manufacturerPart === formData.manufacturerPart &&
-        existingItem.vendor === formData.vendor) {
-
-        // Parse quantities
-        const existingQty = parseInt(existingItem.quantity) || 0;
-        const newQty = parseInt(formData.quantity) || 0;
-
-        // Create merged data, keeping most fields from existing item
-        dataToSubmit = {
-          ...existingItem,
-          quantity: (existingQty + newQty).toString()
-        };
-
-        // Update form data with merged data (for UI consistency)
-        setFormData(dataToSubmit);
-
-        alert(`This item already exists! Adding ${newQty} to the existing quantity of ${existingQty}.`);
-      } else {
-        // This is a new item
-        const newId = lastUsedId + 1;
-        const timestamp = new Date().toISOString();
-
-        dataToSubmit = {
-          ...dataToSubmit,
-          id: newId.toString(),
-          createdAt: timestamp
-        };
-
-        // Update last used ID before saving the item
-        await saveLastUsedIdToGithub(newId);
-      }
-
-      const success = await saveToGithub(dataToSubmit);
-      if (success) {
-        alert("Inventory item and associated files saved successfully to GitHub!");
-        resetForm();
-      } else {
-        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-        alert("Inventory item saved successfully to local state!");
-        resetForm();
-      }
-    } catch (error) {
-      console.error("Error during submission:", error);
-      alert(`Error submitting form: ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  } catch (error) {
+    console.error("Error during submission:", error);
+    alert(`Error submitting form: ${error.message}`);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -647,23 +634,19 @@ const Addproductform = () => {
   };
 
   // save drop down option
-  const saveDropdownOptionsToGithub = async () => {
+  const saveDropdownOptionsToGithub = async (optionsToSave = null) => {
     try {
       const { token, repo, owner, branch, path } = githubConfig;
-
+      const options = optionsToSave || dropdownOptions;
+  
       if (!token || !repo || !owner) {
-        // Save to localStorage if GitHub config is not complete
-        localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
+        localStorage.setItem('dropdownOptions', JSON.stringify(options));
         return;
       }
-
-      // Path to the dropdown options JSON file
+  
       const optionsFilePath = `${path}/dropdownOptions.json`;
-
-      // GitHub API URL for contents
       const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
-
-      // Always check for the latest version of the file
+  
       let sha = '';
       try {
         const checkResponse = await fetch(apiUrl, {
@@ -671,7 +654,7 @@ const Addproductform = () => {
             "Authorization": `token ${token}`
           }
         });
-
+  
         if (checkResponse.ok) {
           const fileData = await checkResponse.json();
           sha = fileData.sha;
@@ -679,23 +662,18 @@ const Addproductform = () => {
       } catch (error) {
         console.log("Creating new dropdown options file");
       }
-
-      // Convert options to JSON and then to base64
-      const content = btoa(JSON.stringify(dropdownOptions, null, 2));
-
-      // Prepare request body
+  
+      const content = btoa(JSON.stringify(options, null, 2));
       const requestBody = {
         message: "Update dropdown options",
         content: content,
         branch: branch
       };
-
-      // Always include sha if we have it
+  
       if (sha) {
         requestBody.sha = sha;
       }
-
-      // Make PUT request to GitHub API
+  
       const response = await fetch(apiUrl, {
         method: "PUT",
         headers: {
@@ -704,24 +682,17 @@ const Addproductform = () => {
         },
         body: JSON.stringify(requestBody)
       });
-
+  
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`GitHub API error: ${errorData.message}`);
+        throw new Error(`GitHub API error: ${await response.text()}`);
       }
-
-      console.log("Dropdown options saved to GitHub successfully");
-
-      // Also save to localStorage as backup
-      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-
+  
+      // Also update local storage
+      localStorage.setItem('dropdownOptions', JSON.stringify(options));
+  
     } catch (error) {
       console.error("Error saving dropdown options:", error);
-      // Save to localStorage as fallback
-      localStorage.setItem('dropdownOptions', JSON.stringify(dropdownOptions));
-
-      // Alert the user about the error
-      alert(`Error saving to GitHub: ${error.message}. Try again or check your GitHub settings.`);
+      localStorage.setItem('dropdownOptions', JSON.stringify(options));
     }
   };
   // New function that accepts options parameter
