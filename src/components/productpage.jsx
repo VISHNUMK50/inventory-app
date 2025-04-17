@@ -119,7 +119,9 @@ export default function ProductDetail({ params }) {
       // Check if token and other required fields are available
       if (!token || !repo || !owner) {
         // Fall back to localStorage if GitHub config is not complete
-        loadFromLocalStorage();
+        alert('invalid token or repo or owner');
+
+        // loadFromLocalStorage();
         return;
       }
 
@@ -137,7 +139,9 @@ export default function ProductDetail({ params }) {
 
       if (response.status === 404) {
         // File doesn't exist yet, use default options
-        loadFromLocalStorage();
+        alert('Error: 404');
+
+        // loadFromLocalStorage();
         return;
       }
 
@@ -162,7 +166,7 @@ export default function ProductDetail({ params }) {
     } catch (error) {
       console.error("Error fetching dropdown options:", error);
       // Fall back to localStorage
-      loadFromLocalStorage();
+      // loadFromLocalStorage();
     }
   };
 
@@ -187,19 +191,21 @@ export default function ProductDetail({ params }) {
       // If GitHub config is incomplete, use sample data
       if (!token || !repo || !owner) {
         // Try to find product in localStorage
-        const localItems = localStorage.getItem('inventoryItems');
-        if (localItems) {
-          const items = JSON.parse(localItems);
-          const foundProduct = items.find(item => item.manufacturerPart === partNum);
-          if (foundProduct) {
-            setProduct(foundProduct);
-            setEditedProduct(foundProduct);
-          } else {
-            setError("Product not found");
-          }
-        } else {
-          setError("sample data not found");
-        }
+        // const localItems = localStorage.getItem('inventoryItems');
+        // if (localItems) {
+        //   const items = JSON.parse(localItems);
+        //   const foundProduct = items.find(item => item.manufacturerPart === partNum);
+        //   if (foundProduct) {
+        //     setProduct(foundProduct);
+        //     setEditedProduct(foundProduct);
+        //   } else {
+        //     setError("Product not found");
+        //   }
+        // } else {
+        //   setError("sample data not found");
+        // }
+        alert('Error: GitHub config is incomplete. Unable to fetch product details.');
+
         setIsLoading(false);
         return;
       }
@@ -530,33 +536,33 @@ const saveChanges = async () => {
     }
     
     // Remove any lingering imageType/datasheetType that shouldn't be in the final JSON
-    delete productToSave.imageType;
-    delete productToSave.datasheetType;
+    // delete productToSave.imageType;
+    // delete productToSave.datasheetType;
 
     // First update local state
     setProduct(productToSave);
 
     // Save to localStorage for persistence in demo mode
-    const localItems = localStorage.getItem('inventoryItems');
-    if (localItems) {
-      const items = JSON.parse(localItems);
-      const index = items.findIndex(item =>
-        item.manufacturerPart === product.manufacturerPart ||
-        item.partName === product.partName ||
-        item.id === product.id ||
-        item.image === product.image ||
-        item.datasheet === product.datasheet
-      );
+    // const localItems = localStorage.getItem('inventoryItems');
+    // if (localItems) {
+    //   const items = JSON.parse(localItems);
+    //   const index = items.findIndex(item =>
+    //     item.manufacturerPart === product.manufacturerPart ||
+    //     item.partName === product.partName ||
+    //     item.id === product.id ||
+    //     item.image === product.image ||
+    //     item.datasheet === product.datasheet
+    //   );
 
-      if (index !== -1) {
-        items[index] = productToSave;
-        localStorage.setItem('inventoryItems', JSON.stringify(items));
-      } else {
-        localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
-      }
-    } else {
-      localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
-    }
+    //   if (index !== -1) {
+    //     items[index] = productToSave;
+    //     localStorage.setItem('inventoryItems', JSON.stringify(items));
+    //   } else {
+    //     localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
+    //   }
+    // } else {
+    //   localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
+    // }
 
     // Now prepare the JSON file and add it to our changes
     if (token && repo && owner) {

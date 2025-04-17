@@ -25,8 +25,8 @@
 <<<<<<< HEAD
 - data not shown in inventory table
 - image flicker in table
-
-
+- image file loading time delay
+-check datasheet
 
 ### **Resolved Bugs**
 =======
