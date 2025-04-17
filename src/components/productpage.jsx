@@ -65,6 +65,106 @@ export default function ProductDetail({ params }) {
       }
     }
   }, [product]);
+  useEffect(() => {
+    fetchDropdownOptionsFromGithub();
+  }, []);
+
+  const safeBase64Encode = (str) => {
+    try {
+      // Convert the string to UTF-8 bytes
+      const utf8Bytes = new TextEncoder().encode(str);
+      // Convert bytes to binary string
+      const binaryStr = String.fromCharCode.apply(null, utf8Bytes);
+      // Base64 encode the binary string
+      return btoa(binaryStr);
+    } catch (error) {
+      console.error('Encoding error:', error);
+      // Fallback method
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+  };
+  const safeBase64Decode = (str) => {
+    try {
+      // Decode base64 to binary string
+      const binaryStr = atob(str);
+      // Convert binary string to UTF-8 bytes
+      const utf8Bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        utf8Bytes[i] = binaryStr.charCodeAt(i);
+      }
+      // Convert UTF-8 bytes to string
+      return new TextDecoder().decode(utf8Bytes);
+    } catch (error) {
+      console.error('Decoding error:', error);
+      // Fallback method
+      return decodeURIComponent(escape(atob(str)));
+    }
+  };
+
+  // State for dropdown options - Added manufacturerParts
+  const [dropdownOptions, setDropdownOptions] = useState({
+    partNames: [],
+    manufacturers: [],
+    vendors: [],
+    manufacturerParts: [], // Added this array for manufacturer part numbers
+    categories: [
+      "IC", "Resistor", "Capacitor", "Transistor", "Diode", "LED", "Connector",
+      "Switch", "Sensor", "Microcontroller", "PCB", "Battery", "Module", "Tool", "Other"
+    ]
+  });
+  const fetchDropdownOptionsFromGithub = async () => {
+    try {
+      const { token, repo, owner, branch, path } = githubConfig;
+
+      // Check if token and other required fields are available
+      if (!token || !repo || !owner) {
+        // Fall back to localStorage if GitHub config is not complete
+        loadFromLocalStorage();
+        return;
+      }
+
+      // Path to the dropdown options JSON file
+      const optionsFilePath = `${path}/dropdownOptions.json`;
+
+      // GitHub API URL for contents
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `token ${token}`
+        }
+      });
+
+      if (response.status === 404) {
+        // File doesn't exist yet, use default options
+        loadFromLocalStorage();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Decode content from base64
+      const content = safeBase64Decode(data.content);
+      const options = JSON.parse(content);
+
+      // Ensure manufacturerParts exists in the options
+      if (!options.manufacturerParts) {
+        options.manufacturerParts = [];
+      }
+
+      // Update state with fetched options
+      setDropdownOptions(options);
+
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      // Fall back to localStorage
+      loadFromLocalStorage();
+    }
+  };
 
   // Fetch product details on component mount
   useEffect(() => {
@@ -246,7 +346,7 @@ export default function ProductDetail({ params }) {
   // Helper function to save files to GitHub
   // Function to create a Git tree with multiple file updates
 const createGitTreeWithFiles = async (fileChanges) => {
-  const { token, repo, owner, branch = 'main' } = githubConfig;
+  const { token, repo, owner, branch } = githubConfig;
   
   // First, get the reference to the latest commit on the branch
   const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
@@ -277,13 +377,37 @@ const createGitTreeWithFiles = async (fileChanges) => {
   const baseTreeSha = commitData.tree.sha;
   
   // Create the new tree with all file changes
-  const treeItems = fileChanges.map(file => ({
-    path: file.path,
-    mode: "100644",  // Regular file mode
-    type: "blob",
-    content: file.content
+  const treeItems = await Promise.all(fileChanges.map(async (file) => {
+    // Create the blob
+    const blobResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        content: file.isBase64 ? file.content : btoa(unescape(encodeURIComponent(file.content))),
+        encoding: "base64"
+      })
+    });
+    
+
+    if (!blobResponse.ok) {
+      throw new Error(`Failed to create blob: ${blobResponse.statusText}`);
+    }
+
+    const blobData = await blobResponse.json();
+
+    // Return the tree item with the blob SHA
+    return {
+      path: file.path,
+      mode: "100644",
+      type: "blob",
+      sha: blobData.sha  // Reference the blob by SHA instead of including content directly
+    };
   }));
   
+  // Create the new tree with the blob references
   const newTreeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
     method: 'POST',
     headers: {
@@ -365,11 +489,10 @@ const saveChanges = async () => {
       
       // Set the image path
       const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
-      
-      // Add image file to changes array
       fileChanges.push({
         path: imageFilePath,
-        content: atob(productToSave.imageData) // Convert base64 to raw content
+        content: productToSave.imageData,
+        isBase64: true
       });
       
       // Update the image URL in the product data
@@ -393,7 +516,9 @@ const saveChanges = async () => {
       // Add datasheet file to changes array
       fileChanges.push({
         path: datasheetFilePath,
-        content: atob(productToSave.datasheetData) // Convert base64 to raw content
+        content: productToSave.datasheetData, // Convert base64 to raw content
+          isBase64: true
+
       });
       
       // Update the datasheet URL in the product data
@@ -449,7 +574,8 @@ const saveChanges = async () => {
       // Add JSON file to changes array
       fileChanges.push({
         path: filePath,
-        content: fileContent
+        content: fileContent,
+        isBase64: false
       });
 
       // Only proceed with the commit if we have changes to make
@@ -688,8 +814,11 @@ const saveChanges = async () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select a category</option>
-                      <option value="electronics">Electronics</option>
-                      <option value="mechanical">Mechanical</option>
+                      {dropdownOptions.categories.map((category, index) => (
+                      <option key={index} value={category}>
+                        {category}
+                      </option>
+                    ))}
                     </select>
                   </div>
 
