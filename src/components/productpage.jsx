@@ -388,7 +388,7 @@ const saveChanges = async () => {
       const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
       
       // Set the datasheet path
-      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
+      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}-${productToSave.datasheet}`;
       
       // Add datasheet file to changes array
       fileChanges.push({
