@@ -84,19 +84,65 @@ const ManageInventory = () => {
       return false;
     }
   };
+  const processFiles = async (files) => {
+    // Fetch content of each JSON file
+    const itemPromises = files.map(async (file) => {
+      if (file.type === "file" && file.name.endsWith(".json")) {
+        try {
+          console.log(`Fetching file: ${file.name}`);
 
-  // Fetch inventory items from GitHub or localStorage
+          // Use the correct authentication method for raw content
+          const fileResponse = await fetch(file.download_url, {
+            headers: {
+              // Note: GitHub doesn't support token auth for raw.githubusercontent.com
+              // Instead, we can use this header if we have a valid token
+              "Accept": "application/vnd.github.v3.raw"
+            }
+          });
+
+          if (!fileResponse.ok) {
+            console.error(`Error fetching ${file.name}: ${fileResponse.status}`);
+            return null;
+          }
+
+          const itemData = await fileResponse.json();
+
+          // Extract ID from filename if it follows the pattern id-PartName-ManufacturerPart.json
+          const fileNameMatch = file.name.match(/^(\d+)-.*\.json$/);
+          if (fileNameMatch && !itemData.id) {
+            itemData.id = fileNameMatch[1];
+          }
+
+          return itemData;
+        } catch (error) {
+          console.error(`Error processing file ${file.name}:`, error);
+          return null;
+        }
+      }
+      return null;
+    });
+
+    const items = (await Promise.all(itemPromises)).filter(item => item !== null);
+    console.log(`Successfully loaded ${items.length} items`);
+
+    setInventoryItems(items);
+    setFilteredItems(items);
+
+    // Save to localStorage as backup
+    localStorage.setItem('inventoryItems', JSON.stringify(items));
+
+    return items;
+  };
   // Fetch inventory items from GitHub or localStorage
   const fetchInventoryItems = async () => {
     setIsLoading(true);
     setError(null);
 
-    console.log("GitHub config:", githubConfig); // Log the current config
-
-    console.log('GitHub config check:', {
-      hasToken: !!githubConfig.token,
-      tokenFirstChars: githubConfig.token ?
-        githubConfig.token.substring(0, 4) + '...' : 'none'
+    console.log("GitHub config:", {
+      owner: githubConfig.owner,
+      repo: githubConfig.repo,
+      path: githubConfig.path,
+      hasToken: !!githubConfig.token
     });
 
     if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
@@ -106,84 +152,88 @@ const ManageInventory = () => {
       return;
     }
 
-    // Add this block - Test GitHub API access
-    const canAccessGitHub = await testGitHubAccess();
-    if (!canAccessGitHub) {
-      console.error("Could not access GitHub API with provided credentials");
-      setError("Could not access GitHub repository. Please check credentials.");
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const { token, repo, owner, path } = githubConfig;
 
-      // If GitHub config is not complete, try localStorage
-      if (!token || !repo || !owner) {
-        const localItems = localStorage.getItem('inventoryItems');
-        if (localItems) {
-          const items = JSON.parse(localItems);
-          setInventoryItems(items);
-          setFilteredItems(items);
-        } else {
-          // If no items in localStorage, use sample data
-          setError("Could not access local data");
-        }
-        setIsLoading(false);
-        return;
+      // First, test GitHub API access
+      const canAccessGitHub = await testGitHubAccess();
+      if (!canAccessGitHub) {
+        throw new Error("Could not access GitHub API with provided credentials");
       }
 
-      // Path to the jsons directory
-      const jsonDirPath = `${path}/jsons`;
+      // Ensure correct path structure
+      // The error shows /db/jsons/ but your code may use a different path
+      // For debugging, let's try both path structures
+      const jsonDirPath = path ? `${path}/jsons` : 'db/jsons';
+      console.log(`Trying to fetch from directory: ${jsonDirPath}`);
 
       // GitHub API URL for contents
       const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
+      console.log(`Fetching directory listing from: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
         headers: {
-          "Authorization": `token ${token}`
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json"
         }
       });
 
+      // Log response details for debugging
+      console.log(`Directory listing response status: ${response.status}`);
+
       if (response.status === 404) {
-        // Directory doesn't exist
-        throw new Error("Inventory directory not found");
+        // Try alternative path as fallback
+        const altPath = path ? 'db/jsons' : 'database/jsons';
+        console.log(`Directory not found. Trying alternative path: ${altPath}`);
+
+        const altApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${altPath}`;
+        const altResponse = await fetch(altApiUrl, {
+          headers: {
+            "Authorization": `token ${token}`,
+            "Accept": "application/vnd.github.v3+json"
+          }
+        });
+
+        if (altResponse.status === 404) {
+          throw new Error("Inventory directory not found in either location");
+        }
+
+        if (!altResponse.ok) {
+          const errorData = await altResponse.json().catch(() => ({}));
+          throw new Error(`GitHub API error: ${altResponse.status} - ${errorData.message || altResponse.statusText}`);
+        }
+
+        const files = await altResponse.json();
+        console.log(`Found ${files.length} files in alternative directory`);
+
+        // Update path for future use if this worked
+        updateConfig({ path: altPath.split('/')[0] });
+
+        return processFiles(files);
       }
 
       if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`GitHub API error: ${response.status} - ${errorData.message || response.statusText}`);
       }
 
       const files = await response.json();
+      console.log(`Found ${files.length} files in directory`);
 
-      // Fetch content of each JSON file
-      const itemPromises = files.map(async (file) => {
-        if (file.type === "file" && file.name.endsWith(".json")) {
-          const fileResponse = await fetch(file.download_url);
-          if (fileResponse.ok) {
-            const itemData = await fileResponse.json();
-
-            // Extract ID from filename if it follows the pattern id-PartName-ManufacturerPart.json
-            const fileNameMatch = file.name.match(/^(\d+)-.*\.json$/);
-            if (fileNameMatch && !itemData.id) {
-              itemData.id = fileNameMatch[1];
-            }
-
-            return itemData;
-          }
-        }
-        return null;
-      });
-
-      const items = (await Promise.all(itemPromises)).filter(item => item !== null);
-
-      // Fix: Set state with the actual array of items, not the length
-      setInventoryItems(items);
-      setFilteredItems(items);
+      return processFiles(files);
 
     } catch (error) {
       console.error("Error fetching inventory items:", error);
       setError(error.message);
+
+      // Try to load from localStorage as fallback
+      const localItems = localStorage.getItem('inventoryItems');
+      if (localItems) {
+        console.log("Loading items from localStorage as fallback");
+        const items = JSON.parse(localItems);
+        setInventoryItems(items);
+        setFilteredItems(items);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -684,65 +734,38 @@ const ManageInventory = () => {
   }, []);
   const getPlaceholderFromGitHub = () => {
     const { owner, repo } = githubConfig;
-    const placeholderUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/database/placeholder.svg`;
-    // console.log("Placeholder URL:", placeholderUrl);
-    return placeholderUrl;
+    // Try this path first
+    const placeholderUrl = `https://raw.githubusercontent.com/${owner}/${repo}/master/database/placeholder.svg`;
+    // Fallback to a hardcoded path if the above doesn't work
+    const fallbackUrl = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+
+    return placeholderUrl || fallbackUrl;
   };
 
-
-  // Function to get image URL or return a placeholder
-  // Update the getImageUrl function to support WebP images
+  // Improved image URL resolution with better fallbacks
   const getImageUrl = (item) => {
     // Check if the item has an image property with a valid URL
-    if (item.image && item.image.startsWith('http')) {
+    if (item && item.image && typeof item.image === 'string' &&
+      (item.image.startsWith('http') || item.image.startsWith('/'))) {
       return item.image;
     }
 
-    // Return a placeholder based on the item's category
-    const category = (item.category || "").toLowerCase();
+    // Use a data URL for a simple placeholder if GitHub isn't accessible
+    const simplePlaceholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
 
-    // if (category.includes("led") || category.includes("light")) {
-    //   return "/api/placeholder/48/48?text=LED";
-    // } else if (category.includes("connector") || category.includes("wire")) {
-    //   return "/api/placeholder/48/48?text=CONN";
-    // } else if (category.includes("ic") || category.includes("chip")) {
-    //   return "/api/placeholder/48/48?text=IC";
-    // } else if (category.includes("tool")) {
-    //   return "/api/placeholder/48/48?text=TOOL";
-    // } else if (category.includes("transistor")) {
-    //   return "/api/placeholder/48/48?text=TRAN";
-    // } else {
-    //   return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
-    // }
-    return "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
-
+    return getPlaceholderFromGitHub() || simplePlaceholder;
   };
 
-  // Update the ImagePreview component to support different image formats
-
+  // Improved ImagePreview component with better error handling
   const ImagePreview = ({ url, alt, handleClick }) => {
-    // Early return with placeholder if no URL is provided
-    if (!url) {
-      return (
-        <div
-          className="h-12 w-12 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
-          onClick={handleClick}
-          title="Click to view larger image"
-        >
-          <img
-            src={getPlaceholderFromGitHub()}
-            alt={alt || "No Image Available"}
-            className="object-contain h-10 w-10"
-          />
-        </div>
-      );
-    }
+    const [imageError, setImageError] = useState(false);
+    const placeholderUrl = getPlaceholderFromGitHub();
 
-    // Parse the URL to get file extension
-    const fileExtension = url.split('.').pop().toLowerCase();
+    // Use a simple SVG data URL as ultimate fallback
+    const ultimateFallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
 
-    // Determine if the image is a supported format
-    const isSupported = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(fileExtension);
+    // Get the source URL, with fallbacks
+    const imgSrc = imageError || !url ? placeholderUrl || ultimateFallback : url;
 
     return (
       <div
@@ -750,78 +773,32 @@ const ManageInventory = () => {
         onClick={handleClick}
         title="Click to view larger image"
       >
-        {isSupported ? (
-          <picture>
-            {/* Only try WebP if the original isn't already WebP */}
-            {/* {fileExtension !== 'webp' && fileExtension !== 'svg' && (
-              <source
-                srcSet={`${url.substring(0, url.lastIndexOf('.'))}.webp`}
-                type="image/webp"
-              />
-            )} */}
-            <img
-              src={url}
-              alt={alt || "Product Image"}
-              className="object-contain h-10 w-10"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = getPlaceholderFromGitHub();
-              }}
-            />
-          </picture>
-        ) : (
-          // Fallback for unsupported or unknown file types
-          <img
-            src={url}
-            alt={alt || "Product Image"}
-            className="object-contain h-10 w-10"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = getPlaceholderFromGitHub();
-            }}
-          />
-        )}
+        <img
+          src={imgSrc}
+          alt={alt || "Product Image"}
+          className="object-contain h-10 w-10"
+          onError={(e) => {
+            console.log(`Image error for: ${imgSrc}`);
+            setImageError(true);
+            e.target.src = ultimateFallback;
+          }}
+        />
       </div>
     );
   };
 
-  // Fixed ImageModal component with null checking
+  // Improved ImageModal component with better error handling
   const ImageModal = ({ isOpen, imageUrl, altText, onClose }) => {
+    const [imgError, setImgError] = useState(false);
+    const placeholderUrl = getPlaceholderFromGitHub();
+
+    // Simple SVG data URL as ultimate fallback
+    const ultimateFallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+
     if (!isOpen) return null;
 
-    // Handle case where imageUrl is undefined or null
-    if (!imageUrl) {
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-          <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-end mb-2">
-              <button
-                className="text-gray-500 hover:text-gray-800"
-                onClick={onClose}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex items-center justify-center">
-              <img
-                src={getPlaceholderFromGitHub()}
-                alt="No Image Available"
-                className="max-h-[70vh] max-w-full object-contain"
-              />
-            </div>
-            <div className="mt-2 text-center text-sm text-gray-600 truncate">
-              {altText || "No image available"}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Parse the URL to get file extension
-    const fileExtension = imageUrl.split('.').pop().toLowerCase();
-
-    // Determine if the image is a supported format
-    const isSupported = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(fileExtension);
+    // Determine the source with fallbacks
+    const imgSrc = imgError || !imageUrl ? placeholderUrl || ultimateFallback : imageUrl;
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
@@ -835,40 +812,19 @@ const ManageInventory = () => {
             </button>
           </div>
           <div className="flex items-center justify-center">
-            {isSupported ? (
-              <picture>
-                {/* Only try WebP if the original isn't already WebP */}
-                {fileExtension !== 'webp' && fileExtension !== 'svg' && (
-                  <source
-                    srcSet={`${imageUrl.substring(0, imageUrl.lastIndexOf('.'))}.webp`}
-                    type="image/webp"
-                  />
-                )}
-                <img
-                  src={imageUrl}
-                  alt={altText}
-                  className="max-h-[70vh] max-w-full object-contain"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = getPlaceholderFromGitHub();
-                  }}
-                />
-              </picture>
-            ) : (
-              // Fallback for unsupported or unknown file types
-              <img
-                src={imageUrl}
-                alt={altText}
-                className="max-h-[70vh] max-w-full object-contain"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = getPlaceholderFromGitHub();
-                }}
-              />
-            )}
+            <img
+              src={imgSrc}
+              alt={altText || "Product Image"}
+              className="max-h-[70vh] max-w-full object-contain"
+              onError={(e) => {
+                console.log(`Modal image error for: ${imgSrc}`);
+                setImgError(true);
+                e.target.src = ultimateFallback;
+              }}
+            />
           </div>
           <div className="mt-2 text-center text-sm text-gray-600 truncate">
-            {altText}
+            {altText || "Product Image"}
           </div>
         </div>
       </div>
