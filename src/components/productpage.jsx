@@ -364,7 +364,7 @@ const saveChanges = async () => {
       const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
       
       // Set the image path
-      const imageFilePath = `${path}/images/${itemIdentifier}-${productToSave.image}`;
+      const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
       
       // Add image file to changes array
       fileChanges.push({
@@ -388,7 +388,7 @@ const saveChanges = async () => {
       const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
       
       // Set the datasheet path
-      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}-${productToSave.datasheet}`;
+      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
       
       // Add datasheet file to changes array
       fileChanges.push({
