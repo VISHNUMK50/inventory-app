@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import { useState, useEffect, useRef } from "react";
 import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home } from "lucide-react";
 import Addproductform from "@/components/Addproductform";
+import githubConfigImport from '@/config/githubConfig';
 
 const AddInventoryForm = () => {
     const [formData, setFormData] = useState({
@@ -32,77 +33,35 @@ const AddInventoryForm = () => {
     const [scrolled, setScrolled] = useState(false);
     const [showGithubConfig, setShowGithubConfig] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const resetForm = () => {
-        // Reset form data
-        setFormData({
-            id: "",  // Add this line
-            partName: "",
-            createdAt: "",
-            manufacturer: "",
-            manufacturerPart: "",
-            vendor: "",
-            vendorProductLink: "", // Changed from vendorPart
-            image: "",
-            imageData: "",
-            imageType: "",
-            datasheet: "",
-            datasheetData: "",
-            datasheetType: "",
-            quantity: "",
-            customerRef: "",
-            description: "",
-            bin: "",
-            reorderPoint: "",
-            reorderQty: "",
-            costPrice: "",
-            salePrice: "",
-            category: ""
-        });
+    const [githubConfig, setGithubConfig] = useState(githubConfigImport);
 
-        // Clear previews
-        setImagePreview(null);
-        setDatasheetName(null);
-
-        // Reset new entries
-        setNewEntries({
-            partName: "",
-            manufacturer: "",
-            vendor: "",
-            manufacturerPart: ""
-        });
-
-        // Clear suggestions
-        setSuggestions({
-            partName: [],
-            manufacturer: [],
-            vendor: [],
-            manufacturerPart: []
-        });
-
-        // Reset active state
-        setActiveDropdown(null);
+    const handleGithubConfigChange = (e) => {
+        const { name, value } = e.target;
+        setGithubConfig(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
+    // Add scroll event listener to track when to apply fixed positioning
+    useEffect(() => {
+        const handleScroll = () => {
+            // Get the header height to know when to trigger fixed position
+            const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
+            if (window.scrollY > mainHeaderHeight) {
+                setScrolled(true);
+            } else {
+                setScrolled(false);
+            }
+        };
 
-  // Add scroll event listener to track when to apply fixed positioning
-  useEffect(() => {
-    const handleScroll = () => {
-      // Get the header height to know when to trigger fixed position
-      const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
-      if (window.scrollY > mainHeaderHeight) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
+        // Add scroll event listener
+        window.addEventListener('scroll', handleScroll);
 
-    // Add scroll event listener
-    window.addEventListener('scroll', handleScroll);
-
-    // Clean up
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
+        // Clean up
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
     return (
         <div className="mx-auto bg-white shadow-xl overflow-hidden">
             {/* Main header - with class for targeting */}
@@ -129,7 +88,7 @@ const AddInventoryForm = () => {
                         </button>
                         <button
                             type="button"
-                            onClick={resetForm}
+                            onClick={() => document.getElementById('resetFormButton').click()}
                             className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200"
                         >
                             <AlertCircle className="h-4 w-4 mr-2" />
@@ -215,7 +174,7 @@ const AddInventoryForm = () => {
                     </div>
                 </div>
             )}
-            <Addproductform/>
+            <Addproductform />
         </div>
     );
 };

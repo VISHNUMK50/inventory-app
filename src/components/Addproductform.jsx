@@ -56,7 +56,6 @@ const Addproductform = () => {
     salePrice: "",
     category: ""
   });
-  const [scrolled, setScrolled] = useState(false);
   const [showSavingModal, setShowSavingModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -203,7 +202,6 @@ const Addproductform = () => {
   // GitHub config state - renamed to avoid conflict
   const [githubConfig, setGithubConfig] = useState(githubConfigImport);
 
-  const [showGithubConfig, setShowGithubConfig] = useState(false);
 
   // New state to preview uploads
   const [imagePreview, setImagePreview] = useState(null);
@@ -1096,7 +1094,12 @@ const Addproductform = () => {
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
-
+      <button
+        id="resetFormButton"
+        type="button"
+        onClick={resetForm}
+        className="hidden"
+      />
       {/* Main Form */}
       <form id="inventoryForm" onSubmit={handleSubmit} className="px-6 py-4">
         <div className="mb-4 ">
