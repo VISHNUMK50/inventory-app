@@ -123,7 +123,7 @@ const Addproductform = () => {
 
       if (!token || !repo || !owner) {
         const savedId = localStorage.getItem('lastUsedId');
-        setLastUsedId(savedId ? parseInt(savedId) : 0);
+        setLastUsedId(savedId ? parseInt(savedId) : 1000);
         return;
       }
 
@@ -147,14 +147,14 @@ const Addproductform = () => {
 
       const data = await response.json();
       const content = JSON.parse(atob(data.content));
-      const fetchedId = parseInt(content.lastUsedId) || 0;
+      const fetchedId = parseInt(content.lastUsedId) || 1000;
       setLastUsedId(fetchedId);
       localStorage.setItem('lastUsedId', fetchedId.toString());
 
     } catch (error) {
       console.error("Error fetching last used ID:", error);
       const savedId = localStorage.getItem('lastUsedId');
-      setLastUsedId(savedId ? parseInt(savedId) : 0);
+      setLastUsedId(savedId ? parseInt(savedId) : 1000);
     }
   };
 
@@ -771,7 +771,7 @@ const Addproductform = () => {
       const data = dataToSave || formData;
 
       // Get the current lastUsedId from state
-      let currentId = parseInt(data.id) || 0;
+      let currentId = parseInt(data.id) || 1000;
       let newLastUsedId = Math.max(lastUsedId, currentId);
 
       // If this is a new item (not an update), increment the ID
