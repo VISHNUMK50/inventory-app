@@ -543,8 +543,8 @@ const Addproductform = () => {
 
     try {
       // We'll look for matching manufacturer part and part name, regardless of ID
-      const sanitizedManufacturerPart = formData.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
-      const sanitizedPartName = formData.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const sanitizedManufacturerPart = formData.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+      const sanitizedPartName = formData.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
 
       // Use a prefix pattern to match items with the same part name and manufacturer part
       // but potentially different IDs
@@ -816,8 +816,8 @@ const Addproductform = () => {
       }
 
       // Generate a unique identifier based on part number and timestamp
-      const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
-      const sanitizedPartName = data.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+      const sanitizedPartName = data.partName.replace(/[^a-z0-9():]/gi, "_").replace(/\s+/g, "_");
       const itemIdentifier = `${data.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
 
       // Create a copy of data to modify before saving
