@@ -32,7 +32,6 @@ const AddInventoryForm = () => {
     const [scrolled, setScrolled] = useState(false);
     const [showGithubConfig, setShowGithubConfig] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     const resetForm = () => {
         // Reset form data
         setFormData({
@@ -84,7 +83,26 @@ const AddInventoryForm = () => {
         setActiveDropdown(null);
     };
 
+  // Add scroll event listener to track when to apply fixed positioning
+  useEffect(() => {
+    const handleScroll = () => {
+      // Get the header height to know when to trigger fixed position
+      const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
+      if (window.scrollY > mainHeaderHeight) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
 
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+
+    // Clean up
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
     return (
         <div className="mx-auto bg-white shadow-xl overflow-hidden">
             {/* Main header - with class for targeting */}

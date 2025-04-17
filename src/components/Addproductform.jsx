@@ -4,6 +4,31 @@ import { useState, useEffect, useRef } from "react";
 import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home } from "lucide-react";
 import githubConfigImport from '../config/githubConfig';
 
+const SavingModal = ({ isSuccess }) => {
+  return (
+    <div className="fixed inset-0 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+      <div className="relative bg-white rounded-lg p-8 m-4 max-w-sm flex flex-col items-center shadow-xl border border-gray-200">
+        {!isSuccess ? (
+          <>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Adding to Inventory...</h3>
+            <p className="text-gray-600">Please wait while we process your item</p>
+          </>
+        ) : (
+          <>
+            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Item Added Successfully!</h3>
+            <p className="text-gray-600">The inventory has been updated</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Addproductform = () => {
   // Main form data state
@@ -31,6 +56,10 @@ const Addproductform = () => {
     salePrice: "",
     category: ""
   });
+  const [scrolled, setScrolled] = useState(false);
+  const [showSavingModal, setShowSavingModal] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   const resetForm = () => {
     // Reset form data
     setFormData({
@@ -56,6 +85,7 @@ const Addproductform = () => {
       costPrice: "",
       salePrice: "",
       category: ""
+
     });
 
     // Clear previews
@@ -80,6 +110,11 @@ const Addproductform = () => {
 
     // Reset active state
     setActiveDropdown(null);
+    // Reset file input values
+    const imageInput = document.getElementById('image-upload');
+    const datasheetInput = document.getElementById('datasheet-upload');
+    if (imageInput) imageInput.value = '';
+    if (datasheetInput) datasheetInput.value = '';
   };
   // New state for tracking the last used ID
   const [lastUsedId, setLastUsedId] = useState(0);
@@ -334,29 +369,29 @@ const Addproductform = () => {
 
   const addNewEntry = (field) => {
     const value = newEntries[field].trim();
-  
+
     if (value && !dropdownOptions[`${field}s`].includes(value)) {
       // Create a new array by spreading to ensure React detects change
       const updatedFieldArray = [...dropdownOptions[`${field}s`], value];
-  
+
       // Create a new object for the updated options
       const updatedOptions = {
         ...dropdownOptions,
         [`${field}s`]: updatedFieldArray
       };
-  
+
       // Update state with the new object
       setDropdownOptions(updatedOptions);
-      
+
       // Update form data with the new value
       setFormData({ ...formData, [field]: value });
-      
+
       // Clear the new entry input
       setNewEntries({ ...newEntries, [field]: "" });
-      
+
       // Reset adding field state
       setAddingField(null);
-  
+
       // Save updated options to GitHub
       saveDropdownOptionsToGithub(updatedOptions);
     }
@@ -562,53 +597,53 @@ const Addproductform = () => {
 
   // Updated handleSubmit function with merge logic
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!formData.partName || !formData.manufacturer || !formData.manufacturerPart) {
-    alert("Please fill all required fields: Part Name, Manufacturer, and Manufacturer Part#");
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    // Create an object to track which fields have new values
-    const newValues = {
-      partNames: formData.partName,
-      manufacturers: formData.manufacturer,
-      vendors: formData.vendor,
-      manufacturerParts: formData.manufacturerPart
-    };
-
-    // Check each field and update dropdownOptions if it's a new value
-    let hasNewValues = false;
-    const updatedOptions = { ...dropdownOptions };
-
-    Object.entries(newValues).forEach(([key, value]) => {
-      if (value && !dropdownOptions[key].includes(value)) {
-        updatedOptions[key] = [...dropdownOptions[key], value];
-        hasNewValues = true;
-      }
-    });
-
-    // If we have new values, update dropdownOptions and save to GitHub
-    if (hasNewValues) {
-      setDropdownOptions(updatedOptions);
-      await saveDropdownOptionsToGithub(updatedOptions);
+    if (!formData.partName || !formData.manufacturer || !formData.manufacturerPart) {
+      alert("Please fill all required fields: Part Name, Manufacturer, and Manufacturer Part#");
+      return;
     }
 
-    // Continue with the rest of your submit logic...
-    await processNewEntries();
-    const existingItem = await checkItemExists();
-    // ... rest of your existing submit logic ...
+    setIsSubmitting(true);
 
-  } catch (error) {
-    console.error("Error during submission:", error);
-    alert(`Error submitting form: ${error.message}`);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    try {
+      // Create an object to track which fields have new values
+      const newValues = {
+        partNames: formData.partName,
+        manufacturers: formData.manufacturer,
+        vendors: formData.vendor,
+        manufacturerParts: formData.manufacturerPart
+      };
+
+      // Check each field and update dropdownOptions if it's a new value
+      let hasNewValues = false;
+      const updatedOptions = { ...dropdownOptions };
+
+      Object.entries(newValues).forEach(([key, value]) => {
+        if (value && !dropdownOptions[key].includes(value)) {
+          updatedOptions[key] = [...dropdownOptions[key], value];
+          hasNewValues = true;
+        }
+      });
+
+      // If we have new values, update dropdownOptions and save to GitHub
+      if (hasNewValues) {
+        setDropdownOptions(updatedOptions);
+        await saveDropdownOptionsToGithub(updatedOptions);
+      }
+
+      // Continue with the rest of your submit logic...
+      await processNewEntries();
+      const existingItem = await checkItemExists();
+      // ... rest of your existing submit logic ...
+
+    } catch (error) {
+      console.error("Error during submission:", error);
+      alert(`Error submitting form: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -638,15 +673,15 @@ const Addproductform = () => {
     try {
       const { token, repo, owner, branch, path } = githubConfig;
       const options = optionsToSave || dropdownOptions;
-  
+
       if (!token || !repo || !owner) {
         localStorage.setItem('dropdownOptions', JSON.stringify(options));
         return;
       }
-  
+
       const optionsFilePath = `${path}/dropdownOptions.json`;
       const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${optionsFilePath}`;
-  
+
       let sha = '';
       try {
         const checkResponse = await fetch(apiUrl, {
@@ -654,7 +689,7 @@ const Addproductform = () => {
             "Authorization": `token ${token}`
           }
         });
-  
+
         if (checkResponse.ok) {
           const fileData = await checkResponse.json();
           sha = fileData.sha;
@@ -662,18 +697,18 @@ const Addproductform = () => {
       } catch (error) {
         console.log("Creating new dropdown options file");
       }
-  
+
       const content = btoa(JSON.stringify(options, null, 2));
       const requestBody = {
         message: "Update dropdown options",
         content: content,
         branch: branch
       };
-  
+
       if (sha) {
         requestBody.sha = sha;
       }
-  
+
       const response = await fetch(apiUrl, {
         method: "PUT",
         headers: {
@@ -682,14 +717,14 @@ const Addproductform = () => {
         },
         body: JSON.stringify(requestBody)
       });
-  
+
       if (!response.ok) {
         throw new Error(`GitHub API error: ${await response.text()}`);
       }
-  
+
       // Also update local storage
       localStorage.setItem('dropdownOptions', JSON.stringify(options));
-  
+
     } catch (error) {
       console.error("Error saving dropdown options:", error);
       localStorage.setItem('dropdownOptions', JSON.stringify(options));
@@ -719,7 +754,7 @@ const Addproductform = () => {
   /// save to github
   const saveToGithub = async (dataToSave = null) => {
     const { token, repo, owner, branch, path } = githubConfig;
-  
+
     if (!token || !repo || !owner) {
       alert("Please fill in all GitHub configuration fields");
       return false;
@@ -728,8 +763,11 @@ const Addproductform = () => {
       console.log("Save already in progress, please wait");
       return false;
     }
-    
+
     isSaving = true;
+    setShowSavingModal(true); // Show the modal when starting to save
+    setSaveSuccess(false); // Reset success state
+
     try {
       setIsSubmitting(true);
       const data = dataToSave || formData;
@@ -743,22 +781,22 @@ const Addproductform = () => {
         newLastUsedId = lastUsedId + 1;
         data.id = newLastUsedId.toString();
       }
-  
+
       // Generate a unique identifier based on part number and timestamp
       const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9]/gi, "_");
       const sanitizedPartName = data.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
       const itemIdentifier = `${data.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-  
+
       // Create a copy of data to modify before saving
       const finalDataToSave = { ...data };
-  
+
       // Remove the base64 data from the JSON file
       delete finalDataToSave.imageData;
       delete finalDataToSave.datasheetData;
-  
+
       // Prepare file updates array
       const fileUpdates = [];
-  
+
       // Add image file if exists
       if (data.image && data.imageData) {
         const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
@@ -768,7 +806,7 @@ const Addproductform = () => {
           content: data.imageData
         });
       }
-  
+
       // Add datasheet file if exists
       if (data.datasheet && data.datasheetData) {
         const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${data.datasheet}`;
@@ -778,7 +816,7 @@ const Addproductform = () => {
           content: data.datasheetData
         });
       }
-  
+
       // Add the JSON data file
       const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
       const jsonContent = btoa(JSON.stringify(finalDataToSave, null, 2));
@@ -786,7 +824,7 @@ const Addproductform = () => {
         path: jsonFilePath,
         content: jsonContent
       });
-      
+
       // Update the lastUsedId file
       const idTrackerPath = `${path}/lastUsedId.json`;
       const idContent = btoa(JSON.stringify({ lastUsedId: newLastUsedId }, null, 2));
@@ -794,14 +832,25 @@ const Addproductform = () => {
         path: idTrackerPath,
         content: idContent
       });
-      
+
       // Create a single commit with all file changes
       await batchCommitToGithub(fileUpdates, `Add inventory item: ${data.partName} (ID: ${data.id}) with all related files`);
-  
+
       // Update local state and storage
       setLastUsedId(newLastUsedId);
       localStorage.setItem('lastUsedId', newLastUsedId.toString());
-  
+      // After successful save, reset the form
+      resetForm();
+      setImagePreview(null);
+      setDatasheetName(null);
+      setSaveSuccess(true);
+
+      // Wait 1.5 seconds to show success message before closing modal
+      setTimeout(() => {
+        setShowSavingModal(false);
+        setSaveSuccess(false);
+      }, 1000);
+
       return true;
     } catch (error) {
       console.error("Error saving to GitHub:", error);
@@ -810,8 +859,12 @@ const Addproductform = () => {
     } finally {
       isSaving = false;
       setIsSubmitting(false);
+
     }
-};
+
+
+
+  };
   // New function to handle batch commits
   const batchCommitToGithub = async (fileUpdates, commitMessage) => {
     const { token, repo, owner, branch } = githubConfig;
@@ -1038,28 +1091,8 @@ const Addproductform = () => {
     );
   };
 
-  const [scrolled, setScrolled] = useState(false);
 
-  // Add scroll event listener to track when to apply fixed positioning
-  useEffect(() => {
-    const handleScroll = () => {
-      // Get the header height to know when to trigger fixed position
-      const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
-      if (window.scrollY > mainHeaderHeight) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
 
-    // Add scroll event listener
-    window.addEventListener('scroll', handleScroll);
-
-    // Clean up
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
@@ -1397,8 +1430,7 @@ const Addproductform = () => {
             </div>
           </div>
         </div>
-
-
+        {showSavingModal && <SavingModal isSuccess={saveSuccess} />}
       </form>
     </div>
   );

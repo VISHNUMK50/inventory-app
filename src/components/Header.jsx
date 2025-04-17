@@ -9,7 +9,9 @@ const Header = ({ title = "Inventory Management System" }) => {
         <div className="flex items justify-between">
           <div className="flex items-center space-x-2">
             <Package className="h-8 w-8" />
+            <Link href="/"> 
             <span className="text-2xl font-bold">InventoryPro</span>
+            </Link>
           </div>
           <h2 className="ml-60 text-3xl font-bold">
             {title}
