@@ -646,18 +646,35 @@ const Addproductform = () => {
   // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   // Add this helper function near the top of your component
   const safeBase64Encode = (str) => {
-    // First encode the string to handle UTF-8 characters
-    const encodedStr = encodeURIComponent(str);
-    // Convert the encoded string to base64
-    return btoa(encodedStr);
+    try {
+      // Convert the string to UTF-8 bytes
+      const utf8Bytes = new TextEncoder().encode(str);
+      // Convert bytes to binary string
+      const binaryStr = String.fromCharCode.apply(null, utf8Bytes);
+      // Base64 encode the binary string
+      return btoa(binaryStr);
+    } catch (error) {
+      console.error('Encoding error:', error);
+      // Fallback method
+      return btoa(unescape(encodeURIComponent(str)));
+    }
   };
-
-  // And a corresponding decode function if needed
   const safeBase64Decode = (str) => {
-    // Decode from base64
-    const decodedStr = atob(str);
-    // Convert back from UTF-8
-    return decodeURIComponent(decodedStr);
+    try {
+      // Decode base64 to binary string
+      const binaryStr = atob(str);
+      // Convert binary string to UTF-8 bytes
+      const utf8Bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        utf8Bytes[i] = binaryStr.charCodeAt(i);
+      }
+      // Convert UTF-8 bytes to string
+      return new TextDecoder().decode(utf8Bytes);
+    } catch (error) {
+      console.error('Decoding error:', error);
+      // Fallback method
+      return decodeURIComponent(escape(atob(str)));
+    }
   };
   const saveLastUsedIdToGithub = async (newId) => {
     try {
@@ -710,8 +727,8 @@ const Addproductform = () => {
         console.log("Creating new dropdown options file");
       }
 
-      const content = safeBase64Encode(JSON.stringify(options, null, 2));
-      const requestBody = {
+      const optionsString = JSON.stringify(options, null, 2);
+      const content = safeBase64Encode(optionsString); const requestBody = {
         message: "Update dropdown options",
         content: content,
         branch: branch
@@ -739,7 +756,11 @@ const Addproductform = () => {
 
     } catch (error) {
       console.error("Error saving dropdown options:", error);
-      localStorage.setItem('dropdownOptions', JSON.stringify(options));
+      if (error.message.includes('Failed to execute \'btoa\'')) {
+        alert('Error: Some special characters in the options cannot be saved. Please check your input.');
+      } else {
+        localStorage.setItem('dropdownOptions', JSON.stringify(options));
+      }
     }
   };
   // New function that accepts options parameter
@@ -831,7 +852,8 @@ const Addproductform = () => {
 
       // Add the JSON data file
       const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
-    const jsonContent = safeBase64Encode(JSON.stringify(finalDataToSave, null, 2));
+      const jsonString = JSON.stringify(finalDataToSave, null, 2);
+      const jsonContent = safeBase64Encode(jsonString);
       fileUpdates.push({
         path: jsonFilePath,
         content: jsonContent
@@ -839,7 +861,8 @@ const Addproductform = () => {
 
       // Update the lastUsedId file
       const idTrackerPath = `${path}/lastUsedId.json`;
-      const idContent = safeBase64Encode(JSON.stringify({ lastUsedId: newLastUsedId }, null, 2));
+      const idString = JSON.stringify({ lastUsedId: newLastUsedId }, null, 2);
+      const idContent = safeBase64Encode(idString);
       fileUpdates.push({
         path: idTrackerPath,
         content: idContent
@@ -866,7 +889,12 @@ const Addproductform = () => {
       return true;
     } catch (error) {
       console.error("Error saving to GitHub:", error);
-      alert(`Error saving to GitHub: ${error.message}`);
+      if (error.message.includes('Failed to execute \'btoa\'')) {
+        alert('Error: Some special characters in the data cannot be saved. Please check your input.');
+      } else {
+        alert(`Error saving to GitHub: ${error.message}`);
+      }
+      setShowSavingModal(false);
       return false;
     } finally {
       isSaving = false;
