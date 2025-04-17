@@ -801,8 +801,8 @@ const ManageInventory = () => {
     const imgSrc = imgError || !imageUrl ? placeholderUrl || ultimateFallback : imageUrl;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-        <div className="bg-white p-2 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0  flex items-center justify-center z-50" onClick={onClose}>
+        <div className="bg-white p-2 shadow-2xl rounded-lg max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
           <div className="flex justify-end mb-2">
             <button
               className="text-gray-500 hover:text-gray-800"

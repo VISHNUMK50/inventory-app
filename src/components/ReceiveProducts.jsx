@@ -316,8 +316,8 @@ const ReceiveProducts = () => {
           console.log("Found existing file:", fileName);
         } else {
           // Create sanitized filename
-          const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-          const sanitizedPartName = product.partName ? product.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_") : "";
+          const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+          const sanitizedPartName = product.partName ? product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_") : "";
 
           fileName = sanitizedPartName
             ? `${sanitizedPartName}-${sanitizedManufacturerPart}.json`

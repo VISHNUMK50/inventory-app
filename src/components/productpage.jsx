@@ -359,12 +359,12 @@ const saveChanges = async () => {
     // Prepare image change if it was modified
     if (productToSave.imageModified && productToSave.imageData) {
       // Create sanitized identifiers for filenames
-      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
       const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
       
       // Set the image path
-      const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
+      const imageFilePath = `${path}/images/${itemIdentifier}-${productToSave.image}`;
       
       // Add image file to changes array
       fileChanges.push({
@@ -383,12 +383,12 @@ const saveChanges = async () => {
     // Prepare datasheet change if it was modified
     if (productToSave.datasheetModified && productToSave.datasheetData) {
       // Create sanitized identifiers for filenames
-      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
       const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
       
       // Set the datasheet path
-      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
+      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}-${productToSave.datasheet}`;
       
       // Add datasheet file to changes array
       fileChanges.push({
@@ -438,8 +438,8 @@ const saveChanges = async () => {
       const jsonDirPath = `${path}/jsons`;
 
       // Create sanitized filename
-      const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9]/gi, "-");
-      const sanitizedPartName = product.partName.replace(/[^a-z0-9\s]/gi, "-").replace(/\s+/g, "_");
+      const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+      const sanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
       const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
       const filePath = `${jsonDirPath}/${fileName}`;
 
