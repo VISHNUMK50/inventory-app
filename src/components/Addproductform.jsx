@@ -146,7 +146,7 @@ const Addproductform = () => {
       }
 
       const data = await response.json();
-      const content = JSON.parse(atob(data.content));
+      const content = JSON.parse(safeBase64Decode(data.content));
       const fetchedId = parseInt(content.lastUsedId) || 1000;
       setLastUsedId(fetchedId);
       localStorage.setItem('lastUsedId', fetchedId.toString());
@@ -295,7 +295,7 @@ const Addproductform = () => {
       const data = await response.json();
 
       // Decode content from base64
-      const content = atob(data.content);
+      const content = safeBase64Decode(data.content);
       const options = JSON.parse(content);
 
       // Ensure manufacturerParts exists in the options
@@ -644,7 +644,21 @@ const Addproductform = () => {
   };
 
   // @@@@@@@@@@@@@@@@@@@     save files     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  // Add this helper function near the top of your component
+  const safeBase64Encode = (str) => {
+    // First encode the string to handle UTF-8 characters
+    const encodedStr = encodeURIComponent(str);
+    // Convert the encoded string to base64
+    return btoa(encodedStr);
+  };
 
+  // And a corresponding decode function if needed
+  const safeBase64Decode = (str) => {
+    // Decode from base64
+    const decodedStr = atob(str);
+    // Convert back from UTF-8
+    return decodeURIComponent(decodedStr);
+  };
   const saveLastUsedIdToGithub = async (newId) => {
     try {
       const { token, repo, owner, path } = githubConfig;
@@ -696,7 +710,7 @@ const Addproductform = () => {
         console.log("Creating new dropdown options file");
       }
 
-      const content = btoa(JSON.stringify(options, null, 2));
+      const content = safeBase64Encode(JSON.stringify(options, null, 2));
       const requestBody = {
         message: "Update dropdown options",
         content: content,
@@ -817,7 +831,7 @@ const Addproductform = () => {
 
       // Add the JSON data file
       const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
-      const jsonContent = btoa(JSON.stringify(finalDataToSave, null, 2));
+    const jsonContent = safeBase64Encode(JSON.stringify(finalDataToSave, null, 2));
       fileUpdates.push({
         path: jsonFilePath,
         content: jsonContent
@@ -825,7 +839,7 @@ const Addproductform = () => {
 
       // Update the lastUsedId file
       const idTrackerPath = `${path}/lastUsedId.json`;
-      const idContent = btoa(JSON.stringify({ lastUsedId: newLastUsedId }, null, 2));
+      const idContent = safeBase64Encode(JSON.stringify({ lastUsedId: newLastUsedId }, null, 2));
       fileUpdates.push({
         path: idTrackerPath,
         content: idContent

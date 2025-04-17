@@ -1,10 +1,10 @@
 ## bugs 
 
-- dropdown option not updated (rare occurance)
-- IF THE ITEM EXIST ADD QTY ( MATCH, Part Name, Manufacturer, Manufacturer Part #, Vendor)
-
+- (R(16-04-25)) dropdown option not updated (rare occurance)
+- (R(16-04-25)) IN ADD PRODUCT PAGE IF THE ITEM EXIST ADD QTY ( MATCH, Part Name, Manufacturer, Manufacturer Part #, Vendor)
+- Error saving to GitHub: Failed to execute 'btoa' on 'Window': The string to be encoded contains characters outside of the Latin1 range.
 ## features
-- ADD LOADING ACTION
+- (R(16-04-25)) ADD LOADING ACTION
 
 ## resolved bugs
 
