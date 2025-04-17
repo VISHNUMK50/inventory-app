@@ -128,8 +128,8 @@ const ManageInventory = () => {
     setInventoryItems(items);
     setFilteredItems(items);
 
-    // Save to localStorage as backup
-    localStorage.setItem('inventoryItems', JSON.stringify(items));
+    // // Save to localStorage as backup
+    // localStorage.setItem('inventoryItems', JSON.stringify(items));
 
     return items;
   };
@@ -227,13 +227,13 @@ const ManageInventory = () => {
       setError(error.message);
 
       // Try to load from localStorage as fallback
-      const localItems = localStorage.getItem('inventoryItems');
-      if (localItems) {
-        console.log("Loading items from localStorage as fallback");
-        const items = JSON.parse(localItems);
-        setInventoryItems(items);
-        setFilteredItems(items);
-      }
+      // const localItems = localStorage.getItem('inventoryItems');
+      // if (localItems) {
+      //   console.log("Loading items from localStorage as fallback");
+      //   const items = JSON.parse(localItems);
+      //   setInventoryItems(items);
+      //   setFilteredItems(items);
+      // }
     } finally {
       setIsLoading(false);
     }
@@ -382,7 +382,7 @@ const ManageInventory = () => {
         }
 
         // Also update localStorage as a backup
-        localStorage.setItem('inventoryItems', JSON.stringify(newItems));
+        // localStorage.setItem('inventoryItems', JSON.stringify(newItems));
 
         if (githubSuccess) {
           alert(`Item deleted successfully`);
@@ -456,7 +456,7 @@ const ManageInventory = () => {
           setSelectAll(false);
 
           // Update localStorage
-          localStorage.setItem('inventoryItems', JSON.stringify(newItems));
+          // localStorage.setItem('inventoryItems', JSON.stringify(newItems));
         }
 
         // Show appropriate message based on results
