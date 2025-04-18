@@ -1,5 +1,5 @@
 import OrderCheckout  from "@/components/createorder";
 
-export default function createorder() {
+export default function CreateOrderPage() {
   return <OrderCheckout  />;
 }
