@@ -4,13 +4,17 @@
 
 ### **Added Features**
 
+- 18/04/24 added checkout page
+- 18/04/24 added modal for datasheet preview 
 - 17/04/24 Added saving modal on add to inventory in add product page 
 - 17/04/24 Click on logo takes to dashboard 
-- 18/04/24 added modal for datasheet preview 
 ***
 
-## **Bugs** 
-- 19/04/24 pdf geration on checkout not working
+## **Bugs**
+
+- 18/04/24 old qty shown on product search
+- 18/04/24 name sugestion not stored.
+- 18/04/24 pdf geration on checkout not working
 - 17/04/24 data not shown in inventory table
 - 17/04/24 image flicker in table
 - 17/04/24 image file loading time delay 

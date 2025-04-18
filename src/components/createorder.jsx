@@ -49,6 +49,16 @@ const OrderCheckout = () => {
         loadAllProducts();
     }, []);
 
+    useEffect(() => {
+        if (customerName.length > 0 && document.activeElement === document.querySelector('#customerNameInput')) {
+            const filtered = customerSuggestions.filter(customer =>
+                customer.toLowerCase().includes(customerName.toLowerCase())
+            );
+            setShowCustomerSuggestions(filtered.length > 0);
+        } else {
+            setShowCustomerSuggestions(false);
+        }
+    }, [customerName, customerSuggestions]);
     // Load all products for search suggestions
     const loadAllProducts = async () => {
         try {
@@ -539,7 +549,7 @@ const OrderCheckout = () => {
                                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     required
                                 />
-                                {showCustomerSuggestions && (
+                                { showCustomerSuggestions && (
                                     <div
                                         ref={customerSuggestionRef}
                                         className="absolute z-10 w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto"
@@ -557,6 +567,7 @@ const OrderCheckout = () => {
                                             ))}
                                     </div>
                                 )}
+
                             </div>
 
                             {/* Date Field */}
