@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ### **New Features**
 
 ### 16-04-25
@@ -13,23 +12,19 @@
 ***
 
 ## **Bugs** 
-=======
 ## bugs 
->>>>>>> 21cbcf0efb5a7b1941769d97fc61476d467f1631
 
 ### 16-04-25
 - Dropdown option not updated (rare occurance)
 - IN ADD PRODUCT PAGE IF THE ITEM EXIST ADD QTY ( MATCH, Part Name, Manufacturer, Manufacturer Part #, Vendor)
 
 ### 17-04-25
-<<<<<<< HEAD
 - data not shown in inventory table
 - image flicker in table
 - image file loading time delay
--check datasheet
+- check datasheet
 
 ### **Resolved Bugs**
-=======
 - Error saving to GitHub: Failed to execute 'btoa' on 'Window': The string to be encoded contains characters outside of the Latin1 range.
 
 ### features
@@ -38,7 +33,6 @@
 - ADD LOADING ACTION
 
 ### resolved bugs
->>>>>>> 21cbcf0efb5a7b1941769d97fc61476d467f1631
 
 - last used id not updated on add product page 
 - last used id not fetch on add product page 
@@ -48,11 +42,9 @@
 - Reset button on add prodcut page not working, Error: setImagePreview is not defined ( fix: passed button to addproductform.jsx) 
 - Clicking show github config show, Error: githubConfig is not defined (fix importded gitconfig) 
 - ID SHOULD BE 4DIGIT 
-<<<<<<< HEAD
 - Error saving to GitHub: Failed to execute 'btoa' on 'Window': The string to be encoded contains characters outside of the Latin1 range.
 
 
-=======
 
 - Error saving to GitHub: Failed to execute 'btoa' on 'Window': The string to be encoded contains characters outside of the Latin1 range.
 
@@ -62,4 +54,3 @@
 ### 17-04-25
 - Added saving modal on add to inventory in add product page 
 - Click on logo takes to dashboard 
->>>>>>> 21cbcf0efb5a7b1941769d97fc61476d467f1631
