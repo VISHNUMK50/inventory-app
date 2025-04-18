@@ -453,7 +453,7 @@ const OrderCheckout = () => {
             setSuccessMessage("Order saved successfully and inventory updated");
 
             // Generate and download PDF
-            generatePDF(order);
+            // generatePDF(order);
 
             // Clear form after successful save
             clearForm();
