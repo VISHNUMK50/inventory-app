@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, Edit, Trash, Download, AlertCircle, Package, Eye, FileSpreadsheet, PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
+import { Search, Edit, Trash, Download, AlertCircle, X, Eye, FileSpreadsheet, PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
 import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
@@ -238,7 +238,93 @@ const ManageInventory = () => {
       setIsLoading(false);
     }
   };
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState("");
+  const openPdfModal = (item) => {
+    if (!item.datasheet) {
+      alert("No datasheet available for this item");
+      return;
+    }
+    setPdfUrl(item.datasheet);
+    setIsPdfModalOpen(true);
+  };
 
+  // Close PDF modal
+  const closePdfModal = () => {
+    setIsPdfModalOpen(false);
+    setPdfUrl("");
+  };
+  const PdfViewerModal = ({ isOpen, pdfUrl, onClose }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // Create a Google Docs viewer URL
+    const getViewerUrl = (url) => {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    };
+
+    if (!isOpen) return null;
+
+    return (
+      <div
+        className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <div className="fixed bg-gray-500 rounded-lg shadow-2xl w-[75%] h-[95vh] flex flex-col m-auto">
+          <div className="px-3 p-1 flex items-center justify-between">
+            <h3 id="modal-title" className="text-l text-white font-medium">Datasheet Preview</h3>
+            <div className="flex space-x-2">
+              <a
+                href={pdfUrl}
+                download
+                className="p-1  bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center text-xs"
+              >
+                <Download className="w-3 h-3 mr-1" /> Download PDF
+              </a>
+              <button
+                onClick={onClose}
+                className="p-1 hover:bg-gray-400 rounded-full"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-grow overflow-hidden relative min-h-[600px]">
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+              </div>
+            )}
+
+            {error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-red-50">
+                <div className="text-red-600 flex items-center">
+                  <AlertCircle className="w-5 h-5 mr-2" />
+                  {error}
+                </div>
+              </div>
+            )}
+
+            <iframe
+              src={getViewerUrl(pdfUrl)}
+              className="w-full h-full rounded-lg "
+              title="PDF Viewer"
+              onLoad={() => setIsLoading(false)}
+              onError={() => {
+                setIsLoading(false);
+                setError('Failed to load PDF');
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
   // Add these state variables to your component
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState({ url: '', alt: '' });
@@ -1165,16 +1251,16 @@ const ManageInventory = () => {
                       <div className="flex items-center space-x-2">
                         <button
                           className="text-blue-600 hover:text-blue-800"
-                          onClick={() => handleopendatasheet(item.manufacturerPart)}
+                          onClick={() => openPdfModal(item)}
                         >
-                          <FileSpreadsheet className="h-4 w-4" />
+                          <FileSpreadsheet className="h-5 w-5" />
 
                         </button>
                         <button
                           className="text-red-600 hover:text-red-800"
                           onClick={() => handleDeleteItem(item.manufacturerPart)}
                         >
-                          <Trash className="h-4 w-4" />
+                          <Trash className="h-5 w-5" />
                         </button>
                       </div>
                     </td>
@@ -1213,6 +1299,12 @@ const ManageInventory = () => {
         altText={selectedImage.alt}
         onClose={() => setModalOpen(false)}
       />
+              {/* PDF Modal */}
+              <PdfViewerModal
+          isOpen={isPdfModalOpen}
+          pdfUrl={pdfUrl}
+          onClose={closePdfModal}
+        />
     </div>
 
   );

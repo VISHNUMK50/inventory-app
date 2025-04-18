@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { use } from "react"; // Import React.use
 import Link from "next/link";
-import { ArrowLeft, Save, Package, Clipboard ,FileText, Download, Eye, ShoppingCart, FileX, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
+import { ArrowLeft, Save, Package, Clipboard, X, FileText, Download, Eye, ShoppingCart, FileX, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
 import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
 import Addproductform from "@/components/Addproductform";
@@ -46,17 +46,18 @@ export default function ProductDetail({ params }) {
   // New state to preview uploads
   const [imagePreview, setImagePreview] = useState(null);
   const [datasheetName, setDatasheetName] = useState(null);
-
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState("");
   // Initialize editedProduct when product is loaded
   useEffect(() => {
     if (product) {
       setEditedProduct(product);
-      
+
       // Initialize image preview if product has an image URL
       if (product.image) {
         setImagePreview(product.image);
       }
-      
+
       // Initialize datasheet name if product has a datasheet
       if (product.datasheet) {
         // Extract filename from URL
@@ -169,7 +170,16 @@ export default function ProductDetail({ params }) {
       // loadFromLocalStorage();
     }
   };
+  const openPdfModal = (url) => {
+    setPdfUrl(url);
+    setIsPdfModalOpen(true);
+  };
 
+  // Close PDF modal
+  const closePdfModal = () => {
+    setIsPdfModalOpen(false);
+    setPdfUrl("");
+  };
   // Fetch product details on component mount
   useEffect(() => {
     if (partName) {
@@ -296,18 +306,18 @@ export default function ProductDetail({ params }) {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-  
+
     // Update preview
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
-  
+
     // Read file as base64
     const reader = new FileReader();
     reader.onload = (event) => {
       // Get base64 data without the prefix (e.g., "data:image/jpeg;base64,")
       const base64String = event.target.result;
       const base64Data = base64String.split(',')[1];
-  
+
       // Update the editedProduct with image information
       setEditedProduct(prev => ({
         ...prev,
@@ -320,22 +330,92 @@ export default function ProductDetail({ params }) {
     };
     reader.readAsDataURL(file);
   };
+  const PdfViewerModal = ({ isOpen, pdfUrl, onClose }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    // Create a Google Docs viewer URL
+    const getViewerUrl = (url) => {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    };
+
+    if (!isOpen) return null;
+
+    return (
+      <div
+        className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <div className="fixed bg-gray-500 rounded-lg shadow-2xl w-[75%] h-[95vh] flex flex-col m-auto">
+          <div className="px-3 p-1 flex items-center justify-between">
+            <h3 id="modal-title" className="text-l text-white font-medium">Datasheet Preview</h3>
+            <div className="flex space-x-2">
+              <a
+                href={pdfUrl}
+                download
+                className="p-1  bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center text-xs"
+              >
+                <Download className="w-3 h-3 mr-1" /> Download PDF
+              </a>
+              <button
+                onClick={onClose}
+                className="p-1 hover:bg-gray-400 rounded-full"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-grow overflow-hidden relative min-h-[600px]">
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+              </div>
+            )}
+
+            {error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-red-50">
+                <div className="text-red-600 flex items-center">
+                  <AlertCircle className="w-5 h-5 mr-2" />
+                  {error}
+                </div>
+              </div>
+            )}
+
+            <iframe
+              src={getViewerUrl(pdfUrl)}
+              className="w-full h-full rounded-lg "
+              title="PDF Viewer"
+              onLoad={() => setIsLoading(false)}
+              onError={() => {
+                setIsLoading(false);
+                setError('Failed to load PDF');
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
   // Updated datasheet upload handler for edit mode
   const handleDatasheetUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-  
+
     // Update preview name
     setDatasheetName(file.name);
-  
+
     // Read file as base64
     const reader = new FileReader();
     reader.onload = (event) => {
       // Get base64 data without the prefix
       const base64String = event.target.result;
       const base64Data = base64String.split(',')[1];
-  
+
       // Update the editedProduct with datasheet information
       setEditedProduct(prev => ({
         ...prev,
@@ -351,258 +431,258 @@ export default function ProductDetail({ params }) {
 
   // Helper function to save files to GitHub
   // Function to create a Git tree with multiple file updates
-const createGitTreeWithFiles = async (fileChanges) => {
-  const { token, repo, owner, branch } = githubConfig;
-  
-  // First, get the reference to the latest commit on the branch
-  const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
+  const createGitTreeWithFiles = async (fileChanges) => {
+    const { token, repo, owner, branch } = githubConfig;
+
+    // First, get the reference to the latest commit on the branch
+    const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!refResponse.ok) {
+      throw new Error(`Failed to get branch reference: ${refResponse.statusText}`);
     }
-  });
-  
-  if (!refResponse.ok) {
-    throw new Error(`Failed to get branch reference: ${refResponse.statusText}`);
-  }
-  
-  const refData = await refResponse.json();
-  const latestCommitSha = refData.object.sha;
-  
-  // Get the commit object to retrieve the tree
-  const commitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
+
+    const refData = await refResponse.json();
+    const latestCommitSha = refData.object.sha;
+
+    // Get the commit object to retrieve the tree
+    const commitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!commitResponse.ok) {
+      throw new Error(`Failed to get commit: ${commitResponse.statusText}`);
     }
-  });
-  
-  if (!commitResponse.ok) {
-    throw new Error(`Failed to get commit: ${commitResponse.statusText}`);
-  }
-  
-  const commitData = await commitResponse.json();
-  const baseTreeSha = commitData.tree.sha;
-  
-  // Create the new tree with all file changes
-  const treeItems = await Promise.all(fileChanges.map(async (file) => {
-    // Create the blob
-    const blobResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
-      method: "POST",
+
+    const commitData = await commitResponse.json();
+    const baseTreeSha = commitData.tree.sha;
+
+    // Create the new tree with all file changes
+    const treeItems = await Promise.all(fileChanges.map(async (file) => {
+      // Create the blob
+      const blobResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          content: file.isBase64 ? file.content : btoa(unescape(encodeURIComponent(file.content))),
+          encoding: "base64"
+        })
+      });
+
+
+      if (!blobResponse.ok) {
+        throw new Error(`Failed to create blob: ${blobResponse.statusText}`);
+      }
+
+      const blobData = await blobResponse.json();
+
+      // Return the tree item with the blob SHA
+      return {
+        path: file.path,
+        mode: "100644",
+        type: "blob",
+        sha: blobData.sha  // Reference the blob by SHA instead of including content directly
+      };
+    }));
+
+    // Create the new tree with the blob references
+    const newTreeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
+      method: 'POST',
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        content: file.isBase64 ? file.content : btoa(unescape(encodeURIComponent(file.content))),
-        encoding: "base64"
+        base_tree: baseTreeSha,
+        tree: treeItems
       })
     });
-    
 
-    if (!blobResponse.ok) {
-      throw new Error(`Failed to create blob: ${blobResponse.statusText}`);
+    if (!newTreeResponse.ok) {
+      throw new Error(`Failed to create tree: ${newTreeResponse.statusText}`);
     }
 
-    const blobData = await blobResponse.json();
+    const newTreeData = await newTreeResponse.json();
 
-    // Return the tree item with the blob SHA
-    return {
-      path: file.path,
-      mode: "100644",
-      type: "blob",
-      sha: blobData.sha  // Reference the blob by SHA instead of including content directly
-    };
-  }));
-  
-  // Create the new tree with the blob references
-  const newTreeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
-    method: 'POST',
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      base_tree: baseTreeSha,
-      tree: treeItems
-    })
-  });
-  
-  if (!newTreeResponse.ok) {
-    throw new Error(`Failed to create tree: ${newTreeResponse.statusText}`);
-  }
-  
-  const newTreeData = await newTreeResponse.json();
-  
-  // Create a new commit with the new tree
-  const newCommitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
-    method: 'POST',
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: "Update product information and assets",
-      tree: newTreeData.sha,
-      parents: [latestCommitSha]
-    })
-  });
-  
-  if (!newCommitResponse.ok) {
-    throw new Error(`Failed to create commit: ${newCommitResponse.statusText}`);
-  }
-  
-  const newCommitData = await newCommitResponse.json();
-  
-  // Update the reference to point to the new commit
-  const updateRefResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
-    method: 'PATCH',
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      sha: newCommitData.sha,
-      force: false
-    })
-  });
-  
-  if (!updateRefResponse.ok) {
-    throw new Error(`Failed to update reference: ${updateRefResponse.statusText}`);
-  }
-  
-  return newCommitData;
-};
+    // Create a new commit with the new tree
+    const newCommitResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
+      method: 'POST',
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: "Update product information and assets",
+        tree: newTreeData.sha,
+        parents: [latestCommitSha]
+      })
+    });
 
-// Updated saveChanges function to use a single commit
-const saveChanges = async () => {
-  setIsSaving(true);
-  setSaveError(null);
-
-  try {
-    const { token, repo, owner, path, branch = 'main' } = githubConfig;
-    
-    // Create a copy of the edited product to modify
-    const productToSave = { ...editedProduct };
-    
-    // Prepare an array to hold all file changes
-    const fileChanges = [];
-    
-    // Prepare image change if it was modified
-    if (productToSave.imageModified && productToSave.imageData) {
-      // Create sanitized identifiers for filenames
-      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-      const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-      
-      // Set the image path
-      const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
-      fileChanges.push({
-        path: imageFilePath,
-        content: productToSave.imageData,
-        isBase64: true
-      });
-      
-      // Update the image URL in the product data
-      productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-      
-      // Remove the base64 data and flag to avoid storing it in JSON
-      delete productToSave.imageData;
-      delete productToSave.imageModified;
+    if (!newCommitResponse.ok) {
+      throw new Error(`Failed to create commit: ${newCommitResponse.statusText}`);
     }
-    
-    // Prepare datasheet change if it was modified
-    if (productToSave.datasheetModified && productToSave.datasheetData) {
-      // Create sanitized identifiers for filenames
-      const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-      const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-      const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-      
-      // Set the datasheet path
-      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
-      
-      // Add datasheet file to changes array
-      fileChanges.push({
-        path: datasheetFilePath,
-        content: productToSave.datasheetData, // Convert base64 to raw content
+
+    const newCommitData = await newCommitResponse.json();
+
+    // Update the reference to point to the new commit
+    const updateRefResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+      method: 'PATCH',
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sha: newCommitData.sha,
+        force: false
+      })
+    });
+
+    if (!updateRefResponse.ok) {
+      throw new Error(`Failed to update reference: ${updateRefResponse.statusText}`);
+    }
+
+    return newCommitData;
+  };
+
+  // Updated saveChanges function to use a single commit
+  const saveChanges = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const { token, repo, owner, path, branch = 'main' } = githubConfig;
+
+      // Create a copy of the edited product to modify
+      const productToSave = { ...editedProduct };
+
+      // Prepare an array to hold all file changes
+      const fileChanges = [];
+
+      // Prepare image change if it was modified
+      if (productToSave.imageModified && productToSave.imageData) {
+        // Create sanitized identifiers for filenames
+        const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+        const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+        const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+
+        // Set the image path
+        const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
+        fileChanges.push({
+          path: imageFilePath,
+          content: productToSave.imageData,
+          isBase64: true
+        });
+
+        // Update the image URL in the product data
+        productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
+
+        // Remove the base64 data and flag to avoid storing it in JSON
+        delete productToSave.imageData;
+        delete productToSave.imageModified;
+      }
+
+      // Prepare datasheet change if it was modified
+      if (productToSave.datasheetModified && productToSave.datasheetData) {
+        // Create sanitized identifiers for filenames
+        const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+        const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+        const itemIdentifier = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+
+        // Set the datasheet path
+        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
+
+        // Add datasheet file to changes array
+        fileChanges.push({
+          path: datasheetFilePath,
+          content: productToSave.datasheetData, // Convert base64 to raw content
           isBase64: true
 
-      });
-      
-      // Update the datasheet URL in the product data
-      productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-      
-      // Remove the base64 data and flag to avoid storing it in JSON
-      delete productToSave.datasheetData;
-      delete productToSave.datasheetModified;
-    }
-    
-    // Remove any lingering imageType/datasheetType that shouldn't be in the final JSON
-    // delete productToSave.imageType;
-    // delete productToSave.datasheetType;
+        });
 
-    // First update local state
-    setProduct(productToSave);
+        // Update the datasheet URL in the product data
+        productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
 
-    // Save to localStorage for persistence in demo mode
-    // const localItems = localStorage.getItem('inventoryItems');
-    // if (localItems) {
-    //   const items = JSON.parse(localItems);
-    //   const index = items.findIndex(item =>
-    //     item.manufacturerPart === product.manufacturerPart ||
-    //     item.partName === product.partName ||
-    //     item.id === product.id ||
-    //     item.image === product.image ||
-    //     item.datasheet === product.datasheet
-    //   );
-
-    //   if (index !== -1) {
-    //     items[index] = productToSave;
-    //     localStorage.setItem('inventoryItems', JSON.stringify(items));
-    //   } else {
-    //     localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
-    //   }
-    // } else {
-    //   localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
-    // }
-
-    // Now prepare the JSON file and add it to our changes
-    if (token && repo && owner) {
-      const jsonDirPath = `${path}/jsons`;
-
-      // Create sanitized filename
-      const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-      const sanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-      const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
-      const filePath = `${jsonDirPath}/${fileName}`;
-
-      // Prepare file content
-      const fileContent = JSON.stringify(productToSave, null, 2);
-      
-      // Add JSON file to changes array
-      fileChanges.push({
-        path: filePath,
-        content: fileContent,
-        isBase64: false
-      });
-
-      // Only proceed with the commit if we have changes to make
-      if (fileChanges.length > 0) {
-        // Create a single commit with all changes
-        await createGitTreeWithFiles(fileChanges);
-        console.log("Successfully saved all changes to GitHub in a single commit");
+        // Remove the base64 data and flag to avoid storing it in JSON
+        delete productToSave.datasheetData;
+        delete productToSave.datasheetModified;
       }
+
+      // Remove any lingering imageType/datasheetType that shouldn't be in the final JSON
+      // delete productToSave.imageType;
+      // delete productToSave.datasheetType;
+
+      // First update local state
+      setProduct(productToSave);
+
+      // Save to localStorage for persistence in demo mode
+      // const localItems = localStorage.getItem('inventoryItems');
+      // if (localItems) {
+      //   const items = JSON.parse(localItems);
+      //   const index = items.findIndex(item =>
+      //     item.manufacturerPart === product.manufacturerPart ||
+      //     item.partName === product.partName ||
+      //     item.id === product.id ||
+      //     item.image === product.image ||
+      //     item.datasheet === product.datasheet
+      //   );
+
+      //   if (index !== -1) {
+      //     items[index] = productToSave;
+      //     localStorage.setItem('inventoryItems', JSON.stringify(items));
+      //   } else {
+      //     localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
+      //   }
+      // } else {
+      //   localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
+      // }
+
+      // Now prepare the JSON file and add it to our changes
+      if (token && repo && owner) {
+        const jsonDirPath = `${path}/jsons`;
+
+        // Create sanitized filename
+        const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+        const sanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+        const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
+        const filePath = `${jsonDirPath}/${fileName}`;
+
+        // Prepare file content
+        const fileContent = JSON.stringify(productToSave, null, 2);
+
+        // Add JSON file to changes array
+        fileChanges.push({
+          path: filePath,
+          content: fileContent,
+          isBase64: false
+        });
+
+        // Only proceed with the commit if we have changes to make
+        if (fileChanges.length > 0) {
+          // Create a single commit with all changes
+          await createGitTreeWithFiles(fileChanges);
+          console.log("Successfully saved all changes to GitHub in a single commit");
+        }
+      }
+
+      // Success!
+      setEditMode(false);
+      alert("Product updated successfully");
+
+    } catch (error) {
+      console.error("Error saving product:", error);
+      setSaveError(error.message);
+    } finally {
+      setIsSaving(false);
     }
-
-    // Success!
-    setEditMode(false);
-    alert("Product updated successfully");
-
-  } catch (error) {
-    console.error("Error saving product:", error);
-    setSaveError(error.message);
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
 
   // If still loading, show a loading spinner
   if (isLoading) {
@@ -821,10 +901,10 @@ const saveChanges = async () => {
                     >
                       <option value="">Select a category</option>
                       {dropdownOptions.categories.map((category, index) => (
-                      <option key={index} value={category}>
-                        {category}
-                      </option>
-                    ))}
+                        <option key={index} value={category}>
+                          {category}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1118,7 +1198,7 @@ const saveChanges = async () => {
                             type="file"
                             onChange={handleDatasheetUpload}
                             className="sr-only"
-                            // value={editedProduct.datasheet}
+                          // value={editedProduct.datasheet}
 
                           />
                         </label>
@@ -1206,7 +1286,10 @@ const saveChanges = async () => {
                       <div className="space-y-4">
                         <div className="border rounded-lg overflow-hidden">
                           <div className="bg-gray-100 h-48 flex items-center justify-center">
-                            <FileText className="h-16 w-16 text-gray-400" />
+                            <FileText
+                              className="h-16 w-16 text-gray-400"
+                              onClick={() => openPdfModal(product.datasheet)}
+                            />
                           </div>
                           <div className="p-3 border-t">
                             <div className="flex items-center justify-between">
@@ -1389,6 +1472,12 @@ const saveChanges = async () => {
             </div>
           </div>
         </div>
+        {/* PDF Modal */}
+        <PdfViewerModal
+          isOpen={isPdfModalOpen}
+          pdfUrl={pdfUrl}
+          onClose={closePdfModal}
+        />
 
 
       </div>
