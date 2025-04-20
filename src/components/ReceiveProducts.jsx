@@ -26,11 +26,11 @@ const ReceiveProducts = () => {
     const loadAllProducts = async () => {
       try {
         // First try to get from localStorage
-        const localItems = localStorage.getItem('inventoryItems');
-        if (localItems) {
-          setAllProducts(JSON.parse(localItems));
-          return;
-        }
+        // const localItems = localStorage.getItem('inventoryItems');
+        // if (localItems) {
+        //   setAllProducts(JSON.parse(localItems));
+        //   return;
+        // }
         // If GitHub config is valid, load from there
         const { token, repo, owner, path } = githubConfig;
         if (token && repo && owner) {
@@ -94,24 +94,23 @@ const ReceiveProducts = () => {
   }, []);
 
   // Update the suggestions effect to be more strict about when to show
-  useEffect(() => {
-    // Only show suggestions when the search input has focus AND there's a query
-    if (searchQuery.length > 0 && document.activeElement === document.querySelector('input[type="text"]')) {
-      const filtered = allProducts.filter(product => {
-        const manufacturerPart = product.manufacturerPart?.toLowerCase() || '';
-        const partName = product.partName?.toLowerCase() || '';
-        const query = searchQuery.toLowerCase();
 
-        return manufacturerPart.includes(query) || partName.includes(query);
-      });
+useEffect(() => {
+  if (searchQuery.trim()) {
+    const filtered = allProducts.filter(product => {
+      const manufacturerPart = product.manufacturerPart?.toLowerCase() || '';
+      const partName = product.partName?.toLowerCase() || '';
+      const query = searchQuery.toLowerCase();
 
-      setSuggestions(filtered.slice(0, 10)); // Limit to 10 suggestions
-      setShowSuggestions(filtered.length > 0);
-    } else {
-      // If no query or input not focused, don't show suggestions
-      setShowSuggestions(false);
-    }
-  }, [searchQuery, allProducts]);
+      return manufacturerPart.includes(query) || partName.includes(query);
+    });
+
+    setSuggestions(filtered.slice(0, 10)); // Limit to 10 suggestions
+  } else {
+    setSuggestions([]);
+    setShowSuggestions(false);
+  }
+}, [searchQuery, allProducts]);
 
   // Function to search for products by manufacturerPart
   const searchProducts = async (e) => {
@@ -130,13 +129,13 @@ const ReceiveProducts = () => {
       // If GitHub config is incomplete, use sample data
       if (!token || !repo || !owner) {
         // Try to find product in localStorage
-        const localItems = localStorage.getItem('inventoryItems');
-        if (localItems) {
-          const items = JSON.parse(localItems);
-          const foundProduct = items.find(item =>
-            item.manufacturerPart.toLowerCase() === searchQuery.toLowerCase() ||
-            (item.partName && item.partName.toLowerCase() === searchQuery.toLowerCase())
-          );
+        // const localItems = localStorage.getItem('inventoryItems');
+        // if (localItems) {
+        //   const items = JSON.parse(localItems);
+        //   const foundProduct = items.find(item =>
+        //     item.manufacturerPart.toLowerCase() === searchQuery.toLowerCase() ||
+        //     (item.partName && item.partName.toLowerCase() === searchQuery.toLowerCase())
+        //   );
 
           if (foundProduct) {
             setProduct(foundProduct);
@@ -149,9 +148,9 @@ const ReceiveProducts = () => {
           }
         }
         else {
-        
-            setError("GitHub config is incomplete");
-          
+
+          setError("GitHub config is incomplete");
+
         }
         setIsLoading(false);
         return;
@@ -211,7 +210,7 @@ const ReceiveProducts = () => {
         }
 
       }
-    } 
+    }
     catch (error) {
       console.error("Error searching for product:", error);
       setError(error.message);
@@ -257,23 +256,23 @@ const ReceiveProducts = () => {
       };
 
       // Save to localStorage for persistence in demo mode
-      const localItems = localStorage.getItem('inventoryItems');
-      if (localItems) {
-        const items = JSON.parse(localItems);
-        const index = items.findIndex(item =>
-          item.manufacturerPart === product.manufacturerPart ||
-          item.partName === product.partName
-        );
+      // const localItems = localStorage.getItem('inventoryItems');
+      // if (localItems) {
+      //   const items = JSON.parse(localItems);
+      //   const index = items.findIndex(item =>
+      //     item.manufacturerPart === product.manufacturerPart ||
+      //     item.partName === product.partName
+      //   );
 
-        if (index !== -1) {
-          items[index] = updatedProduct;
-          localStorage.setItem('inventoryItems', JSON.stringify(items));
-        } else {
-          localStorage.setItem('inventoryItems', JSON.stringify([...items, updatedProduct]));
-        }
-      } else {
-        localStorage.setItem('inventoryItems', JSON.stringify([updatedProduct]));
-      }
+      //   if (index !== -1) {
+      //     items[index] = updatedProduct;
+      //     localStorage.setItem('inventoryItems', JSON.stringify(items));
+      //   } else {
+      //     localStorage.setItem('inventoryItems', JSON.stringify([...items, updatedProduct]));
+      //   }
+      // } else {
+      //   localStorage.setItem('inventoryItems', JSON.stringify([updatedProduct]));
+      // }
 
       // Save to GitHub if config is valid
       const { token, repo, owner, path } = githubConfig;
@@ -417,13 +416,24 @@ const ReceiveProducts = () => {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => searchQuery.length > 0 && setSuggestions.length > 0 && setShowSuggestions(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    // Show suggestions immediately when typing
+                    if (e.target.value) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    // Show suggestions when input is focused and has value
+                    if (searchQuery) {
+                      setShowSuggestions(true);
+                    }
+                  }}
                   placeholder="Enter manufacturer part number or part name"
                   className="w-full px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoComplete="off"
                 />
-                {showSuggestions && (
+                {showSuggestions && suggestions.length > 0 && (
                   <div
                     ref={suggestionRef}
                     className="absolute z-10 w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
@@ -459,7 +469,7 @@ const ReceiveProducts = () => {
                 type="button"
                 onClick={async () => {
                   // Clear localStorage
-                  localStorage.removeItem('inventoryItems');
+                  // localStorage.removeItem('inventoryItems');
                   // Force reload from GitHub
                   const loadAllProducts = async () => {
                     // ... copy the same loadAllProducts function logic here
