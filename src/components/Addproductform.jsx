@@ -12,7 +12,6 @@ const SavingModal = ({ isSuccess }) => {
           <>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Adding to Inventory...</h3>
-            <p className="text-gray-600">Please wait while we process your item</p>
           </>
         ) : (
           <>
@@ -22,7 +21,6 @@ const SavingModal = ({ isSuccess }) => {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Item Added Successfully!</h3>
-            <p className="text-gray-600">The inventory has been updated</p>
           </>
         )}
       </div>
@@ -56,6 +54,7 @@ const Addproductform = () => {
     salePrice: "",
     category: ""
   });
+
   const [showSavingModal, setShowSavingModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -115,8 +114,10 @@ const Addproductform = () => {
     if (imageInput) imageInput.value = '';
     if (datasheetInput) datasheetInput.value = '';
   };
+
   // New state for tracking the last used ID
   const [lastUsedId, setLastUsedId] = useState(0);
+  
   const fetchLastUsedId = async () => {
     try {
       const { token, repo, owner, path } = githubConfig;
@@ -158,7 +159,6 @@ const Addproductform = () => {
     }
   };
 
-
   useEffect(() => {
     fetchDropdownOptionsFromGithub();
     fetchLastUsedId(); // Add this line
@@ -196,13 +196,9 @@ const Addproductform = () => {
 
   // State for which field is currently being added to
   const [addingField, setAddingField] = useState(null);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   // GitHub config state - renamed to avoid conflict
   const [githubConfig, setGithubConfig] = useState(githubConfigImport);
-
-
   // New state to preview uploads
   const [imagePreview, setImagePreview] = useState(null);
   const [datasheetName, setDatasheetName] = useState(null);
@@ -763,6 +759,7 @@ const Addproductform = () => {
       }
     }
   };
+
   // New function that accepts options parameter
   const saveOptionsToGithub = async (options) => {
     try {

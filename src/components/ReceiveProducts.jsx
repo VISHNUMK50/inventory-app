@@ -93,9 +93,6 @@ const ReceiveProducts = () => {
     };
   }, []);
 
-
-
-  /// Update the suggestions effect
   // Update the suggestions effect to be more strict about when to show
   useEffect(() => {
     // Only show suggestions when the search input has focus AND there's a query
@@ -235,10 +232,7 @@ const ReceiveProducts = () => {
     setError(null);
     setSuccessMessage("");
   };
-  // Add this function at the top of your component
-  const debugLog = (message, data) => {
-    console.log(`DEBUG: ${message}`, data);
-  };
+
   // Function to add product to inventory
   const addToInventory = async () => {
     if (!product || !qtyToAdd) return;

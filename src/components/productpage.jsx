@@ -7,6 +7,7 @@ import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
 export default function ProductDetail({ params }) {
+  
   const [formData, setFormData] = useState({
     id: "",
     createdAt: "",
@@ -31,14 +32,18 @@ export default function ProductDetail({ params }) {
     salePrice: "",
     category: ""
   });
+
   // Properly unwrap params using React.use()
   const unwrappedParams = use(params);
   const partName = unwrappedParams?.partName ? decodeURIComponent(unwrappedParams.partName) : null;
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const shouldEditMode = searchParams.get('editMode') === 'true';
+
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(shouldEditMode); // Initialize with the query param value
   const [editedProduct, setEditedProduct] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -47,6 +52,13 @@ export default function ProductDetail({ params }) {
   const [datasheetName, setDatasheetName] = useState(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState("");
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const shouldEditMode = searchParams.get('editMode') === 'true';
+    setEditMode(shouldEditMode);
+  }, []);
+
   // Initialize editedProduct when product is loaded
   useEffect(() => {
     if (product) {
@@ -65,6 +77,7 @@ export default function ProductDetail({ params }) {
       }
     }
   }, [product]);
+
   useEffect(() => {
     fetchDropdownOptionsFromGithub();
   }, []);
@@ -83,6 +96,7 @@ export default function ProductDetail({ params }) {
       return btoa(unescape(encodeURIComponent(str)));
     }
   };
+
   const safeBase64Decode = (str) => {
     try {
       // Decode base64 to binary string
@@ -112,6 +126,7 @@ export default function ProductDetail({ params }) {
       "Switch", "Sensor", "Microcontroller", "PCB", "Battery", "Module", "Tool", "Other"
     ]
   });
+
   const fetchDropdownOptionsFromGithub = async () => {
     try {
       const { token, repo, owner, branch, path } = githubConfig;
@@ -169,6 +184,7 @@ export default function ProductDetail({ params }) {
       // loadFromLocalStorage();
     }
   };
+
   const openPdfModal = (url) => {
     setPdfUrl(url);
     setIsPdfModalOpen(true);
@@ -179,6 +195,7 @@ export default function ProductDetail({ params }) {
     setIsPdfModalOpen(false);
     setPdfUrl("");
   };
+
   // Fetch product details on component mount
   useEffect(() => {
     if (partName) {
@@ -329,6 +346,7 @@ export default function ProductDetail({ params }) {
     };
     reader.readAsDataURL(file);
   };
+
   const PdfViewerModal = ({ isOpen, pdfUrl, onClose }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -400,6 +418,7 @@ export default function ProductDetail({ params }) {
       </div>
     );
   };
+  
   // Updated datasheet upload handler for edit mode
   const handleDatasheetUpload = (e) => {
     const file = e.target.files[0];
@@ -428,7 +447,6 @@ export default function ProductDetail({ params }) {
     reader.readAsDataURL(file);
   };
 
-  // Helper function to save files to GitHub
   // Function to create a Git tree with multiple file updates
   const createGitTreeWithFiles = async (fileChanges) => {
     const { token, repo, owner, branch } = githubConfig;

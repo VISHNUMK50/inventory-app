@@ -40,7 +40,6 @@ const ManageInventory = () => {
     setConfig({ ...config, ...newConfig });
   };
 
-
   // Fetch inventory items on component mount
   useEffect(() => {
     fetchInventoryItems();
@@ -60,6 +59,7 @@ const ManageInventory = () => {
       applyFiltersAndSearch();
     }
   }, [inventoryItems, searchTerm, filters, viewMode]);
+
   // Add this function before fetchInventoryItems
   const testGitHubAccess = async () => {
     try {
@@ -85,6 +85,7 @@ const ManageInventory = () => {
       return false;
     }
   };
+
   const processFiles = async (files) => {
     // Fetch content of each JSON file
     const itemPromises = files.map(async (file) => {
@@ -134,6 +135,7 @@ const ManageInventory = () => {
 
     return items;
   };
+
   // Fetch inventory items from GitHub or localStorage
   const fetchInventoryItems = async () => {
     setIsLoading(true);
@@ -241,6 +243,7 @@ const ManageInventory = () => {
       setIsLoading(false);
     }
   };
+
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState("");
   const openPdfModal = (item) => {
@@ -257,6 +260,7 @@ const ManageInventory = () => {
     setIsPdfModalOpen(false);
     setPdfUrl("");
   };
+
   const PdfViewerModal = ({ isOpen, pdfUrl, onClose }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -337,6 +341,7 @@ const ManageInventory = () => {
     setSelectedImage({ url, alt });
     setModalOpen(true);
   };
+
   // Apply filters and search to inventory items
   const applyFiltersAndSearch = () => {
     let result = [...inventoryItems];
@@ -429,7 +434,7 @@ const ManageInventory = () => {
 
     setFilteredItems(result);
   };
-  // Add this function to handle single item deletion
+
   // Updated delete single item function with better error handling
   const handleDeleteItem = async (itemId) => {
     if (confirm(`Are you sure you want to delete this item?`)) {
@@ -799,6 +804,7 @@ const ManageInventory = () => {
     }
     return "";
   };
+
   const [scrolled, setScrolled] = useState(false);
 
   // Add scroll event listener to track when to apply fixed positioning
@@ -821,6 +827,7 @@ const ManageInventory = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
   const getPlaceholderFromGitHub = () => {
     const { owner, repo } = githubConfig;
     // Try this path first
@@ -920,49 +927,10 @@ const ManageInventory = () => {
     );
   };
 
-
-  const handleopendatasheet = (itemId) => {
-    try {
-      // Find the item in our existing inventory data
-      const item = inventoryItems.find(item => item.manufacturerPart === itemId);
-      if (!item) {
-        alert("Item not found in inventory data.");
-        return;
-      }
-
-      // Check if datasheet URL exists
-      if (item.datasheet) {
-        // Create viewer URL
-        openPdfViewer(item.datasheet, itemId);
-      } else {
-        // If no datasheet in the item data, try a constructed URL based on common pattern
-        const constructedUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/master/database/datasheets/${itemId.replace(/\s+/g, '_')}.pdf`;
-
-        // Test if the URL exists before opening
-        fetch(constructedUrl, { method: 'HEAD' })
-          .then(response => {
-            if (response.ok) {
-              openPdfViewer(constructedUrl, itemId);
-            } else {
-              alert("No datasheet available for this item.");
-            }
-          })
-          .catch(() => {
-            alert("No datasheet available for this item.");
-          });
-      }
-    } catch (error) {
-      console.error("Error in handleopendatasheet:", error);
-      alert(`Error: ${error.message}`);
-    }
-  };
-
   // Helper function to open PDF in viewer
   const openPdfViewer = (pdfUrl, itemId) => {
     // Use Mozilla's PDF.js viewer (most reliable)
     window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`, '_blank');
-
-
   };
 
   return (
@@ -1251,7 +1219,7 @@ const ManageInventory = () => {
                     <td className="px-4 py-3 whitespace-nowrap">{item.quantity}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{item.bin}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-3">
                         <button
                           className="text-blue-600 hover:text-blue-800"
                           onClick={() => openPdfModal(item)}
@@ -1259,6 +1227,11 @@ const ManageInventory = () => {
                           <FileSpreadsheet className="h-5 w-5" />
 
                         </button>
+                        <Link href={`/product/${encodeURIComponent(item.manufacturerPart)}?editMode=true`}>
+                          <Edit className="text-blue-600 hover:text-blue-800 w-5 h-5" />
+                        </Link>
+
+
                         <button
                           className="text-red-600 hover:text-red-800"
                           onClick={() => handleDeleteItem(item.manufacturerPart)}
@@ -1273,7 +1246,8 @@ const ManageInventory = () => {
             </tbody>
           </table>
         </div>
-      )}
+      )
+      }
 
       {/* Stats Footer */}
       <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
@@ -1300,7 +1274,7 @@ const ManageInventory = () => {
         pdfUrl={pdfUrl}
         onClose={closePdfModal}
       />
-    </div>
+    </div >
 
   );
 };
