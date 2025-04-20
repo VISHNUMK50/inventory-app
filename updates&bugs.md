@@ -12,12 +12,12 @@
 
 ## **Bugs**
 
-- 18/04/24 old qty shown on product search
-- 18/04/24 name sugestion not stored.
+- 18/04/24 old qty shown on product search (not updated instantly)
+- 18/04/24 name sugestion not stored. 
 - 18/04/24 pdf geration on checkout not working
 - 17/04/24 data not shown in inventory table
 - 17/04/24 image flicker in table
-- 17/04/24 image file loading time delay 
+- 17/04/24 image file loading time delay (not updated instantly) 
 - 17/04/24 check datasheet
 - 16/04/24 Dropdown option not updated (rare occurance)
 - 16/04/24 IN ADD PRODUCT PAGE IF THE ITEM EXIST ADD QTY ( MATCH, Part Name, Manufacturer, Manufacturer Part #, Vendor)

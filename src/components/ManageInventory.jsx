@@ -4,6 +4,7 @@ import { Search, Edit, Trash, Download, AlertCircle, X, Eye, FileSpreadsheet, Pl
 import Link from "next/link";
 import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
+import TimeStamp from '@/components/TimeStamp';
 
 const ManageInventory = () => {
   // State for inventory items
@@ -39,7 +40,7 @@ const ManageInventory = () => {
     setConfig({ ...config, ...newConfig });
   };
 
-  //hias
+
   // Fetch inventory items on component mount
   useEffect(() => {
     fetchInventoryItems();
@@ -218,8 +219,10 @@ const ManageInventory = () => {
       }
 
       const files = await response.json();
+      const items = await processFiles(files);
       console.log(`Found ${files.length} files in directory`);
-
+      setInventoryItems(items);
+      setFilteredItems(items);
       return processFiles(files);
 
     } catch (error) {
@@ -1280,17 +1283,9 @@ const ManageInventory = () => {
             <span> | <span className="font-medium">{selectedItems.length}</span> selected</span>
           )}
         </div>
-        <div className="text-sm text-gray-600" suppressHydrationWarning // Add this prop
-        >
-          Last updated: {new Date().toLocaleString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-          })}
+        <div className="text-sm text-gray-600" >
+          <TimeStamp />
+
         </div>
       </div>
       <ImageModal
@@ -1299,12 +1294,12 @@ const ManageInventory = () => {
         altText={selectedImage.alt}
         onClose={() => setModalOpen(false)}
       />
-              {/* PDF Modal */}
-              <PdfViewerModal
-          isOpen={isPdfModalOpen}
-          pdfUrl={pdfUrl}
-          onClose={closePdfModal}
-        />
+      {/* PDF Modal */}
+      <PdfViewerModal
+        isOpen={isPdfModalOpen}
+        pdfUrl={pdfUrl}
+        onClose={closePdfModal}
+      />
     </div>
 
   );

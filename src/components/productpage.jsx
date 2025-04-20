@@ -5,8 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Save, Package, Clipboard, X, FileText, Download, Eye, ShoppingCart, FileX, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home } from "lucide-react";
 import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
-import Addproductform from "@/components/Addproductform";
-
+import TimeStamp from '@/components/TimeStamp';
 export default function ProductDetail({ params }) {
   const [formData, setFormData] = useState({
     id: "",
@@ -561,7 +560,7 @@ export default function ProductDetail({ params }) {
       const { token, repo, owner, path, branch = 'main' } = githubConfig;
 
       // Create a copy of the edited product to modify
-      const productToSave = { ...editedProduct };
+      const productToSave = { ...editedProduct       };
 
       // Prepare an array to hold all file changes
       const fileChanges = [];
@@ -1460,7 +1459,7 @@ export default function ProductDetail({ params }) {
         <div className="bg-gray-50 px-6 py-4 border-t rounded-lg border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <span className="text-sm text-gray-500">Last updated: {new Date().toLocaleString()}</span>
+            <TimeStamp />
             </div>
             <div>
               {Number(product.quantity) <= Number(product.reorderPoint) && Number(product.reorderPoint) > 0 && (
