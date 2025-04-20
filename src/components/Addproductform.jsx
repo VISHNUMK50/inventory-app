@@ -1,7 +1,8 @@
 "use client";
+import Header from "@/components/Header";
 
 import { useState, useEffect, useRef } from "react";
-import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home } from "lucide-react";
+import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home, Trash2 } from "lucide-react";
 import githubConfigImport from '../config/githubConfig';
 
 const SavingModal = ({ isSuccess }) => {
@@ -44,20 +45,24 @@ const Addproductform = () => {
     datasheet: "",
     datasheetData: "",
     datasheetType: "",
-    quantity: "",
+    avl_quantity: "",
+    binLocations: [],
     customerRef: "",
     description: "",
-    bin: "",
     reorderPoint: "",
     reorderQty: "",
     costPrice: "",
     salePrice: "",
     category: ""
   });
+  const [scrolled, setScrolled] = useState(false);
+  const [showGithubConfig, setShowGithubConfig] = useState(false);
 
   const [showSavingModal, setShowSavingModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
+  const [binLocations, setBinLocations] = useState([]);
+  const [newBinLocation, setNewBinLocation] = useState("");
+  const [newBinQuantity, setNewBinQuantity] = useState("");
   const resetForm = () => {
     // Reset form data
     setFormData({
@@ -74,10 +79,10 @@ const Addproductform = () => {
       datasheet: "",
       datasheetData: "",
       datasheetType: "",
-      quantity: "",
+      avl_quantity: "",
+      binLocations: [],
       customerRef: "",
       description: "",
-      bin: "",
       reorderPoint: "",
       reorderQty: "",
       costPrice: "",
@@ -85,6 +90,15 @@ const Addproductform = () => {
       category: ""
 
     });
+    setBinLocations([]);
+    setNewBinLocation("");
+    setNewBinQuantity("");
+    // Set quantity to 0 if tracking total separately
+    setFormData(prev => ({
+      ...prev,
+      quantity: "0",
+      binLocations: []
+    }));
 
     // Clear previews
     setImagePreview(null);
@@ -117,7 +131,7 @@ const Addproductform = () => {
 
   // New state for tracking the last used ID
   const [lastUsedId, setLastUsedId] = useState(0);
-  
+
   const fetchLastUsedId = async () => {
     try {
       const { token, repo, owner, path } = githubConfig;
@@ -163,7 +177,6 @@ const Addproductform = () => {
     fetchDropdownOptionsFromGithub();
     fetchLastUsedId(); // Add this line
   }, []);
-
 
 
   // State for dropdown options - Added manufacturerParts
@@ -588,6 +601,82 @@ const Addproductform = () => {
       return false;
     }
   };
+  const calculateTotalQuantity = (locations) => {
+    return locations.reduce((total, location) => total + (parseInt(location.quantity) || 0), 0);
+  };
+  const calculateProvisionalTotal = () => {
+    // Get sum of existing bin locations
+    const existingTotal = binLocations.reduce((total, location) => 
+      total + (parseInt(location.quantity) || 0), 0);
+    
+    // Add the current input value if it's a valid number
+    const inputValue = parseInt(newBinQuantity) || 0;
+    
+    return existingTotal + inputValue;
+  };
+  const handleBinQuantityChange = (e) => {
+    const value = e.target.value;
+    setNewBinQuantity(value);
+    
+    // Update the provisional total in real-time
+    const provisionalTotal = calculateProvisionalTotal();
+    
+    // Update the form data with the provisional total
+    setFormData(prev => ({
+      ...prev,
+      avl_quantity: provisionalTotal.toString()
+    }));
+  };
+
+  const handleAddBinLocation = () => {
+  if (!newBinLocation.trim()) {
+    alert("Please enter a bin location");
+    return;
+  }
+  
+  if (!newBinQuantity || isNaN(parseInt(newBinQuantity))) {
+    alert("Please enter a valid quantity");
+    return;
+  }
+
+  const newLocation = {
+    bin: newBinLocation.trim(),
+    quantity: parseInt(newBinQuantity)
+  };
+
+  const updatedLocations = [...binLocations, newLocation];
+  setBinLocations(updatedLocations);
+  
+  // Calculate total quantity (should match the provisional total)
+  const totalQuantity = calculateTotalQuantity(updatedLocations);
+  
+  setFormData(prev => ({
+    ...prev,
+    binLocations: updatedLocations,
+    avl_quantity: totalQuantity.toString()
+  }));
+  
+  // Reset input fields
+  setNewBinLocation("");
+  setNewBinQuantity("");
+};
+
+// Also need to update the bin removal handler to recalculate the provisional total
+const handleRemoveBinLocation = (index) => {
+  const updatedLocations = binLocations.filter((_, i) => i !== index);
+  setBinLocations(updatedLocations);
+  
+  // Recalculate total quantity including current input
+  const existingTotal = calculateTotalQuantity(updatedLocations);
+  const inputValue = parseInt(newBinQuantity) || 0;
+  const provisionalTotal = existingTotal + inputValue;
+  
+  setFormData(prev => ({
+    ...prev,
+    binLocations: updatedLocations,
+    avl_quantity: provisionalTotal.toString()
+  }));
+};
 
   // Updated handleSubmit function with merge logic
   const handleSubmit = async (e) => {
@@ -598,15 +687,24 @@ const Addproductform = () => {
       return;
     }
 
+    // Calculate final avl_quantity before submitting
+    const totalQuantity = calculateTotalQuantity(binLocations);
+    const finalFormData = {
+      ...formData,
+      avl_quantity: totalQuantity.toString(),
+      createdAt: formData.createdAt || new Date().toISOString() // Set creation date if not already set
+    };
+
     setIsSubmitting(true);
+    setShowSavingModal(true);
 
     try {
       // Create an object to track which fields have new values
       const newValues = {
-        partNames: formData.partName,
-        manufacturers: formData.manufacturer,
-        vendors: formData.vendor,
-        manufacturerParts: formData.manufacturerPart
+        partNames: finalFormData.partName,
+        manufacturers: finalFormData.manufacturer,
+        vendors: finalFormData.vendor,
+        manufacturerParts: finalFormData.manufacturerPart
       };
 
       // Check each field and update dropdownOptions if it's a new value
@@ -629,11 +727,34 @@ const Addproductform = () => {
       // Continue with the rest of your submit logic...
       await processNewEntries();
       const existingItem = await checkItemExists();
-      // ... rest of your existing submit logic ...
+
+      if (existingItem) {
+        // If item exists, ask if user wants to update it
+        if (confirm(`An item with the same part name and manufacturer part already exists (ID: ${existingItem.id}). Would you like to update it?`)) {
+          // Merge with existing item, keeping the existing ID
+          const mergedItem = {
+            ...finalFormData,
+            id: existingItem.id
+          };
+          await saveToGithub(mergedItem);
+        } else {
+          // User chose not to update, continue with a new item
+          await saveToGithub(finalFormData);
+        }
+      } else {
+        // No existing item, save as new
+        await saveToGithub(finalFormData);
+      }
+
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setShowSavingModal(false);
+      }, 1500);
 
     } catch (error) {
       console.error("Error during submission:", error);
       alert(`Error submitting form: ${error.message}`);
+      setShowSavingModal(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -781,7 +902,27 @@ const Addproductform = () => {
     }
   };
   let isSaving = false;
-  /// save to github
+
+  // Add scroll event listener to track when to apply fixed positioning
+  useEffect(() => {
+    const handleScroll = () => {
+      // Get the header height to know when to trigger fixed position
+      const mainHeaderHeight = document.querySelector('.main-header')?.offsetHeight || 0;
+      if (window.scrollY > mainHeaderHeight) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+
+    // Clean up
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
   const saveToGithub = async (dataToSave = null) => {
     const { token, repo, owner, branch, path } = githubConfig;
 
@@ -1116,7 +1257,7 @@ const Addproductform = () => {
                 <button
                   type="button"
                   onClick={() => toggleAddField(field)}
-                  className="px-3 py-2 bg-blue-100 text-blue-700 rounded-r-md hover:bg-blue-200 flex items-center"
+                  className="px-3 py-2 border border-blue-100 bg-blue-100 text-blue-700 rounded-r-md hover:bg-blue-200 flex items-center"
                 >
                   <PlusCircle className="h-4 w-4 mr-1" /> New
                 </button>
@@ -1133,238 +1274,292 @@ const Addproductform = () => {
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
-      <button
-        id="resetFormButton"
-        type="button"
-        onClick={resetForm}
-        className="hidden"
-      />
-      {/* Main Form */}
-      <form id="inventoryForm" onSubmit={handleSubmit} className="px-6 py-4">
-        <div className="mb-4 ">
-          <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="bg-indigo-50 p-4 rounded-lg">
-              <h3 className="font-medium text-blue-800 mb-3 flex items-center">
-                <Tag className="mr-2 h-5 w-5" /> Product Identification
-              </h3>
-              <div className="space-y-4">
+      {/* Main header - with class for targeting */}
+      <Header title="Inventory Management System" />
 
-                {/* Part Name */}
-                {renderAutocomplete("partName", "Part Name", true)}
-                {/* Category */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a category</option>
-                    {dropdownOptions.categories.map((category, index) => (
-                      <option key={index} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {/* Customer Reference */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Reference
-                  </label>
-                  <textarea
-                    name="customerRef"
-                    value={formData.customerRef}
-                    onChange={handleChange}
-                    rows="2"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Customer part reference"
-                  />
-                </div>
-              </div>
 
+      {/* Fixed action bar that appears on scroll */}
+      <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-3 px-6`}>
+        <div className="bg-gray-300  flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+
+            <h2 className="text-2xl font-bold text-black flex items-center">
+              <PlusCircle className="mr-2 h-5 w-5" /> Add Product
+            </h2>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={() => setShowGithubConfig(!showGithubConfig)}
+              className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              <Github className="h-4 w-4 mr-2" />
+              {showGithubConfig ? "Hide GitHub Config" : "Show GitHub Config"}
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById('resetFormButton').click()}
+              className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Reset
+            </button>
+            <button
+              type="submit"
+              form="inventoryForm"
+              disabled={isSubmitting}
+              className="flex items-center px-4 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
+              onClick={(e) => {
+                // If there's unsaved bin location data, add it before form submission
+                if (newBinLocation.trim() && newBinQuantity) {
+                  const isDuplicate = formData.binLocations.some(
+                    loc => loc.bin.toLowerCase() === newBinLocation.trim().toLowerCase()
+                  );
+
+                  if (!isDuplicate) {
+                    // Update form data with new bin location before the form submits
+                    setFormData(prevData => ({
+                      ...prevData,
+                      binLocations: [
+                        ...prevData.binLocations,
+                        {
+                          bin: newBinLocation.trim(),
+                          quantity: parseInt(newBinQuantity)
+                        }
+                      ]
+                    }));
+                  }
+                }
+              }}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              {isSubmitting ? "Saving..." : "Add to Inventory"}
+            </button>
+          </div>
+        </div>
+      </div>
+      {formData.createdAt && (
+        <div className="mt-4 text-sm text-gray-500">
+          <p>Item created on: {new Date(formData.createdAt).toLocaleString()}</p>
+        </div>
+      )}
+      {/* GitHub Configuration Section */}
+      {showGithubConfig && (
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-800 mb-3">GitHub Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Token</label>
+              <input
+                type="password"
+                name="token"
+                value={githubConfig.token}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="GitHub Personal Access Token"
+              />
             </div>
-            <div className="bg-pink-50 p-4 rounded-lg md:col-span-1 lg:col-span-2">
-              <h3 className="font-medium text-indigo-800 mb-3 flex items-center">
-                <Folder className="mr-2 h-5 w-5" /> Manufacturer Details
-              </h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+              <input
+                type="text"
+                name="owner"
+                value={githubConfig.owner}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="GitHub Username or Org"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Repository</label>
+              <input
+                type="text"
+                name="repo"
+                value={githubConfig.repo}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Repository Name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+              <input
+                type="text"
+                name="branch"
+                value={githubConfig.branch}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="main"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Path</label>
+              <input
+                type="text"
+                name="path"
+                value={githubConfig.path}
+                onChange={handleGithubConfigChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="inventory"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="mx-auto bg-white shadow-xl overflow-hidden">
+        <button
+          id="resetFormButton"
+          type="button"
+          onClick={resetForm}
+          className="hidden"
+        />
+        {/* Main Form */}
+        <form id="inventoryForm" onSubmit={handleSubmit} className="px-6 py-4">
+          <div className="mb-4 ">
+            <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="bg-indigo-50 p-4 rounded-lg shadow-md">
+                <h3 className="font-medium text-blue-800 mb-3 flex items-center">
+                  <Tag className="mr-2 h-5 w-5" /> Product Identification
+                </h3>
+                <div className="space-y-4">
 
-                  {/* Manufacturer */}
-                  {renderAutocomplete("manufacturer", "Manufacturer", true)}
-
-                  {/* Manufacturer Part # */}
-                  {renderAutocomplete("manufacturerPart", "Manufacturer Part #", true)}
-
-
-                  {/* Vendor */}
-                  {renderAutocomplete("vendor", "Vendor")}
-
-                  {/* Vendor Product Link - Updated field */}
+                  {/* Part Name */}
+                  {renderAutocomplete("partName", "Part Name", true)}
+                  {/* Category */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Vendor Product Link
+                      Category
                     </label>
-                    <input
-                      type="text"
-                      name="vendorProductLink"
-                      value={formData.vendorProductLink}
+                    <select
+                      name="category"
+                      value={formData.category}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://vendor.com/product/123"
+                    >
+                      <option value="">Select a category</option>
+                      {dropdownOptions.categories.map((category, index) => (
+                        <option key={index} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Customer Reference */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Reference
+                    </label>
+                    <textarea
+                      name="customerRef"
+                      value={formData.customerRef}
+                      onChange={handleChange}
+                      rows="2"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Customer part reference"
                     />
                   </div>
                 </div>
 
-
-
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows="2"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Brief description of the part"
-                  />
-                </div>
               </div>
-            </div>
-          </div>
-        </div>
+              <div className="shadow-md bg-pink-50 p-4 rounded-lg md:col-span-1 lg:col-span-2">
+                <h3 className="font-medium text-indigo-800 mb-3 flex items-center">
+                  <Folder className="mr-2 h-5 w-5" /> Manufacturer Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        <div className="mb-4">
-          <div className="bg-green-50 p-4 rounded-lg ">
-            <h3 className="font-medium text-green-800 mb-3 flex items-center">
-              <DollarSign className="mr-2 h-5 w-5" /> Pricing Information
-            </h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Manufacturer */}
+                    {renderAutocomplete("manufacturer", "Manufacturer", true)}
 
-                {/* Cost Price */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      <span>Cost Price</span>
+                    {/* Manufacturer Part # */}
+                    {renderAutocomplete("manufacturerPart", "Manufacturer Part #", true)}
+
+
+                    {/* Vendor */}
+                    {renderAutocomplete("vendor", "Vendor")}
+
+                    {/* Vendor Product Link - Updated field */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Vendor Product Link
+                      </label>
+                      <input
+                        type="text"
+                        name="vendorProductLink"
+                        value={formData.vendorProductLink}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://vendor.com/product/123"
+                      />
                     </div>
-                  </label>
-                  <input
-                    type="number"
-                    name="costPrice"
-                    value={formData.costPrice}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
-                </div>
+                  </div>
 
-                {/* Sale Price */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <div className="flex items-center">
-                      <Tag className="h-4 w-4 mr-1" />
-                      <span>Sale Price</span>
-                    </div>
-                  </label>
-                  <input
-                    type="number"
-                    name="salePrice"
-                    value={formData.salePrice}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
+
+
+                  {/* Description */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      rows="2"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Brief description of the part"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-        </div>
-        <div className="mb-4">
-          <div className="space-y-4">
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <h3 className="font-medium text-purple-800 mb-3 flex items-center">
-                <MapPin className="mr-2 h-5 w-5" /> Inventory Details
+          <div className="mb-4">
+            <div className="bg-green-50 p-4 rounded-lg shadow-md ">
+              <h3 className="font-medium text-green-800 mb-3 flex items-center">
+                <DollarSign className="mr-2 h-5 w-5" /> Pricing Information
               </h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                  {/* Quantity */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      name="quantity"
-                      value={formData.quantity}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="0"
-                      min="0"
-                    />
-                  </div>
-
-                  {/* Bin Location */}
+                  {/* Cost Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        <span>Bin Location</span>
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        <span>Cost Price</span>
                       </div>
                     </label>
                     <input
-                      type="text"
-                      name="bin"
-                      value={formData.bin}
+                      type="number"
+                      name="costPrice"
+                      value={formData.costPrice}
                       onChange={handleChange}
+                      step="0.01"
+                      min="0"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="A1-B2-C3"
+                      placeholder="0.00"
                     />
                   </div>
 
-                  {/* Reorder Point */}
+                  {/* Sale Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Reorder Point
+                      <div className="flex items-center">
+                        <Tag className="h-4 w-4 mr-1" />
+                        <span>Sale Price</span>
+                      </div>
                     </label>
                     <input
                       type="number"
-                      name="reorderPoint"
-                      value={formData.reorderPoint}
+                      name="salePrice"
+                      value={formData.salePrice}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="5"
+                      step="0.01"
                       min="0"
-                    />
-                  </div>
-
-                  {/* Reorder Quantity */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Reorder Quantity
-                    </label>
-                    <input
-                      type="number"
-                      name="reorderQty"
-                      value={formData.reorderQty}
-                      onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="10"
-                      min="0"
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
@@ -1372,109 +1567,239 @@ const Addproductform = () => {
             </div>
 
           </div>
-        </div>
+          <div className="mb-4">
+            <div className="space-y-4">
+              <div className="bg-purple-50 p-4 rounded-lg shadow-md">
+                <h3 className="font-medium text-purple-800 mb-3 flex items-center">
+                  <MapPin className="mr-2 h-5 w-5" /> Inventory Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bin Locations
+                      </label>
+                      {/* Add new bin location */}
+                      <div className="flex items-center mb-3">
 
-        <div className="mb-4 bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-xl font-medium text-gray-800 mb-3">Files & Documentation</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Image Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Component Image
-              </label>
-              <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  {imagePreview ? (
-                    <div>
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="mx-auto h-32 w-auto object-contain mb-2"
-                      />
-                      <p className="text-xs text-gray-500">{formData.image}</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        stroke="currentColor"
-                        fill="none"
-                        viewBox="0 0 48 48"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                        <div className="relative w-full">
+                          <input
+                            type="text"
+                            value={newBinLocation}
+                            onChange={(e) => setNewBinLocation(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Bin identifier"
+                          />
+                        </div>
+                        <button
+                          id="add-bin-button"
+                          type="button"
+                          onClick={handleAddBinLocation}
+                          className="px-3 py-2.5 border border-purple-200 bg-purple-200 text-purple-800 rounded-r-md hover:bg-purple-300 flex items-center"
+                        >
+                          <PlusCircle className="h-5 w-5" />
+                        </button>
+                      </div>
+
+                    {binLocations.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Current Locations:</h4>
+                        <div className="flex flex-col space-y-2">
+                          {binLocations.map((location, index) => (
+                            <div key={index} className="flex items-center justify-between bg-purple-200 p-2 rounded-md">
+                              <span className="font-medium">
+                                {location.bin}: <span className="font-normal">{location.quantity} units</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveBinLocation(index)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                                        </div>
+
+                    <div className="md-2">
+
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bin Locations
+                        </label>
+                        <input
+                          type="number"
+                          value={newBinQuantity}
+                          onChange={handleBinQuantityChange} // Use the new handler here
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Quantity"
+                          min="0"
                         />
-                      </svg>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+
+
+                      </div>
+
+
+                      <div className="py-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Available Quantity
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formData.avl_quantity || "0"}
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md focus:outline-none"
+                          placeholder="Calculated from bins"
+                        />
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <label
-                      htmlFor="image-upload"
-                      className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-                    >
-                      <span>{imagePreview ? "Change Image" : "Upload Image"}</span>
+
+
+                    {/* Reorder Point */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Reorder Point
+                      </label>
                       <input
-                        id="image-upload"
-                        name="image"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="sr-only"
+                        type="number"
+                        name="reorderPoint"
+                        value={formData.reorderPoint}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="5"
+                        min="0"
                       />
-                    </label>
+                    </div>
+                    {/* Reorder Quantity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Reorder Quantity
+                      </label>
+                      <input
+                        type="number"
+                        name="reorderQty"
+                        value={formData.reorderQty}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="10"
+                        min="0"
+                      />
+                    </div>
+
+
+
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Datasheet Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Datasheet
-              </label>
-              <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  {datasheetName ? (
+            </div>
+          </div>
+
+          <div className="mb-4 bg-gray-50 p-4 rounded-lg shadow-md">
+            <h3 className="text-xl font-medium text-gray-800 mb-3">Files & Documentation</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Component Image
+                </label>
+                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                  <div className="space-y-1 text-center">
+                    {imagePreview ? (
+                      <div>
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="mx-auto h-32 w-auto object-contain mb-2"
+                        />
+                        <p className="text-xs text-gray-500">{formData.image}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <svg
+                          className="mx-auto h-12 w-12 text-gray-400"
+                          stroke="currentColor"
+                          fill="none"
+                          viewBox="0 0 48 48"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                    )}
                     <div>
-                      <Clipboard className="mx-auto h-12 w-12 text-blue-500" />
-                      <p className="text-xs font-medium text-gray-900 mt-2">
-                        {datasheetName}
-                      </p>
+                      <label
+                        htmlFor="image-upload"
+                        className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                      >
+                        <span>{imagePreview ? "Change Image" : "Upload Image"}</span>
+                        <input
+                          id="image-upload"
+                          name="image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="sr-only"
+                        />
+                      </label>
                     </div>
-                  ) : (
+                  </div>
+                </div>
+              </div>
+
+              {/* Datasheet Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Datasheet
+                </label>
+                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                  <div className="space-y-1 text-center">
+                    {datasheetName ? (
+                      <div>
+                        <Clipboard className="mx-auto h-12 w-12 text-blue-500" />
+                        <p className="text-xs font-medium text-gray-900 mt-2">
+                          {datasheetName}
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Folder className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="text-xs text-gray-500">PDF, DOC, XLS up to 10MB</p>
+                      </div>
+                    )}
                     <div>
-                      <Folder className="mx-auto h-12 w-12 text-gray-400" />
-                      <p className="text-xs text-gray-500">PDF, DOC, XLS up to 10MB</p>
+                      <label
+                        htmlFor="datasheet-upload"
+                        className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                      >
+                        <span>{datasheetName ? "Change File" : "Upload Datasheet"}</span>
+                        <input
+                          id="datasheet-upload"
+                          name="datasheet"
+                          type="file"
+                          onChange={handleDatasheetUpload}
+                          className="sr-only"
+                        />
+                      </label>
                     </div>
-                  )}
-                  <div>
-                    <label
-                      htmlFor="datasheet-upload"
-                      className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-                    >
-                      <span>{datasheetName ? "Change File" : "Upload Datasheet"}</span>
-                      <input
-                        id="datasheet-upload"
-                        name="datasheet"
-                        type="file"
-                        onChange={handleDatasheetUpload}
-                        className="sr-only"
-                      />
-                    </label>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        {showSavingModal && <SavingModal isSuccess={saveSuccess} />}
-      </form>
-    </div>
+          {showSavingModal && <SavingModal isSuccess={saveSuccess} />}
+        </form>
+      </div>    </div>
+
   );
 };
 

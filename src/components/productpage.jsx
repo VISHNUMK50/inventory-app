@@ -7,7 +7,40 @@ import githubConfig from '../config/githubConfig';
 import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
 export default function ProductDetail({ params }) {
+
   
+
+  // Properly unwrap params using React.use()
+  const unwrappedParams = use(params);
+  const partName = unwrappedParams?.partName ? decodeURIComponent(unwrappedParams.partName) : null;
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const shouldEditMode = searchParams.get('editMode') === 'true';
+
+  const [product, setProduct] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [editMode, setEditMode] = useState(shouldEditMode); // Initialize with the query param value
+  const [editedProduct, setEditedProduct] = useState({
+    ...product,
+    binLocations: product && product.binLocations ? product.binLocations : []
+  });
+  const [binLocations, setBinLocations] = useState(
+    product && product.binLocations ? product.binLocations : []
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  // New state to preview uploads
+  const [imagePreview, setImagePreview] = useState(null);
+  const [datasheetName, setDatasheetName] = useState(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState("");
+  const calculateTotalQuantity = (binLocations) => {
+    if (!binLocations || !Array.isArray(binLocations)) return 0;
+    return binLocations.reduce((total, location) => {
+      return total + (parseInt(location.quantity) || 0);
+    }, 0);
+  };
   const [formData, setFormData] = useState({
     id: "",
     createdAt: "",
@@ -22,61 +55,44 @@ export default function ProductDetail({ params }) {
     datasheet: "",
     datasheetData: "",
     datasheetType: "",
-    quantity: "",
+    avl_quantity:calculateTotalQuantity(binLocations), // This will now be calculated
+    binLocations: [],
     customerRef: "",
     description: "",
-    bin: "",
     reorderPoint: "",
     reorderQty: "",
     costPrice: "",
     salePrice: "",
     category: ""
   });
-
-  // Properly unwrap params using React.use()
-  const unwrappedParams = use(params);
-  const partName = unwrappedParams?.partName ? decodeURIComponent(unwrappedParams.partName) : null;
-
-  const searchParams = new URLSearchParams(window.location.search);
-  const shouldEditMode = searchParams.get('editMode') === 'true';
-
-  const [product, setProduct] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editMode, setEditMode] = useState(shouldEditMode); // Initialize with the query param value
-  const [editedProduct, setEditedProduct] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState(null);
-  // New state to preview uploads
-  const [imagePreview, setImagePreview] = useState(null);
-  const [datasheetName, setDatasheetName] = useState(null);
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState("");
-
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const shouldEditMode = searchParams.get('editMode') === 'true';
     setEditMode(shouldEditMode);
   }, []);
+  useEffect(() => {
+    if (editedProduct) {
+      const totalQty = calculateTotalQuantity(editedProduct.binLocations);
+      setEditedProduct(prev => ({
+        ...prev,
+        quantity: totalQty
+      }));
+    }
+  }, [editedProduct?.binLocations]);
 
   // Initialize editedProduct when product is loaded
   useEffect(() => {
     if (product) {
-      setEditedProduct(product);
-
-      // Initialize image preview if product has an image URL
-      if (product.image) {
-        setImagePreview(product.image);
-      }
-
-      // Initialize datasheet name if product has a datasheet
-      if (product.datasheet) {
-        // Extract filename from URL
-        const filename = product.datasheet.split('/').pop();
-        setDatasheetName(filename);
-      }
+      setEditedProduct({
+        ...product,
+        binLocations: product.binLocations || []
+      });
+      setImagePreview(product.image);
+      setDatasheetName(product.datasheet ? product.datasheet.split("/").pop() : null);
+      setBinLocations(product.binLocations || []);
     }
   }, [product]);
+
 
   useEffect(() => {
     fetchDropdownOptionsFromGithub();
@@ -312,6 +328,8 @@ export default function ProductDetail({ params }) {
   // Handle edit form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'quantity') return;
+
     setEditedProduct(prev => ({
       ...prev,
       [name]: value
@@ -418,7 +436,7 @@ export default function ProductDetail({ params }) {
       </div>
     );
   };
-  
+
   // Updated datasheet upload handler for edit mode
   const handleDatasheetUpload = (e) => {
     const file = e.target.files[0];
@@ -578,7 +596,7 @@ export default function ProductDetail({ params }) {
       const { token, repo, owner, path, branch = 'main' } = githubConfig;
 
       // Create a copy of the edited product to modify
-      const productToSave = { ...editedProduct       };
+      const productToSave = { ...editedProduct };
 
       // Prepare an array to hold all file changes
       const fileChanges = [];
@@ -689,13 +707,12 @@ export default function ProductDetail({ params }) {
         }
       }
 
-      // Success!
+      setProduct(editedProduct);
       setEditMode(false);
-      alert("Product updated successfully");
-
+      setIsSaving(false);
     } catch (error) {
-      console.error("Error saving product:", error);
-      setSaveError(error.message);
+      setSaveError(error.message || "Failed to save changes");
+      setIsSaving(false);
     } finally {
       setIsSaving(false);
     }
@@ -1069,32 +1086,58 @@ export default function ProductDetail({ params }) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    placeholder="0"
-                    value={editedProduct.quantity}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z" clipRule="evenodd" />
-                    </svg>
-                    Bin Location
-                  </label>
-                  <input
-                    type="text"
-                    name="bin"
-                    placeholder="A1-B2-C3"
-                    value={editedProduct.bin}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bin Locations</label>
+                  <div className="space-y-2 mb-2">
+                    {editedProduct.binLocations && editedProduct.binLocations.map((location, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          placeholder="Bin Location"
+                          value={location.bin}
+                          onChange={(e) => {
+                            const updatedLocations = [...editedProduct.binLocations];
+                            updatedLocations[index].bin = e.target.value;
+                            setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Quantity"
+                          value={location.quantity}
+                          onChange={(e) => {
+                            const updatedLocations = [...editedProduct.binLocations];
+                            updatedLocations[index].quantity = e.target.value;
+                            setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
+                          }}
+                          className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedLocations = editedProduct.binLocations.filter((_, i) => i !== index);
+                            setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
+                          }}
+                          className="p-2 text-red-600 hover:text-red-800"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const binLocations = editedProduct.binLocations || [];
+                      setEditedProduct({
+                        ...editedProduct,
+                        binLocations: [...binLocations, { bin: "", quantity: 0 }]
+                      });
+                    }}
+                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                  >
+                    + Add Bin Location
+                  </button>
                 </div>
 
                 <div>
@@ -1107,9 +1150,7 @@ export default function ProductDetail({ params }) {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                </div>
 
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Quantity</label>
                   <input
                     type="number"
@@ -1242,12 +1283,14 @@ export default function ProductDetail({ params }) {
 
               {/* Status Badge */}
               <div className="mt-4 md:mt-0 flex items-center">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${Number(product.quantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${calculateTotalQuantity(product.binLocations) > 0
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
                   }`}>
-                  {Number(product.quantity) > 0 ? 'In Stock' : 'Out of Stock'}
+                  {calculateTotalQuantity(product.binLocations) > 0 ? 'In Stock' : 'Out of Stock'}
                 </span>
               </div>
-            </div>
+              </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 space-y-6">
               {/* Left Column - Image and Quick Stats */}
@@ -1270,236 +1313,244 @@ export default function ProductDetail({ params }) {
 
                 {/* Quick Stats */}
                 <div className="p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-gray-500">Quantity</span>
-                    <span className="font-semibold text-lg">{product.quantity || "0"}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-gray-500">Category</span>
-                    {product.category ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {product.category}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">Not specified</span>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-500">Manufacturer</span>
-                    <span className="font-medium">{product.manufacturer || "Not specified"}</span>
-                  </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm font-medium text-gray-500">Total Quantity</span>
+                  <span className="font-semibold text-lg">
+                    {calculateTotalQuantity(product.binLocations)}
+                  </span>
                 </div>
-                {/* Datasheet Preview */}
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <FileText className="h-5 w-5 mr-2 text-blue-600" /> Datasheet
-                    </h2>
-                  </div>
-                  <div className="p-4">
-                    {product.datasheet ? (
-                      <div className="space-y-4">
-                        <div className="border rounded-lg overflow-hidden">
-                          <div className="bg-gray-100 h-48 flex items-center justify-center">
-                            <FileText
-                              className="h-16 w-16 text-gray-400"
-                              onClick={() => openPdfModal(product.datasheet)}
-                            />
-                          </div>
-                          <div className="p-3 border-t">
-                            <div className="flex items-center justify-between">
 
-                              <span className="text-sm truncate">
-                                {product.datasheet ? product.datasheet.split('/').pop() : "Datasheet"}
-                              </span>                              <div className="flex space-x-2">
-                                <a
-                                  href={product.datasheet}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                >
-                                  <Download className="mr-1 h-3 w-3" /> Download
-                                </a>
-                                <button
-                                  onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(product.datasheet)}`, '_blank')}
-                                  className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                >
-                                  <Eye className="mr-1 h-3 w-3" /> View
-                                </button>
-                              </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm font-medium text-gray-500">Category</span>
+                  {product.category ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {product.category}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Not specified</span>
+                  )}
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">Manufacturer</span>
+                  <span className="font-medium">{product.manufacturer || "Not specified"}</span>
+                </div>
+              </div>
+              {/* Datasheet Preview */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                    <FileText className="h-5 w-5 mr-2 text-blue-600" /> Datasheet
+                  </h2>
+                </div>
+                <div className="p-4">
+                  {product.datasheet ? (
+                    <div className="space-y-4">
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-gray-100 h-48 flex items-center justify-center">
+                          <FileText
+                            className="h-16 w-16 text-gray-400"
+                            onClick={() => openPdfModal(product.datasheet)}
+                          />
+                        </div>
+                        <div className="p-3 border-t">
+                          <div className="flex items-center justify-between">
+
+                            <span className="text-sm truncate">
+                              {product.datasheet ? product.datasheet.split('/').pop() : "Datasheet"}
+                            </span>                              <div className="flex space-x-2">
+                              <a
+                                href={product.datasheet}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              >
+                                <Download className="mr-1 h-3 w-3" /> Download
+                              </a>
+                              <button
+                                onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(product.datasheet)}`, '_blank')}
+                                className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              >
+                                <Eye className="mr-1 h-3 w-3" /> View
+                              </button>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-6 text-gray-400 border border-dashed rounded-lg">
-                        <FileX className="h-12 w-12 mb-2" />
-                        <p className="text-sm">No datasheet available</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Middle Column - Basic Information and Inventory Details */}
-              <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <ClipboardList className="h-5 w-5 mr-2 text-blue-600" /> Basic Information
-                    </h2>
-                  </div>
-                  <div className="p-4">
-                    <table className="min-w-full">
-                      <tbody className="divide-y divide-gray-200">
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Part Name</td>
-                          <td className="py-2 text-sm text-gray-800">{product.partName || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer Part</td>
-                          <td className="py-2 text-sm text-gray-800">{product.manufacturerPart || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer</td>
-                          <td className="py-2 text-sm text-gray-800">{product.manufacturer || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Description</td>
-                          <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <Package className="h-5 w-5 mr-2 text-blue-600" /> Inventory Details
-                    </h2>
-                  </div>
-                  <div className="p-4">
-                    <table className="min-w-full">
-                      <tbody className="divide-y divide-gray-200">
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Quantity in Stock</td>
-                          <td className="py-2 text-sm text-gray-800">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${Number(product.quantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                              }`}>
-                              {product.quantity || "0"}
-                            </span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Bin Location</td>
-                          <td className="py-2 text-sm text-gray-800">{product.bin || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
-                          <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
-                          <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 text-gray-400 border border-dashed rounded-lg">
+                      <FileX className="h-12 w-12 mb-2" />
+                      <p className="text-sm">No datasheet available</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Right Column - Pricing & References + Datasheet Preview */}
-              <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <DollarSign className="h-5 w-5 mr-2 text-blue-600" /> Pricing
-                    </h2>
-                  </div>
-                  <div className="p-4">
-                    <table className="min-w-full">
-                      <tbody className="divide-y divide-gray-200">
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Cost Price</td>
-                          <td className="py-2 text-sm text-gray-800">
-                            {product.costPrice ? `$${product.costPrice}` : "Not specified"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Sale Price</td>
-                          <td className="py-2 text-sm text-gray-800">
-                            {product.salePrice ? `$${product.salePrice}` : "Not specified"}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+            </div>
 
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <Eye className="h-5 w-5 mr-2 text-blue-600" /> References
-                    </h2>
-                  </div>
-                  <div className="p-4">
-                    <table className="min-w-full">
-                      <tbody className="divide-y divide-gray-200">
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Vendor</td>
-                          <td className="py-2 text-sm text-gray-800">{product.vendor || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Vendor Part #</td>
-                          <td className="py-2 text-sm text-gray-800">{product.vendorPart || "Not specified"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Customer Reference</td>
-                          <td className="py-2 text-sm text-gray-800">{product.customerRef || "Not specified"}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+            {/* Middle Column - Basic Information and Inventory Details */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                    <ClipboardList className="h-5 w-5 mr-2 text-blue-600" /> Basic Information
+                  </h2>
+                </div>
+                <div className="p-4">
+                  <table className="min-w-full">
+                    <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Part Name</td>
+                        <td className="py-2 text-sm text-gray-800">{product.partName || "Not specified"}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Manufacturer Part</td>
+                        <td className="py-2 text-sm text-gray-800">{product.manufacturerPart || "Not specified"}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Manufacturer</td>
+                        <td className="py-2 text-sm text-gray-800">{product.manufacturer || "Not specified"}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Description</td>
+                        <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                    <Package className="h-5 w-5 mr-2 text-blue-600" /> Inventory Details
+                  </h2>
+                </div>
+                <div className="p-4">
+                  <table className="min-w-full">
+                    <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Bin Locations</td>
+                        <td className="py-2 text-sm text-gray-800">
+                          {product && product.binLocations && product.binLocations.length > 0 ? (
+                            <div className="space-y-1">
+                              {product.binLocations.map((location, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {location.bin}
+                                  </span>
+                                  <span className="text-xs text-gray-600">Qty: {location.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            "Not specified"
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
+                        <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
+                        <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
+
+            {/* Right Column - Pricing & References + Datasheet Preview */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                    <DollarSign className="h-5 w-5 mr-2 text-blue-600" /> Pricing
+                  </h2>
+                </div>
+                <div className="p-4">
+                  <table className="min-w-full">
+                    <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Cost Price</td>
+                        <td className="py-2 text-sm text-gray-800">
+                          {product.costPrice ? `$${product.costPrice}` : "Not specified"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Sale Price</td>
+                        <td className="py-2 text-sm text-gray-800">
+                          {product.salePrice ? `$${product.salePrice}` : "Not specified"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                    <Eye className="h-5 w-5 mr-2 text-blue-600" /> References
+                  </h2>
+                </div>
+                <div className="p-4">
+                  <table className="min-w-full">
+                    <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Vendor</td>
+                        <td className="py-2 text-sm text-gray-800">{product.vendor || "Not specified"}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Vendor Part #</td>
+                        <td className="py-2 text-sm text-gray-800">{product.vendorPart || "Not specified"}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm font-medium text-gray-600">Customer Reference</td>
+                        <td className="py-2 text-sm text-gray-800">{product.customerRef || "Not specified"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
           </div>
         )}
 
 
 
 
-        {/* Status Section */}
-        <div className="bg-gray-50 px-6 py-4 border-t rounded-lg border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
+      {/* Status Section */}
+      <div className="bg-gray-50 px-6 py-4 border-t rounded-lg border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <TimeStamp />
-            </div>
-            <div>
-              {Number(product.quantity) <= Number(product.reorderPoint) && Number(product.reorderPoint) > 0 && (
-                <div className="flex items-center text-amber-600">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  <span className="text-sm font-medium">Low stock alert</span>
-                </div>
-              )}
-            </div>
+          </div>
+          <div>
+            {Number(product.quantity) <= Number(product.reorderPoint) && Number(product.reorderPoint) > 0 && (
+              <div className="flex items-center text-amber-600">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                <span className="text-sm font-medium">Low stock alert</span>
+              </div>
+            )}
           </div>
         </div>
-        {/* PDF Modal */}
-        <PdfViewerModal
-          isOpen={isPdfModalOpen}
-          pdfUrl={pdfUrl}
-          onClose={closePdfModal}
-        />
-
-
       </div>
+      {/* PDF Modal */}
+      <PdfViewerModal
+        isOpen={isPdfModalOpen}
+        pdfUrl={pdfUrl}
+        onClose={closePdfModal}
+      />
 
 
     </div>
+
+
+    </div >
   );
 };

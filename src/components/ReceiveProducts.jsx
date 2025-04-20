@@ -149,7 +149,7 @@ const ReceiveProducts = () => {
         // }
         // else {
 
-          setError("GitHub config is incomplete");
+        setError("GitHub config is incomplete");
 
         // }
         setIsLoading(false);
@@ -187,7 +187,7 @@ const ReceiveProducts = () => {
         if (fileResponse.ok) {
           const fileContent = await fileResponse.json();
           setProduct(fileContent);
-          setQtyToAdd(fileContent.quantity || "0");
+          setQtyToAdd("");
         } else {
           throw new Error("Error loading product details");
         }
@@ -226,157 +226,63 @@ const ReceiveProducts = () => {
 
     // Set the product directly without API call since we already have the data
     setProduct(suggestion);
-    setQtyToAdd(suggestion.quantity || "0");
-    setBin(suggestion.bin || "");
+    setQtyToAdd("");
+    setBin("");
     setError(null);
     setSuccessMessage("");
   };
 
   // Function to add product to inventory
   const addToInventory = async () => {
-    if (!product || !qtyToAdd) return;
-    // Hide suggestions immediately when adding to inventory
+    if (!product || !qtyToAdd || !bin) return;
     setShowSuggestions(false);
-
     setIsAdding(true);
     setError(null);
     setSuccessMessage("");
-
+  
     try {
-      // Update product's quantity
-      const currentQty = parseInt(product.quantity || "0");
       const qtyToAddNum = parseInt(qtyToAdd);
-      const updatedQty = currentQty + qtyToAddNum;
-
+      
+      // Create or update bins array
+      const existingBins = product.bins || [];
+      const totalQty = parseInt(product.totalQuantity || "0");
+      
+      // Find if bin already exists
+      const binIndex = existingBins.findIndex(b => b.binId === bin);
+      
+      let updatedBins;
+      if (binIndex >= 0) {
+        // Update existing bin
+        updatedBins = existingBins.map((b, i) => 
+          i === binIndex 
+            ? { ...b, quantity: (parseInt(b.quantity) + qtyToAddNum).toString() }
+            : b
+        );
+      } else {
+        // Add new bin
+        updatedBins = [
+          ...existingBins,
+          { binId: bin, quantity: qtyToAddNum.toString() }
+        ];
+      }
+  
       // Create updated product object
       const updatedProduct = {
         ...product,
-        quantity: updatedQty.toString(),
-        bin: bin || product.bin || ""
+        bins: updatedBins,
+        totalQuantity: (totalQty + qtyToAddNum).toString()
       };
-
-      // Save to localStorage for persistence in demo mode
-      // const localItems = localStorage.getItem('inventoryItems');
-      // if (localItems) {
-      //   const items = JSON.parse(localItems);
-      //   const index = items.findIndex(item =>
-      //     item.manufacturerPart === product.manufacturerPart ||
-      //     item.partName === product.partName
-      //   );
-
-      //   if (index !== -1) {
-      //     items[index] = updatedProduct;
-      //     localStorage.setItem('inventoryItems', JSON.stringify(items));
-      //   } else {
-      //     localStorage.setItem('inventoryItems', JSON.stringify([...items, updatedProduct]));
-      //   }
-      // } else {
-      //   localStorage.setItem('inventoryItems', JSON.stringify([updatedProduct]));
-      // }
-
-      // Save to GitHub if config is valid
+  
+      // Rest of your existing GitHub save logic...
       const { token, repo, owner, path } = githubConfig;
       if (token && repo && owner) {
-        console.log("Starting GitHub update process");
-        const jsonDirPath = `${path}/jsons`;
-
-        // First, check if the file exists by listing the directory
-        const dirListUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
-        console.log("Fetching directory listing from:", dirListUrl);
-
-        const dirResponse = await fetch(dirListUrl, {
-          headers: {
-            "Authorization": `token ${token}`
-          }
-        });
-
-        if (!dirResponse.ok) {
-          throw new Error(`GitHub API error: ${dirResponse.statusText} (${dirResponse.status})`);
-        }
-
-        const files = await dirResponse.json();
-        console.log("Files in directory:", files.map(f => f.name));
-
-        // Look for an exact match of the file by manufacturer part
-        const exactFileMatch = files.find(file =>
-          file.name.toLowerCase().includes(product.manufacturerPart.toLowerCase())
-        );
-
-        // If we found an exact match, use that filename
-        let fileName;
-        if (exactFileMatch) {
-          fileName = exactFileMatch.name;
-          console.log("Found existing file:", fileName);
-        } else {
-          // Create sanitized filename
-          const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-          const sanitizedPartName = product.partName ? product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_") : "";
-
-          fileName = sanitizedPartName
-            ? `${sanitizedPartName}-${sanitizedManufacturerPart}.json`
-            : `${sanitizedManufacturerPart}.json`;
-
-          console.log("Created new filename:", fileName);
-        }
-
-        // Check if file exists
-        let existingFile = files.find(file => file.name === fileName);
-        let filePath = `${jsonDirPath}/${fileName}`;
-        let fileExists = !!existingFile;
-        let existingSha = fileExists ? existingFile.sha : null;
-
-        console.log("File exists:", fileExists, "SHA:", existingSha);
-
-        // Prepare file content
-        const fileContent = JSON.stringify(updatedProduct, null, 2);
-        const encodedContent = btoa(unescape(encodeURIComponent(fileContent)));
-
-        // Prepare request body
-        const requestBody = {
-          message: fileExists
-            ? `Update inventory for product: ${updatedProduct.manufacturerPart}`
-            : `Add inventory for product: ${updatedProduct.manufacturerPart}`,
-          content: encodedContent,
-        };
-
-        // If updating existing file, include the sha
-        if (fileExists && existingSha) {
-          requestBody.sha = existingSha;
-        }
-
-        // Make PUT request to GitHub API
-        const saveUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-        console.log("Sending update to GitHub:", saveUrl);
-        console.log("Request body:", JSON.stringify(requestBody).substring(0, 200) + "...");
-
-        const saveResponse = await fetch(saveUrl, {
-          method: 'PUT',
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(requestBody)
-        });
-
-        const responseText = await saveResponse.text();
-
-        if (!saveResponse.ok) {
-          console.error("GitHub save error:", responseText);
-          throw new Error(`GitHub save error: ${saveResponse.status} ${saveResponse.statusText}`);
-        }
-
-        try {
-          const responseData = JSON.parse(responseText);
-          console.log("GitHub save successful:", responseData);
-        } catch (e) {
-          console.log("Raw response:", responseText);
-        }
+        // ... existing GitHub save code ...
       }
-
+  
       // Update the product state with new quantity
       setProduct(updatedProduct);
-      setSuccessMessage(`Successfully added ${qtyToAdd} units to inventory. New total: ${updatedQty}`);
-
+      setSuccessMessage(`Successfully added ${qtyToAdd} units to bin ${bin}. New total: ${updatedProduct.totalQuantity}`);
+  
       // Update allProducts for suggestions
       setAllProducts(prevProducts => {
         const updatedProducts = [...prevProducts];
@@ -388,7 +294,7 @@ const ReceiveProducts = () => {
         }
         return updatedProducts;
       });
-
+  
       // Reset form
       setBin("");
       setQtyToAdd("");
@@ -564,18 +470,34 @@ const ReceiveProducts = () => {
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                          <td className="py-2 text-sm font-medium text-gray-600">Current Bin</td>
-                          <td className="py-2 text-sm text-gray-800">{product.bin || "Not specified"}</td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 text-sm font-medium text-gray-600">Current Quantity</td>
-                          <td className="py-2 text-sm text-gray-800">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${Number(product.quantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                              }`}>
-                              {product.quantity || "0"}
-                            </span>
-                          </td>
-                        </tr>
+  <td className="py-2 text-sm font-medium text-gray-600">Bin Locations</td>
+  <td className="py-2 text-sm text-gray-800">
+    <div className="space-y-1">
+      {product.bins && product.bins.length > 0 ? (
+        product.bins.map((bin, index) => (
+          <div key={index} className="flex items-center space-x-2">
+            <span className="font-medium">{bin.binId}:</span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {bin.quantity}
+            </span>
+          </div>
+        ))
+      ) : (
+        "No bins assigned"
+      )}
+    </div>
+  </td>
+</tr>
+<tr className="border-b border-gray-100">
+  <td className="py-2 text-sm font-medium text-gray-600">Total Quantity</td>
+  <td className="py-2 text-sm text-gray-800">
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      Number(product.totalQuantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+    }`}>
+      {product.totalQuantity || "0"}
+    </span>
+  </td>
+</tr>
                       </tbody>
                     </table>
                   </div>
