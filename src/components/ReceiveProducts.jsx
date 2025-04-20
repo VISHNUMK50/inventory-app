@@ -95,22 +95,22 @@ const ReceiveProducts = () => {
 
   // Update the suggestions effect to be more strict about when to show
 
-useEffect(() => {
-  if (searchQuery.trim()) {
-    const filtered = allProducts.filter(product => {
-      const manufacturerPart = product.manufacturerPart?.toLowerCase() || '';
-      const partName = product.partName?.toLowerCase() || '';
-      const query = searchQuery.toLowerCase();
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const filtered = allProducts.filter(product => {
+        const manufacturerPart = product.manufacturerPart?.toLowerCase() || '';
+        const partName = product.partName?.toLowerCase() || '';
+        const query = searchQuery.toLowerCase();
 
-      return manufacturerPart.includes(query) || partName.includes(query);
-    });
+        return manufacturerPart.includes(query) || partName.includes(query);
+      });
 
-    setSuggestions(filtered.slice(0, 10)); // Limit to 10 suggestions
-  } else {
-    setSuggestions([]);
-    setShowSuggestions(false);
-  }
-}, [searchQuery, allProducts]);
+      setSuggestions(filtered.slice(0, 10)); // Limit to 10 suggestions
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchQuery, allProducts]);
 
   // Function to search for products by manufacturerPart
   const searchProducts = async (e) => {
@@ -137,21 +137,21 @@ useEffect(() => {
         //     (item.partName && item.partName.toLowerCase() === searchQuery.toLowerCase())
         //   );
 
-          if (foundProduct) {
-            setProduct(foundProduct);
-            setQtyToAdd("");
-          }
-          else {
+        //   if (foundProduct) {
+        //     setProduct(foundProduct);
+        //     setQtyToAdd("");
+        //   }
+        //   else {
 
-            setError("Product not found");
+        //     setError("Product not found");
 
-          }
-        }
-        else {
+        //   }
+        // }
+        // else {
 
           setError("GitHub config is incomplete");
 
-        }
+        // }
         setIsLoading(false);
         return;
       }
