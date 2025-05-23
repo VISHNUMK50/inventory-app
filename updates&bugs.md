@@ -15,7 +15,6 @@
 - 18/04/24 old qty shown on product search (not updated instantly)
 - 18/04/24 name sugestion not stored. 
 - 18/04/24 pdf geration on checkout not working
-- 17/04/24 data not shown in inventory table
 - 17/04/24 check datasheet
 
 

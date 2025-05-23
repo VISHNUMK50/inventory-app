@@ -20,7 +20,11 @@ const ReceiveProducts = () => {
   const [allProducts, setAllProducts] = useState([]);
   const suggestionRef = useRef(null);
   const productsData = [];
-
+const generateFileName = (product) => {
+    const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+    const sanitizedPartName = product.partName.replace(/[^a-z0-9():]/gi, "_").replace(/\s+/g, "_");
+    return `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
+  };
   // Load all products once for suggestions
   useEffect(() => {
     const loadAllProducts = async () => {
@@ -114,110 +118,71 @@ const ReceiveProducts = () => {
 
   // Function to search for products by manufacturerPart
   const searchProducts = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  e.preventDefault();
+  if (!searchQuery.trim()) return;
 
-    setIsLoading(true);
-    setError(null);
-    setProduct(null);
-    setSuccessMessage("");
-    setShowSuggestions(false);
+  setIsLoading(true);
+  setError(null);
+  setProduct(null);
+  setSuccessMessage("");
+  setShowSuggestions(false);
 
-    try {
-      const { token, repo, owner, path } = githubConfig;
-
-      // If GitHub config is incomplete, use sample data
-      if (!token || !repo || !owner) {
-        // Try to find product in localStorage
-        // const localItems = localStorage.getItem('inventoryItems');
-        // if (localItems) {
-        //   const items = JSON.parse(localItems);
-        //   const foundProduct = items.find(item =>
-        //     item.manufacturerPart.toLowerCase() === searchQuery.toLowerCase() ||
-        //     (item.partName && item.partName.toLowerCase() === searchQuery.toLowerCase())
-        //   );
-
-        //   if (foundProduct) {
-        //     setProduct(foundProduct);
-        //     setQtyToAdd("");
-        //   }
-        //   else {
-
-        //     setError("Product not found");
-
-        //   }
-        // }
-        // else {
-
-        setError("GitHub config is incomplete");
-
-        // }
-        setIsLoading(false);
-        return;
-      }
-
-      // Real GitHub API implementation
-      const jsonDirPath = `${path}/jsons`;
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
-
-      console.log("Fetching from:", apiUrl);
-
-      const response = await fetch(apiUrl, {
-        headers: {
-          "Authorization": `token ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.statusText} (${response.status})`);
-      }
-
-      const files = await response.json();
-
-      // Look for files with format including the search query
-      let foundProductFile = files.find(file =>
-        file.type === "file" &&
-        file.name.endsWith(".json") &&
-        file.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
-      // If we found a matching file, load its contents
-      if (foundProductFile) {
-        const fileResponse = await fetch(foundProductFile.download_url);
-        if (fileResponse.ok) {
-          const fileContent = await fileResponse.json();
-          setProduct(fileContent);
-          setQtyToAdd("");
-        } else {
-          throw new Error("Error loading product details");
-        }
-      } else {
-        // If we couldn't find a matching file by name, check each file's content
-        let productFound = false;
-
-        for (const file of files) {
-          if (file.type === "file" && file.name.endsWith(".json")) {
-            try {
-              const fileResponse = await fetch(file.download_url);
-              if (fileResponse.ok) {
-                const fileContent = await fileResponse.json();
-                productsData.push(fileContent);  // This assumes each file contains one product
-              }
-            } catch (error) {
-              console.error("Error loading product:", error);
-            }
-          }
-        }
-
-      }
-    }
-    catch (error) {
-      console.error("Error searching for product:", error);
-      setError(error.message);
-    } finally {
+  try {
+    const { token, repo, owner, path } = githubConfig;
+    if (!token || !repo || !owner) {
+      setError("GitHub config is incomplete");
       setIsLoading(false);
+      return;
     }
-  };
+
+    // Find the product in allProducts first
+    const matchingProduct = allProducts.find(p => 
+      p.manufacturerPart.toLowerCase() === searchQuery.toLowerCase() ||
+      p.partName.toLowerCase() === searchQuery.toLowerCase()
+    );
+
+    if (!matchingProduct) {
+      setError("Product not found");
+      setIsLoading(false);
+      return;
+    }
+
+    // Use the same file naming convention
+    const fileName = generateFileName(matchingProduct);
+    const jsonDirPath = path ? `${path}/jsons` : 'jsons';
+    const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}/${fileName}`;
+
+    console.log("Fetching file:", fileUrl);
+
+    const response = await fetch(fileUrl, {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.statusText} (${response.status})`);
+    }
+
+    const fileData = await response.json();
+    const fileResponse = await fetch(fileData.download_url);
+    
+    if (fileResponse.ok) {
+      const fileContent = await fileResponse.json();
+      setProduct(fileContent);
+      setQtyToAdd("");
+    } else {
+      throw new Error("Error loading product details");
+    }
+
+  } catch (error) {
+    console.error("Error searching for product:", error);
+    setError(error.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Function to handle suggestion click
   const handleSuggestionClick = (suggestion) => {
@@ -234,59 +199,94 @@ const ReceiveProducts = () => {
 
   // Function to add product to inventory
   const addToInventory = async () => {
-    if (!product || !qtyToAdd || !bin) return;
-    setShowSuggestions(false);
-    setIsAdding(true);
-    setError(null);
-    setSuccessMessage("");
-  
-    try {
-      const qtyToAddNum = parseInt(qtyToAdd);
-      
-      // Create or update bins array
-      const existingBins = product.bins || [];
-      const totalQty = parseInt(product.totalQuantity || "0");
-      
-      // Find if bin already exists
-      const binIndex = existingBins.findIndex(b => b.binId === bin);
-      
-      let updatedBins;
-      if (binIndex >= 0) {
-        // Update existing bin
-        updatedBins = existingBins.map((b, i) => 
-          i === binIndex 
-            ? { ...b, quantity: (parseInt(b.quantity) + qtyToAddNum).toString() }
+  if (!product || !qtyToAdd || !bin) return;
+  setShowSuggestions(false);
+  setIsAdding(true);
+  setError(null);
+  setSuccessMessage("");
+
+  try {
+    const { token, repo, owner, path } = githubConfig;
+    if (!token || !repo || !owner) {
+      throw new Error("GitHub configuration is incomplete");
+    }
+
+    const qtyToAddNum = parseInt(qtyToAdd);
+    const existingBins = product.binLocations || [];
+    const totalQty = parseInt(product.avl_quantity || "0");
+
+    // Create updated product data
+    const binIndex = existingBins.findIndex(b => b.bin === bin);
+    const updatedBins = binIndex >= 0
+      ? existingBins.map((b, i) =>
+          i === binIndex
+            ? { ...b, quantity: parseInt(b.quantity) + qtyToAddNum }
             : b
-        );
-      } else {
-        // Add new bin
-        updatedBins = [
-          ...existingBins,
-          { binId: bin, quantity: qtyToAddNum.toString() }
-        ];
+        )
+      : [...existingBins, { bin: bin, quantity: qtyToAddNum }];
+
+    const updatedProduct = {
+      ...product,
+      binLocations: updatedBins,
+      avl_quantity: (totalQty + qtyToAddNum).toString()
+    };
+
+    try {
+      
+const fileName = generateFileName(product);
+  const jsonDirPath = path ? `${path}/jsons` : 'jsons';
+  const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}/${fileName}`;
+
+  console.log("Attempting to update file:", fileUrl);
+console.log("Debug info:", {
+  product,
+  fileName: generateFileName(product),
+  path: jsonDirPath,
+  fullUrl: fileUrl
+});
+      // Get existing file to get its SHA
+      const fileResponse = await fetch(fileUrl, {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json"
+        }
+      });
+
+      if (!fileResponse.ok) {
+        throw new Error(`GitHub API error: ${fileResponse.status} - ${fileResponse.statusText}`);
       }
-  
-      // Create updated product object
-      const updatedProduct = {
-        ...product,
-        bins: updatedBins,
-        totalQuantity: (totalQty + qtyToAddNum).toString()
-      };
-  
-      // Rest of your existing GitHub save logic...
-      const { token, repo, owner, path } = githubConfig;
-      if (token && repo && owner) {
-        // ... existing GitHub save code ...
+
+      const fileData = await fileResponse.json();
+      const content = Buffer.from(JSON.stringify(updatedProduct, null, 2)).toString('base64');
+
+      // Update the file
+      const updateResponse = await fetch(fileUrl, {
+        method: 'PUT',
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `Update inventory for ${product.manufacturerPart}`,
+          content: content,
+          sha: fileData.sha
+        })
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(`Failed to update file: ${errorData.message}`);
       }
-  
-      // Update the product state with new quantity
+
+      // Update local state
       setProduct(updatedProduct);
-      setSuccessMessage(`Successfully added ${qtyToAdd} units to bin ${bin}. New total: ${updatedProduct.totalQuantity}`);
-  
-      // Update allProducts for suggestions
+      setSuccessMessage(`Successfully added ${qtyToAdd} units to bin ${bin}. New total: ${updatedProduct.avl_quantity}`);
+      
+      // Update suggestions list
       setAllProducts(prevProducts => {
         const updatedProducts = [...prevProducts];
-        const index = updatedProducts.findIndex(p =>
+        const index = updatedProducts.findIndex(p => 
           p.manufacturerPart === product.manufacturerPart
         );
         if (index !== -1) {
@@ -294,18 +294,23 @@ const ReceiveProducts = () => {
         }
         return updatedProducts;
       });
-  
+
       // Reset form
       setBin("");
       setQtyToAdd("");
-    } catch (error) {
-      console.error("Error adding to inventory:", error);
-      setError(`Error adding to inventory: ${error.message}`);
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
+    } catch (githubError) {
+      console.error("GitHub API Error:", githubError);
+      throw new Error(`GitHub API Error: ${githubError.message}`);
+    }
+
+  } catch (error) {
+    console.error("Error adding to inventory:", error);
+    setError(`Error adding to inventory: ${error.message}`);
+  } finally {
+    setIsAdding(false);
+  }
+};
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       {/* Header */}
@@ -418,7 +423,7 @@ const ReceiveProducts = () => {
           <div className="p-6 max-w-3xl mx-auto">
             <div className="bg-white border border-gray-200 rounded-md overflow-hidden shadow-sm">
               <div className="bg-blue-50 p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-blue-800">Product Detail</h3>
+                <h3 className="text-lg font-semibold text-blue-800">Product Detail - {product.id || "Not specified"}</h3>
               </div>
 
               <div className="p-4">
@@ -446,6 +451,10 @@ const ReceiveProducts = () => {
                           <td className="py-2 text-sm font-medium text-gray-600">Vendor Part#</td>
                           <td className="py-2 text-sm text-gray-800">{product.vendorPart || "Not specified"}</td>
                         </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 text-sm font-medium text-gray-600">Description</td>
+                          <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -453,10 +462,7 @@ const ReceiveProducts = () => {
                   <div>
                     <table className="min-w-full">
                       <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 text-sm font-medium text-gray-600">Description</td>
-                          <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
-                        </tr>
+
                         <tr className="border-b border-gray-100">
                           <td className="py-2 text-sm font-medium text-gray-600">Category</td>
                           <td className="py-2 text-sm text-gray-800">
@@ -470,34 +476,41 @@ const ReceiveProducts = () => {
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100">
-  <td className="py-2 text-sm font-medium text-gray-600">Bin Locations</td>
-  <td className="py-2 text-sm text-gray-800">
-    <div className="space-y-1">
-      {product.bins && product.bins.length > 0 ? (
-        product.bins.map((bin, index) => (
-          <div key={index} className="flex items-center space-x-2">
-            <span className="font-medium">{bin.binId}:</span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {bin.quantity}
-            </span>
-          </div>
-        ))
-      ) : (
-        "No bins assigned"
-      )}
-    </div>
-  </td>
-</tr>
-<tr className="border-b border-gray-100">
-  <td className="py-2 text-sm font-medium text-gray-600">Total Quantity</td>
-  <td className="py-2 text-sm text-gray-800">
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-      Number(product.totalQuantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-    }`}>
-      {product.totalQuantity || "0"}
-    </span>
-  </td>
-</tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Bin Locations</td>
+                          <td className="py-2 text-sm text-gray-800">
+                            <div className="space-y-1">
+                              {product.binLocations && product.binLocations.length > 0 ? (
+                                product.binLocations.map((location, index) => (
+                                  <div key={index} className="flex items-center space-x-2">
+                                    <span className="font-medium">{location.bin}:</span>
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                      {location.quantity}
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                "No bins assigned"
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 text-sm font-medium text-gray-600">Available Quantity</td>
+                          <td className="py-2 text-sm text-gray-800">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${Number(product.avl_quantity) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                              {product.avl_quantity || "0"}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
+                          <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
+                          <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>

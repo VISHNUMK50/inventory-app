@@ -972,31 +972,24 @@ const Addproductform = () => {
     setShowSavingModal(true); // Show the modal when starting to save
     setSaveSuccess(false); // Reset success state
 
-    try {
-      setIsSubmitting(true);
+       try {
       const data = dataToSave || formData;
       // Handle ID generation/update
       let currentId;
-      let newLastUsedId; // Define the variable here
+      let newLastUsedId;
 
       if (dataToSave && dataToSave.id) {
         // If updating existing item, keep its ID
         currentId = parseInt(dataToSave.id);
-        newLastUsedId = Math.max(lastUsedId, currentId); // Update lastUsedId if current is higher
+        newLastUsedId = Math.max(lastUsedId, currentId);
       } else {
         // For new items, increment lastUsedId
         currentId = lastUsedId + 1;
-        newLastUsedId = currentId; // Set new last used ID
-      }
-
-      // Ensure ID is valid
-      if (!currentId || isNaN(currentId)) {
-        currentId = 1001; // Fallback ID
         newLastUsedId = currentId;
       }
 
       // Update the data with the ID
-      const finalFormData = {
+      const finalDataToSave = {
         ...data,
         id: currentId.toString()
       };
@@ -1004,25 +997,17 @@ const Addproductform = () => {
       // Save the new last used ID before proceeding
       await saveLastUsedIdToGithub(newLastUsedId);
 
-
-      // // Calculate total quantity from bin locations
+      // Calculate total quantity from bin locations
       const totalQuantity = data.binLocations.reduce((sum, location) =>
         sum + (parseInt(location.quantity) || 0), 0);
 
-      // Update avl_quantity with the calculated total
-      const finalData = {
-        ...data,
-        avl_quantity: totalQuantity.toString()
-      };
-
+      // Update the finalDataToSave with the calculated total
+      finalDataToSave.avl_quantity = totalQuantity.toString();
 
       // Generate a unique identifier based on part number and timestamp
       const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
       const sanitizedPartName = data.partName.replace(/[^a-z0-9():]/gi, "_").replace(/\s+/g, "_");
-      const itemIdentifier = `${newLastUsedId}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
-
-      // Create a copy of data to modify before saving
-      const finalDataToSave = { ...data };
+      const itemIdentifier = `${currentId}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
 
       // Remove the base64 data from the JSON file
       delete finalDataToSave.imageData;
