@@ -754,7 +754,7 @@ const Addproductform = () => {
       }
 
       // Continue with the rest of your submit logic...
-      await processNewEntries();
+      // await processNewEntries();
       const existingItem = await checkItemExists();
 
       if (existingItem) {
@@ -772,7 +772,9 @@ const Addproductform = () => {
         }
       } else {
         // No existing item, save as new
-        await saveToGithub(finalFormData);
+        // await saveToGithub(finalFormData);
+              await processNewEntries();
+
       }
 
       setSaveSuccess(true);

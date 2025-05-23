@@ -1,33 +1,98 @@
 "use client";
-
+import React, { useEffect, useState } from "react";
+import githubConfig from '@/config/githubConfig';
 import { Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers } from "lucide-react";
 import Link from "next/link";
 
 const Dashboard = () => {
   // Sample data - in a real app, this would come from your backend
-  const inventoryStats = {
+  // const inventoryStats = {
+  //   totalCount: 182,
+  //   onHand: 182,
+  //   onLoan: 0,
+  //   productLines: 12,
+  //   noStock: 0,
+  //   lowStock: 0
+  // };
+  // Sample low stock items
+
+  // const lowStockItems = [
+  //   { id: 1, name: "ATmega328P", category: "IC", current: 5, minimum: 10 },
+  //   { id: 2, name: "USB-C Connector", category: "Connector", current: 8, minimum: 15 },
+  //   { id: 3, name: "10uF Capacitor", category: "Capacitor", current: 22, minimum: 50 }
+  // ];
+
+    const [inventoryStats, setInventoryStats] = useState({
     totalCount: 182,
     onHand: 182,
     onLoan: 0,
-    productLines: 12,
+    productLines: 0,
     noStock: 0,
     lowStock: 0
-  };
-  // Sample low stock items
+  });
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [loadingReplenishment, setLoadingReplenishment] = useState(true);
 
-  const lowStockItems = [
-    { id: 1, name: "ATmega328P", category: "IC", current: 5, minimum: 10 },
-    { id: 2, name: "USB-C Connector", category: "Connector", current: 8, minimum: 15 },
-    { id: 3, name: "10uF Capacitor", category: "Capacitor", current: 22, minimum: 50 }
-  ];
+  // Add this new useEffect
+  useEffect(() => {
+    fetch('/api/inventory/lowstock')
+      .then((res) => res.json())
+      .then((data) => {
+        setInventoryStats(prev => ({
+          ...prev,
+          productLines: data.stats.productLines,
+          noStock: data.stats.noStock,
+          lowStock: data.stats.lowStock
+        }));
+        setLowStockItems(data.lowStockItems);
+        setLoadingReplenishment(false);
+      })
+      .catch((error) => {
+        console.error('Error fetching low stock data:', error);
+        setLoadingReplenishment(false);
+      });
+  }, []);
   // Sample recent activity data
-  const recentActivity = [
-    { id: 1, action: "Added 25 units of ATmega328P", date: "Mar 5, 2025", user: "John D." },
-    { id: 2, action: "Shipped 12 units of 10K Resistors", date: "Mar 4, 2025", user: "Sarah M." },
-    { id: 3, action: "Created order #ORD-2025-0042", date: "Mar 3, 2025", user: "Michael K." },
-    { id: 4, action: "Received 100 units of LED 5mm Red", date: "Mar 2, 2025", user: "John D." }
-  ];
+  // const recentActivity = [
+  //     { id: 1, action: "Added 25 units of ATmega328P", date: "Mar 5, 2025", user: "John D." },
+  //     { id: 2, action: "Shipped 12 units of 10K Resistors", date: "Mar 4, 2025", user: "Sarah M." },
+  //     { id: 3, action: "Created order #ORD-2025-0042", date: "Mar 3, 2025", user: "Michael K." },
+  //     { id: 4, action: "Received 100 units of LED 5mm Red", date: "Mar 2, 2025", user: "John D." }
+  //   ];
 
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
+
+  // Add this useEffect after your existing useEffect
+  useEffect(() => {
+    fetch('/api/activity/commits')
+      .then((res) => res.json())
+      .then((data) => {
+        setRecentActivity(data);
+        setLoadingActivity(false);
+      })
+      .catch((error) => {
+        console.error('Error fetching commits:', error);
+        setLoadingActivity(false);
+      });
+  }, []);
+
+
+  const [categoryStats, setCategoryStats] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/inventory/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        setCategoryStats(data);
+        setLoadingCategories(false);
+      })
+      .catch((error) => {
+        console.error('Error fetching category stats:', error);
+        setLoadingCategories(false);
+      });
+  }, []);
   // Sample low stock items that would appear in alerts
   const inventoryAlerts = [
     { id: 1, partNumber: "ATM328", manufacturer: "Microchip", inStock: 5, reorderPoint: 10 },
@@ -38,18 +103,18 @@ const Dashboard = () => {
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-          <div className="  px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Package className="h-8 w-8" />
-              <span className="text-2xl font-bold">InventoryPro</span>
-            </div>
-            <div>
-              <span className="mr-4">Welcome, Admin</span>
-              <button className="bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition">
-                Logout
-              </button>
-            </div>
+        <div className="  px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Package className="h-8 w-8" />
+            <span className="text-2xl font-bold">InventoryPro</span>
           </div>
+          <div>
+            <span className="mr-4">Welcome, Admin</span>
+            <button className="bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition">
+              Logout
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Navigation breadcrumb */}
@@ -81,7 +146,7 @@ const Dashboard = () => {
           </Link>
 
           <Link href="/reports" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-yellow-600">
-            <ArrowLeftRight  className="h-10 w-10 text-yellow-600 mb-2" />
+            <ArrowLeftRight className="h-10 w-10 text-yellow-600 mb-2" />
             <span className="font-medium">Transactions</span>
           </Link>
 
@@ -142,7 +207,7 @@ const Dashboard = () => {
                 </h3>
               </div>
               <div className="p-4">
-                <div className="grid grid-cols-3 gap-4">
+                {/* <div className="grid grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <p className="text-2xl font-bold text-blue-600">{inventoryStats.productLines}</p>
                     <p className="text-gray-600 text-sm">Product Lines</p>
@@ -157,10 +222,10 @@ const Dashboard = () => {
                     <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
                     <p className="text-gray-600 text-sm">Low Stock</p>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Display when there are low stock items */}
-                {lowStockItems.length > 0 && (
+                {/* {lowStockItems.length > 0 && (
                   <div className="mt-4">
                     <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
                     <div className="space-y-2">
@@ -178,7 +243,52 @@ const Dashboard = () => {
                       ))}
                     </div>
                   </div>
-                )}
+                )} */}
+
+                {loadingReplenishment ? (
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{inventoryStats.productLines}</p>
+                <p className="text-gray-600 text-sm">Product Lines</p>
+              </div>
+
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-red-600">{inventoryStats.noStock}</p>
+                <p className="text-gray-600 text-sm">No Stock</p>
+              </div>
+
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
+                <p className="text-gray-600 text-sm">Low Stock</p>
+              </div>
+            </div>
+
+            {lowStockItems.length > 0 && (
+              <div className="mt-4">
+                <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
+                <div className="space-y-2">
+                  {lowStockItems.map(item => (
+                    <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-xs text-gray-500">{item.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-red-600 font-medium">{item.current}/{item.minimum}</p>
+                        <p className="text-xs text-gray-500">Current/Min</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
               </div>
             </div>
           </div>
@@ -188,7 +298,7 @@ const Dashboard = () => {
         {/* Bottom section with activity and inventory breakdown */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Recent Activity */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="bg-gray-700 px-4 py-3">
               <h3 className="text-lg font-medium text-white">Recent Activity</h3>
             </div>
@@ -209,8 +319,50 @@ const Dashboard = () => {
                 </Link>
               </div>
             </div>
+          </div> */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="bg-gray-700 px-4 py-3">
+              <h3 className="text-lg font-medium text-white">Recent Activity</h3>
+            </div>
+            <div className="p-4">
+              {loadingActivity ? (
+                <div className="flex justify-center items-center h-48">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : recentActivity.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  No recent activity
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {recentActivity.map(activity => (
+                    <div key={activity.id} className="py-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium break-words pr-4">
+                            {activity.action || 'Unknown action'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {activity.date || 'Unknown date'} by {activity.user || 'Unknown user'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-4 text-center">
+                <a
+                  href={`https://github.com/${githubConfig.owner}/${githubConfig.repo}/commits/master`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  View Commit History →
+                </a>
+              </div>
+            </div>
           </div>
-
           {/* Inventory by Category */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="bg-gray-700 px-4 py-3">
@@ -218,7 +370,7 @@ const Dashboard = () => {
                 <Layers className="h-5 w-5 mr-2" /> Inventory by Category
               </h3>
             </div>
-            <div className="p-4">
+            {/* <div className="p-4">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">ICs</span>
@@ -261,6 +413,44 @@ const Dashboard = () => {
                 </div>
               </div>
 
+              <div className="mt-4 text-center">
+                <Link href="/inventory-report" className="text-blue-600 hover:text-blue-800 font-medium">
+                  View Full Inventory Report →
+                </Link>
+              </div>
+            </div> */}
+            <div className="p-4">
+              {loadingCategories ? (
+                <div className="flex justify-center items-center h-48">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : categoryStats.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  No category data available
+                </div>
+              ) : (
+                <div className="space-y-3">
+  {categoryStats.map((category) => (
+    <div key={category.name}>
+      <div className="flex justify-between items-center">
+        <span className="text-gray-600">{category.name}</span>
+        <span className="font-medium">
+          {category.count} units ({category.items} items)
+        </span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div
+          className="h-2.5 rounded-full"
+          style={{
+            width: `${(category.count / category.totalCount) * 100}%`,
+            backgroundColor: `var(--color-${category.color}-600)`
+          }}
+        ></div>
+      </div>
+    </div>
+  ))}
+</div>
+              )}
               <div className="mt-4 text-center">
                 <Link href="/inventory-report" className="text-blue-600 hover:text-blue-800 font-medium">
                   View Full Inventory Report →
