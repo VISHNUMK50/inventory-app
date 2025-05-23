@@ -47,6 +47,18 @@ const SettingsPage = () => {
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+{/* Clear Local Storage Button */}
+      <div className="mb-4">
+        <button
+          onClick={() => {
+            localStorage.clear();
+            alert('Local storage cleared!');
+          }}
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Clear Local Storage
+        </button>
+      </div>
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar */}

@@ -454,7 +454,7 @@ const ManageInventory = () => {
   // Add these helper functions after the existing GitHub config import
 
 // Function to move file to recycle bin
-const moveToRecycleBin = async (itemId, sourceContent) => {
+const moveToRecycleBin = async (itemId) => {
   const { token, repo, owner, path } = githubConfig;
   
   try {
@@ -484,8 +484,10 @@ const moveToRecycleBin = async (itemId, sourceContent) => {
     }
 
     const fileData = await fileResponse.json();
-    const content = fileData.content;
-    const sha = fileData.sha;
+    
+    // Create the content in base64
+    const contentStr = JSON.stringify(item, null, 2);
+    const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
 
     // Create file in recycle bin
     await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
@@ -496,7 +498,7 @@ const moveToRecycleBin = async (itemId, sourceContent) => {
       },
       body: JSON.stringify({
         message: `Moved ${fileName} to recycle bin`,
-        content: content,
+        content: contentBase64,
         branch: 'master'
       })
     });
@@ -510,7 +512,7 @@ const moveToRecycleBin = async (itemId, sourceContent) => {
       },
       body: JSON.stringify({
         message: `Moved to recycle bin: ${fileName}`,
-        sha: sha
+        sha: fileData.sha
       })
     });
 
