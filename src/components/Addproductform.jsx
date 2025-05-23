@@ -96,7 +96,6 @@ const Addproductform = () => {
     // Set quantity to 0 if tracking total separately
     setFormData(prev => ({
       ...prev,
-      quantity: "0",
       binLocations: []
     }));
 
@@ -138,7 +137,7 @@ const Addproductform = () => {
 
       if (!token || !repo || !owner) {
         const savedId = localStorage.getItem('lastUsedId');
-        setLastUsedId(savedId ? parseInt(savedId) : 1000);
+        setLastUsedId(savedId ? parseInt(savedId) : 1001);
         return;
       }
 
@@ -547,17 +546,18 @@ const Addproductform = () => {
     const { token, repo, owner, branch, path } = githubConfig;
 
     if (!token || !repo || !owner) {
-      return false; // Can't check, assume it doesn't exist
+      return false;
     }
 
     try {
-      // We'll look for matching manufacturer part and part name, regardless of ID
-      const sanitizedManufacturerPart = formData.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-      const sanitizedPartName = formData.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+      // Make sure both required fields exist before checking
+      if (!formData.partName || !formData.manufacturerPart) {
+        return false;
+      }
 
-      // Use a prefix pattern to match items with the same part name and manufacturer part
-      // but potentially different IDs
-      const filePattern = `-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
+      // Sanitize the strings for comparison
+      const sanitizedManufacturerPart = formData.manufacturerPart.trim().toLowerCase();
+      const sanitizedPartName = formData.partName.trim().toLowerCase();
 
       // List all files in the jsons directory
       const listUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}/jsons`;
@@ -574,28 +574,29 @@ const Addproductform = () => {
 
       const files = await response.json();
 
-      // Find a file that matches our pattern
-      const matchingFile = files.find(file => file.name.includes(filePattern));
+      // For each file, fetch and check its content
+      for (const file of files) {
+        if (file.name.endsWith('.json')) {
+          const fileResponse = await fetch(file.url, {
+            headers: {
+              "Authorization": `token ${token}`
+            }
+          });
 
-      if (matchingFile) {
-        // Found a match, fetch its content
-        const fileResponse = await fetch(matchingFile.url, {
-          headers: {
-            "Authorization": `token ${token}`
+          if (fileResponse.ok) {
+            const fileData = await fileResponse.json();
+            const content = JSON.parse(atob(fileData.content));
+
+            // Compare both part name and manufacturer part exactly
+            if (content.partName?.trim().toLowerCase() === sanitizedPartName &&
+              content.manufacturerPart?.trim().toLowerCase() === sanitizedManufacturerPart) {
+              return content;
+            }
           }
-        });
-
-        if (fileResponse.ok) {
-          const fileData = await fileResponse.json();
-          const content = atob(fileData.content);
-          const existingItem = JSON.parse(content);
-
-          // Return the existing item
-          return existingItem;
         }
       }
 
-      return false; // Item doesn't exist
+      return false; // No match found
     } catch (error) {
       console.error("Error checking if item exists:", error);
       return false;
@@ -606,21 +607,27 @@ const Addproductform = () => {
   };
   const calculateProvisionalTotal = () => {
     // Get sum of existing bin locations
-    const existingTotal = binLocations.reduce((total, location) => 
+    const existingTotal = binLocations.reduce((total, location) =>
       total + (parseInt(location.quantity) || 0), 0);
-    
+
     // Add the current input value if it's a valid number
     const inputValue = parseInt(newBinQuantity) || 0;
-    
+
     return existingTotal + inputValue;
   };
   const handleBinQuantityChange = (e) => {
-    const value = e.target.value;
-    setNewBinQuantity(value);
-    
-    // Update the provisional total in real-time
-    const provisionalTotal = calculateProvisionalTotal();
-    
+    // Ensure the input is a non-negative number
+    const value = Math.max(0, parseInt(e.target.value) || 0);
+    setNewBinQuantity(value.toString());
+
+    // Calculate total from existing bin locations
+    const existingTotal = binLocations.reduce((sum, location) =>
+      sum + (parseInt(location.quantity) || 0), 0
+    );
+
+    // Add the current input value to get provisional total
+    const provisionalTotal = existingTotal + value;
+
     // Update the form data with the provisional total
     setFormData(prev => ({
       ...prev,
@@ -629,54 +636,54 @@ const Addproductform = () => {
   };
 
   const handleAddBinLocation = () => {
-  if (!newBinLocation.trim()) {
-    alert("Please enter a bin location");
-    return;
-  }
-  
-  if (!newBinQuantity || isNaN(parseInt(newBinQuantity))) {
-    alert("Please enter a valid quantity");
-    return;
-  }
+    if (!newBinLocation.trim()) {
+      alert("Please enter a bin location");
+      return;
+    }
 
-  const newLocation = {
-    bin: newBinLocation.trim(),
-    quantity: parseInt(newBinQuantity)
+    if (!newBinQuantity || isNaN(parseInt(newBinQuantity))) {
+      alert("Please enter a valid quantity");
+      return;
+    }
+
+    const newLocation = {
+      bin: newBinLocation.trim(),
+      quantity: parseInt(newBinQuantity)
+    };
+
+    const updatedLocations = [...binLocations, newLocation];
+    setBinLocations(updatedLocations);
+
+    // Calculate total quantity (should match the provisional total)
+    const totalQuantity = calculateTotalQuantity(updatedLocations);
+
+    setFormData(prev => ({
+      ...prev,
+      binLocations: updatedLocations,
+      avl_quantity: totalQuantity.toString()
+    }));
+
+    // Reset input fields
+    setNewBinLocation("");
+    setNewBinQuantity("");
   };
 
-  const updatedLocations = [...binLocations, newLocation];
-  setBinLocations(updatedLocations);
-  
-  // Calculate total quantity (should match the provisional total)
-  const totalQuantity = calculateTotalQuantity(updatedLocations);
-  
-  setFormData(prev => ({
-    ...prev,
-    binLocations: updatedLocations,
-    avl_quantity: totalQuantity.toString()
-  }));
-  
-  // Reset input fields
-  setNewBinLocation("");
-  setNewBinQuantity("");
-};
+  // Also need to update the bin removal handler to recalculate the provisional total
+  const handleRemoveBinLocation = (index) => {
+    const updatedLocations = binLocations.filter((_, i) => i !== index);
+    setBinLocations(updatedLocations);
 
-// Also need to update the bin removal handler to recalculate the provisional total
-const handleRemoveBinLocation = (index) => {
-  const updatedLocations = binLocations.filter((_, i) => i !== index);
-  setBinLocations(updatedLocations);
-  
-  // Recalculate total quantity including current input
-  const existingTotal = calculateTotalQuantity(updatedLocations);
-  const inputValue = parseInt(newBinQuantity) || 0;
-  const provisionalTotal = existingTotal + inputValue;
-  
-  setFormData(prev => ({
-    ...prev,
-    binLocations: updatedLocations,
-    avl_quantity: provisionalTotal.toString()
-  }));
-};
+    // Recalculate total quantity including current input
+    const existingTotal = calculateTotalQuantity(updatedLocations);
+    const inputValue = parseInt(newBinQuantity) || 0;
+    const provisionalTotal = existingTotal + inputValue;
+
+    setFormData(prev => ({
+      ...prev,
+      binLocations: updatedLocations,
+      avl_quantity: provisionalTotal.toString()
+    }));
+  };
 
   // Updated handleSubmit function with merge logic
   const handleSubmit = async (e) => {
@@ -687,12 +694,28 @@ const handleRemoveBinLocation = (index) => {
       return;
     }
 
-    // Calculate final avl_quantity before submitting
-    const totalQuantity = calculateTotalQuantity(binLocations);
+    // Calculate final total quantity from all bin locations - using let instead of const
+    let totalQuantity = binLocations.reduce((sum, location) =>
+      sum + (parseInt(location.quantity) || 0), 0);
+
+    // Add any pending bin location if both fields are filled
+    let updatedBinLocations = [...binLocations];
+    if (newBinLocation.trim() && newBinQuantity) {
+      const newLocation = {
+        bin: newBinLocation.trim(),
+        quantity: parseInt(newBinQuantity)
+      };
+      updatedBinLocations.push(newLocation);
+      // Update total quantity to include the new bin
+      totalQuantity += parseInt(newBinQuantity);
+    }
+
+    // Create final form data with updated quantity and bin locations
     const finalFormData = {
       ...formData,
+      binLocations: updatedBinLocations,
       avl_quantity: totalQuantity.toString(),
-      createdAt: formData.createdAt || new Date().toISOString() // Set creation date if not already set
+      createdAt: formData.createdAt || new Date().toISOString()
     };
 
     setIsSubmitting(true);
@@ -942,9 +965,8 @@ const handleRemoveBinLocation = (index) => {
     try {
       setIsSubmitting(true);
       const data = dataToSave || formData;
-
       // Get the current lastUsedId from state
-      let currentId = parseInt(data.id) || 1000;
+      let currentId = parseInt(data.id) || 1001;
       let newLastUsedId = Math.max(lastUsedId, currentId);
 
       // If this is a new item (not an update), increment the ID
@@ -952,6 +974,17 @@ const handleRemoveBinLocation = (index) => {
         newLastUsedId = lastUsedId + 1;
         data.id = newLastUsedId.toString();
       }
+
+      // // Calculate total quantity from bin locations
+      const totalQuantity = data.binLocations.reduce((sum, location) =>
+        sum + (parseInt(location.quantity) || 0), 0);
+
+      // Update avl_quantity with the calculated total
+      const finalData = {
+        ...data,
+        avl_quantity: totalQuantity.toString()
+      };
+
 
       // Generate a unique identifier based on part number and timestamp
       const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
@@ -1135,7 +1168,7 @@ const handleRemoveBinLocation = (index) => {
       },
       body: JSON.stringify({
         sha: newCommitData.sha,
-        force: false
+        force: true
       })
     });
 
@@ -1428,7 +1461,7 @@ const handleRemoveBinLocation = (index) => {
                   {/* Category */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category
+                      Category <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="category"
@@ -1476,7 +1509,7 @@ const handleRemoveBinLocation = (index) => {
 
 
                     {/* Vendor */}
-                    {renderAutocomplete("vendor", "Vendor")}
+                    {renderAutocomplete("vendor", "Vendor", true)}
 
                     {/* Vendor Product Link - Updated field */}
                     <div>
@@ -1525,16 +1558,15 @@ const handleRemoveBinLocation = (index) => {
 
                   {/* Cost Price */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <div className="flex items-center">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
                         <DollarSign className="h-4 w-4 mr-1" />
-                        <span>Cost Price</span>
-                      </div>
+                        Cost Price <span className="ml-1 text-red-500">*</span>
                     </label>
                     <input
                       type="number"
                       name="costPrice"
                       value={formData.costPrice}
+                      required={true}
                       onChange={handleChange}
                       step="0.01"
                       min="0"
@@ -1577,7 +1609,7 @@ const handleRemoveBinLocation = (index) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Bin Locations
+                        Bin Locations <span className="text-red-500">*</span>
                       </label>
                       {/* Add new bin location */}
                       <div className="flex items-center mb-3">
@@ -1587,6 +1619,8 @@ const handleRemoveBinLocation = (index) => {
                             type="text"
                             value={newBinLocation}
                             onChange={(e) => setNewBinLocation(e.target.value)}
+                            required={true}
+
                             className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Bin identifier"
                           />
@@ -1601,42 +1635,44 @@ const handleRemoveBinLocation = (index) => {
                         </button>
                       </div>
 
-                    {binLocations.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Current Locations:</h4>
-                        <div className="flex flex-col space-y-2">
-                          {binLocations.map((location, index) => (
-                            <div key={index} className="flex items-center justify-between bg-purple-200 p-2 rounded-md">
-                              <span className="font-medium">
-                                {location.bin}: <span className="font-normal">{location.quantity} units</span>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveBinLocation(index)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ))}
+                      {binLocations.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Current Locations:</h4>
+                          <div className="flex flex-col space-y-2">
+                            {binLocations.map((location, index) => (
+                              <div key={index} className="flex items-center justify-between bg-purple-200 p-2 rounded-md">
+                                <span className="font-medium">
+                                  {location.bin}: <span className="font-normal">{location.quantity} units</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveBinLocation(index)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                                        </div>
+                      )}
+                    </div>
 
                     <div className="md-2">
 
                       <div className="flex-1">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Bin Locations
+                          Quantity <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
                           value={newBinQuantity}
+                        required={true}
                           onChange={handleBinQuantityChange} // Use the new handler here
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Quantity"
                           min="0"
+
                         />
 
 
@@ -1651,8 +1687,9 @@ const handleRemoveBinLocation = (index) => {
                           type="text"
                           readOnly
                           value={formData.avl_quantity || "0"}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md focus:outline-none"
+                          className="w-full px-3 py-2 bg-gray-50  border border-gray-300 rounded-md focus:outline-none"
                           placeholder="Calculated from bins"
+                          tabIndex="-1"
                         />
                       </div>
                     </div>
@@ -1661,11 +1698,12 @@ const handleRemoveBinLocation = (index) => {
                     {/* Reorder Point */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Reorder Point
+                        Reorder Point <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
                         name="reorderPoint"
+                        required={true}
                         value={formData.reorderPoint}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
