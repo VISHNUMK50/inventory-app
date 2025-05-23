@@ -137,7 +137,8 @@ const Addproductform = () => {
 
       if (!token || !repo || !owner) {
         const savedId = localStorage.getItem('lastUsedId');
-        setLastUsedId(savedId ? parseInt(savedId) : 1001);
+        const initialId = savedId ? parseInt(savedId) : 1000;
+        setLastUsedId(initialId);
         return;
       }
 
@@ -151,7 +152,10 @@ const Addproductform = () => {
       });
 
       if (response.status === 404) {
-        setLastUsedId(0);
+        // If file doesn't exist, set initial ID and create file
+        const initialId = 1000;
+        setLastUsedId(initialId);
+        await saveLastUsedIdToGithub(initialId);
         return;
       }
 
@@ -167,8 +171,10 @@ const Addproductform = () => {
 
     } catch (error) {
       console.error("Error fetching last used ID:", error);
+      // Set fallback ID
       const savedId = localStorage.getItem('lastUsedId');
-      setLastUsedId(savedId ? parseInt(savedId) : 1000);
+      const fallbackId = savedId ? parseInt(savedId) : 1000;
+      setLastUsedId(fallbackId);
     }
   };
 
@@ -946,6 +952,8 @@ const Addproductform = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // Function to save files to GitHub
   const saveToGithub = async (dataToSave = null) => {
     const { token, repo, owner, branch, path } = githubConfig;
 
@@ -965,15 +973,35 @@ const Addproductform = () => {
     try {
       setIsSubmitting(true);
       const data = dataToSave || formData;
-      // Get the current lastUsedId from state
-      let currentId = parseInt(data.id) || 1001;
-      let newLastUsedId = Math.max(lastUsedId, currentId);
+      // Handle ID generation/update
+      let currentId;
+      let newLastUsedId; // Define the variable here
 
-      // If this is a new item (not an update), increment the ID
-      if (!dataToSave) {
-        newLastUsedId = lastUsedId + 1;
-        data.id = newLastUsedId.toString();
+      if (dataToSave && dataToSave.id) {
+        // If updating existing item, keep its ID
+        currentId = parseInt(dataToSave.id);
+        newLastUsedId = Math.max(lastUsedId, currentId); // Update lastUsedId if current is higher
+      } else {
+        // For new items, increment lastUsedId
+        currentId = lastUsedId + 1;
+        newLastUsedId = currentId; // Set new last used ID
       }
+
+      // Ensure ID is valid
+      if (!currentId || isNaN(currentId)) {
+        currentId = 1001; // Fallback ID
+        newLastUsedId = currentId;
+      }
+
+      // Update the data with the ID
+      const finalFormData = {
+        ...data,
+        id: currentId.toString()
+      };
+
+      // Save the new last used ID before proceeding
+      await saveLastUsedIdToGithub(newLastUsedId);
+
 
       // // Calculate total quantity from bin locations
       const totalQuantity = data.binLocations.reduce((sum, location) =>
@@ -989,7 +1017,7 @@ const Addproductform = () => {
       // Generate a unique identifier based on part number and timestamp
       const sanitizedManufacturerPart = data.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
       const sanitizedPartName = data.partName.replace(/[^a-z0-9():]/gi, "_").replace(/\s+/g, "_");
-      const itemIdentifier = `${data.id}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+      const itemIdentifier = `${newLastUsedId}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
 
       // Create a copy of data to modify before saving
       const finalDataToSave = { ...data };
@@ -1559,8 +1587,8 @@ const Addproductform = () => {
                   {/* Cost Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        Cost Price <span className="ml-1 text-red-500">*</span>
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      Cost Price <span className="ml-1 text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -1667,7 +1695,7 @@ const Addproductform = () => {
                         <input
                           type="number"
                           value={newBinQuantity}
-                        required={true}
+                          required={true}
                           onChange={handleBinQuantityChange} // Use the new handler here
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Quantity"
