@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import githubConfig from '@/config/githubConfig';
-import fs from 'fs/promises';
-import path from 'path';
+
 
 async function getLastModifiedFiles() {
   try {
