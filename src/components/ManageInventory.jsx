@@ -28,6 +28,7 @@ const ManageInventory = () => {
   const [filters, setFilters] = useState({
     category: "",
     manufacturer: "",
+    vendor: "",
     minStock: "",
     maxStock: ""
   });
@@ -51,7 +52,11 @@ const ManageInventory = () => {
       applyFiltersAndSearch();
     }
   }, [inventoryItems, searchTerm, filters, viewMode]);
-
+  useEffect(() => {
+    if (inventoryItems.length > 0) {
+      applyFiltersAndSearch();
+    }
+  }, [sortField, sortDirection]);
   useEffect(() => {
     console.log("Inventory items after fetch:", inventoryItems);
     console.log("View mode:", viewMode);
@@ -341,16 +346,22 @@ const ManageInventory = () => {
     setSelectedImage({ url, alt });
     setModalOpen(true);
   };
-
+  const getUniqueVendors = () => {
+    const vendors = inventoryItems
+      .map(item => item.vendor)
+      .filter(Boolean)
+      .sort();
+    return [...new Set(vendors)];
+  };
   // Apply filters and search to inventory items
   const applyFiltersAndSearch = () => {
     let result = [...inventoryItems];
 
     // Apply active/inactive filter
     if (viewMode === "active") {
-      result = result.filter(item => Number(item.quantity) > 0);
+      result = result.filter(item => Number(item.avl_quantity) > 0);
     } else if (viewMode === "inactive") {
-      result = result.filter(item => Number(item.quantity) <= 0);
+      result = result.filter(item => Number(item.avl_quantity) <= 0);
     }
 
     // Apply search term
@@ -372,7 +383,9 @@ const ManageInventory = () => {
     if (filters.manufacturer) {
       result = result.filter(item => item.manufacturer === filters.manufacturer);
     }
-
+    if (filters.vendor) {
+      result = result.filter(item => item.vendor === filters.vendor);
+    }
     // Apply min stock filter
     if (filters.minStock !== "") {
       result = result.filter(item => Number(item.quantity) >= Number(filters.minStock));
@@ -390,37 +403,40 @@ const ManageInventory = () => {
       // Determine values to compare based on sortField
       switch (sortField) {
         case "id":
-          valA = a.id || "";
-          valB = b.id || "";
+          valA = parseInt(a.id) || 0;
+          valB = parseInt(b.id) || 0;
           break;
-        case "part":
-          valA = a.manufacturerPart || "";
-          valB = b.manufacturerPart || "";
+        case "partname":
+          valA = (a.partName || "").toLowerCase();
+          valB = (b.partName || "").toLowerCase();
           break;
-        case "manufacturer":
-          valA = a.manufacturer || "";
-          valB = b.manufacturer || "";
+        case "manufacturerpart":
+          valA = (a.manufacturerPart || "").toLowerCase();
+          valB = (b.manufacturerPart || "").toLowerCase();
+          break;
+        case "vendor":
+          valA = (a.vendor || "").toLowerCase();
+          valB = (b.vendor || "").toLowerCase();
+          break;
+        case "category":
+          valA = (a.category || "").toLowerCase();
+          valB = (b.category || "").toLowerCase();
           break;
         case "description":
-          valA = a.description || "";
-          valB = b.description || "";
-          break;
-        case "bin":
-          valA = a.bin || "";
-          valB = b.bin || "";
+          valA = (a.description || "").toLowerCase();
+          valB = (b.description || "").toLowerCase();
           break;
         case "stock":
-          valA = Number(a.quantity) || 0;
-          valB = Number(b.quantity) || 0;
+          valA = parseFloat(a.avl_quantity) || 0;
+          valB = parseFloat(b.avl_quantity) || 0;
           break;
-        case "onLoan":
-          // Assuming onLoan is a property that might be added later
-          valA = Number(a.onLoan) || 0;
-          valB = Number(b.onLoan) || 0;
+        case "bin":
+          valA = a.binLocations?.[0]?.bin || "";
+          valB = b.binLocations?.[0]?.bin || "";
           break;
         default:
-          valA = a.manufacturerPart || "";
-          valB = b.manufacturerPart || "";
+          valA = (a.manufacturerPart || "").toLowerCase();
+          valB = (b.manufacturerPart || "").toLowerCase();
       }
 
       // Compare values based on sort direction
@@ -653,12 +669,14 @@ const ManageInventory = () => {
   const handleSort = (field) => {
     if (sortField === field) {
       // Toggle sort direction if clicking on the same field
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
     } else {
       // Set new sort field and default to ascending
       setSortField(field);
       setSortDirection("asc");
     }
+    // Apply the sorting immediately
+    applyFiltersAndSearch();
   };
 
   // Handle checkbox change for item selection
@@ -699,6 +717,7 @@ const ManageInventory = () => {
     setFilters({
       category: "",
       manufacturer: "",
+      vendor: "",
       minStock: "",
       maxStock: ""
     });
@@ -719,7 +738,6 @@ const ManageInventory = () => {
 
   // Export selected items to CSV
   const exportToCSV = () => {
-    // Get selected items or all filtered items if none selected
     const itemsToExport = selectedItems.length > 0
       ? filteredItems.filter(item => selectedItems.includes(item.manufacturerPart))
       : filteredItems;
@@ -729,23 +747,42 @@ const ManageInventory = () => {
       return;
     }
 
-    // Create CSV header
-    const headers = ["Part #", "Manufacturer", "Description", "Bin", "In-Stock", "On Loan"];
+    // Updated headers with all requested fields
+    const headers = [
+      "id",
+      "Created At",
+      "Part Name",
+      "Manufacturer",
+      "Manufacturer Part #",
+      "Category",
+      "Vendor",
+      "Vendor Product Link",
+      "Available Quantity",
+      "Bin Locations",
+      "Cost Price",
+      "Sale Price"
+    ];
 
-    // Create CSV rows
+    // Updated row mapping with all requested fields
     const rows = itemsToExport.map(item => [
+      item.id || "",
+      item.createdAt || "",
       item.partName || "",
       item.manufacturer || "",
-      item.description || "",
-      item.bin || "",
-      item.quantity || "0",
-      "0" // Placeholder for on loan
+      item.manufacturerPart || "",
+      item.category || "",
+      item.vendor || "",
+      item.vendorProductLink || "",
+      item.avl_quantity || "0",
+      item.binLocations?.map(loc => `${loc.bin}(${loc.quantity})`).join('; ') || "",
+      item.costPrice || "0",
+      item.salePrice || "0"
     ]);
 
     // Combine headers and rows
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.join(","))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
     ].join("\n");
 
     // Create and download the CSV file
@@ -754,7 +791,6 @@ const ManageInventory = () => {
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", `inventory_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -978,9 +1014,9 @@ const ManageInventory = () => {
                   value={viewMode}
                   onChange={(e) => setViewMode(e.target.value)}
                 >
-                  <option value="all">All</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="all">All Items</option>
+                  <option value="active">In Stock</option>
+                  <option value="inactive">Out of Stock</option>
                 </select>
               </div>
 
@@ -1064,7 +1100,20 @@ const ManageInventory = () => {
                 ))}
               </select>
             </div>
-
+            <div className="flex items-center">
+              <label className="text-xs font-medium text-gray-700 mr-2">Vendor</label>
+              <select
+                name="vendor"
+                value={filters.vendor}
+                onChange={handleFilterChange}
+                className="w-44 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">All Vendors</option>
+                {getUniqueVendors().map(vendor => (
+                  <option key={vendor} value={vendor}>{vendor}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center">
               <label className="text-xs font-medium text-gray-700 mr-2">Min Stock</label>
               <input
@@ -1116,6 +1165,8 @@ const ManageInventory = () => {
 
       {/* Inventory Table */}
       {!isLoading && !error && (
+        // <div className="bg-gray px-4 py-3 flex items-center justify-between border-t border-gray-200">
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -1125,7 +1176,7 @@ const ManageInventory = () => {
                     type="checkbox"
                     checked={selectAll}
                     onChange={handleSelectAll}
-                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    className="ml-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
@@ -1148,6 +1199,13 @@ const ManageInventory = () => {
                 >
                   MANUFACTURER Part # {renderSortIndicator("manufacturerpart")}
                 </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort("vendor")}
+                >
+                  Vendor {renderSortIndicator("vendor")}
+                </th>
+
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSort("category")}
@@ -1180,7 +1238,7 @@ const ManageInventory = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="11" className="px-4 py-8 text-center text-gray-500">
                     No inventory items found. Try adjusting your filters or adding new items.
                   </td>
                 </tr>
@@ -1192,7 +1250,7 @@ const ManageInventory = () => {
                         type="checkbox"
                         checked={selectedItems.includes(item.manufacturerPart)}
                         onChange={() => handleSelectItem(item.manufacturerPart)}
-                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        className="ml-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{item.id || "N/A"}</td>
@@ -1214,11 +1272,29 @@ const ManageInventory = () => {
                     </td>
                     {/* // Inside your table row where the part number is displayed */}
                     <td className="px-4 py-3 whitespace-nowrap">{item.manufacturerPart}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{item.vendor || "N/A"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{item.category || "Uncategorized"}</td>
                     <td className="px-4 py-3">{item.description}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.quantity}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{item.bin}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">{item.avl_quantity}</td>
+                    <td className="px-4 py-3">
+                      <div className="inline-block">
+                        {item.binLocations && Array.isArray(item.binLocations) ? (
+                          <div className="grid grid-cols-2 gap-1 auto-cols-min">
+                            {item.binLocations.map((location, idx) => (
+                              <span
+                                key={`${location.bin}-${idx}`}
+                                className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                title={`Quantity: ${location.quantity}`}
+                              >
+                                {location.bin} ({location.quantity})
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">No bin assigned</span>
+                        )}
+                      </div>
+                    </td>                   <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center space-x-3">
                         <button
                           className="text-blue-600 hover:text-blue-800"
