@@ -23,7 +23,8 @@ const ManageInventory = () => {
   // State for sorting
   const [sortField, setSortField] = useState("part");
   const [sortDirection, setSortDirection] = useState("asc");
-
+const CACHE_DURATION = 30000; // 30 seconds in milliseconds
+const [lastFetchTime, setLastFetchTime] = useState(0);
   // State for filters
   const [filters, setFilters] = useState({
     category: "",
@@ -57,6 +58,17 @@ const ManageInventory = () => {
       applyFiltersAndSearch();
     }
   }, [sortField, sortDirection]);
+
+  useEffect(() => {
+  const handleInventoryUpdate = (event) => {
+    console.log('Inventory updated, refreshing data...');
+    fetchInventoryData(true);
+  };
+
+  window.addEventListener('inventoryUpdated', handleInventoryUpdate);
+  return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
+}, []);
+
   useEffect(() => {
     console.log("Inventory items after fetch:", inventoryItems);
     console.log("View mode:", viewMode);
@@ -90,7 +102,28 @@ const ManageInventory = () => {
       return false;
     }
   };
+  const fetchInventoryData = async (force = false) => {
+  const now = Date.now();
+  if (!force && (now - lastFetchTime) < CACHE_DURATION) {
+    return; // Use cached data if within duration
+  }
 
+  try {
+    // ... existing fetch code ...
+    setLastFetchTime(now);
+  } catch (error) {
+    console.error('Fetch error:', error);
+  }
+};
+useEffect(() => {
+  const handleInventoryUpdate = (event) => {
+    console.log('Inventory updated, refreshing data...');
+    fetchInventoryData(true);
+  };
+
+  window.addEventListener('inventoryUpdated', handleInventoryUpdate);
+  return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
+}, []);
   const processFiles = async (files) => {
     // Fetch content of each JSON file
     const itemPromises = files.map(async (file) => {
@@ -1010,6 +1043,7 @@ const deleteSelectedItems = async () => {
           <h2 className="text-2xl font-bold text-black flex items-center">
             <Store className="mr-2 h-5 w-5" /> Manage Products
           </h2>
+
 
           <div className="flex items-center gap-2">
             <div className="p-1 flex gap-2">

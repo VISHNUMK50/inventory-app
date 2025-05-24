@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import githubConfig from '@/config/githubConfig';
-import { Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers } from "lucide-react";
+import { Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
 import Link from "next/link";
 
 const Dashboard = () => {
@@ -129,32 +129,37 @@ const Dashboard = () => {
 
       <div className="container mx-auto px-4 py-4">
         {/* Quick action buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Link href="/manage-inventory" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-blue-600">
-            <Package className="h-10 w-10 text-blue-600 mb-2" />
-            <span className="font-medium">Manage Inventory</span>
-          </Link>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+  <Link href="/manage-inventory" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-blue-600">
+    <Package className="h-10 w-10 text-blue-600 mb-2" />
+    <span className="font-medium">Manage Inventory</span>
+  </Link>
 
-          <Link href="/add-product" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-green-600">
-            <PlusCircle className="h-10 w-10 text-green-600 mb-2" />
-            <span className="font-medium">Add a Product</span>
-          </Link>
+  <Link href="/add-product" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-green-600">
+    <PlusCircle className="h-10 w-10 text-green-600 mb-2" />
+    <span className="font-medium">Add a Product</span>
+  </Link>
 
-          <Link href="/receive-products" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-purple-600">
-            <Download className="h-10 w-10 text-purple-600 mb-2" />
-            <span className="font-medium">Receive Products</span>
-          </Link>
+  <Link href="/receive-products" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-purple-600">
+    <Download className="h-10 w-10 text-purple-600 mb-2" />
+    <span className="font-medium">Receive Products</span>
+  </Link>
 
-          <Link href="/reports" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-yellow-600">
-            <ArrowLeftRight className="h-10 w-10 text-yellow-600 mb-2" />
-            <span className="font-medium">Transactions</span>
-          </Link>
+  <Link href="/reports" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-yellow-600">
+    <ArrowLeftRight className="h-10 w-10 text-yellow-600 mb-2" />
+    <span className="font-medium">Transactions</span>
+  </Link>
 
-          <Link href="/create-order" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-red-600">
-            <ShoppingCart className="h-10 w-10 text-red-600 mb-2" />
-            <span className="font-medium">Create an Order</span>
-          </Link>
-        </div>
+  <Link href="/create-order" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-red-600">
+    <ShoppingCart className="h-10 w-10 text-red-600 mb-2" />
+    <span className="font-medium">Create an Order</span>
+  </Link>
+
+  <Link href="/datasheets" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-indigo-600">
+    <FileText className="h-10 w-10 text-indigo-600 mb-2" />
+    <span className="font-medium">Datasheets</span>
+  </Link>
+</div>
 
         {/* At A Glance Section */}
         <div className="mb-6">

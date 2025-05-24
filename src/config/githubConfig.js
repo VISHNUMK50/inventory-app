@@ -6,7 +6,8 @@ const githubConfig = {
     owner: process.env.GITHUB_OWNER ||"VISHNUMK50",
     branch: "master",
     // path: "database"
-    path: "db"
+    path: "db",
+    datasheets: "db/datasheets"
   };
   
   export default githubConfig;

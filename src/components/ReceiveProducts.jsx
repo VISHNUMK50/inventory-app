@@ -20,7 +20,7 @@ const ReceiveProducts = () => {
   const [allProducts, setAllProducts] = useState([]);
   const suggestionRef = useRef(null);
   const productsData = [];
-const generateFileName = (product) => {
+  const generateFileName = (product) => {
     const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
     const sanitizedPartName = product.partName.replace(/[^a-z0-9():]/gi, "_").replace(/\s+/g, "_");
     return `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
@@ -118,71 +118,71 @@ const generateFileName = (product) => {
 
   // Function to search for products by manufacturerPart
   const searchProducts = async (e) => {
-  e.preventDefault();
-  if (!searchQuery.trim()) return;
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
 
-  setIsLoading(true);
-  setError(null);
-  setProduct(null);
-  setSuccessMessage("");
-  setShowSuggestions(false);
+    setIsLoading(true);
+    setError(null);
+    setProduct(null);
+    setSuccessMessage("");
+    setShowSuggestions(false);
 
-  try {
-    const { token, repo, owner, path } = githubConfig;
-    if (!token || !repo || !owner) {
-      setError("GitHub config is incomplete");
-      setIsLoading(false);
-      return;
-    }
-
-    // Find the product in allProducts first
-    const matchingProduct = allProducts.find(p => 
-      p.manufacturerPart.toLowerCase() === searchQuery.toLowerCase() ||
-      p.partName.toLowerCase() === searchQuery.toLowerCase()
-    );
-
-    if (!matchingProduct) {
-      setError("Product not found");
-      setIsLoading(false);
-      return;
-    }
-
-    // Use the same file naming convention
-    const fileName = generateFileName(matchingProduct);
-    const jsonDirPath = path ? `${path}/jsons` : 'jsons';
-    const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}/${fileName}`;
-
-    console.log("Fetching file:", fileUrl);
-
-    const response = await fetch(fileUrl, {
-      headers: {
-        "Authorization": `token ${token}`,
-        "Accept": "application/vnd.github.v3+json"
+    try {
+      const { token, repo, owner, path } = githubConfig;
+      if (!token || !repo || !owner) {
+        setError("GitHub config is incomplete");
+        setIsLoading(false);
+        return;
       }
-    });
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.statusText} (${response.status})`);
+      // Find the product in allProducts first
+      const matchingProduct = allProducts.find(p =>
+        p.manufacturerPart.toLowerCase() === searchQuery.toLowerCase() ||
+        p.partName.toLowerCase() === searchQuery.toLowerCase()
+      );
+
+      if (!matchingProduct) {
+        setError("Product not found");
+        setIsLoading(false);
+        return;
+      }
+
+      // Use the same file naming convention
+      const fileName = generateFileName(matchingProduct);
+      const jsonDirPath = path ? `${path}/jsons` : 'jsons';
+      const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}/${fileName}`;
+
+      console.log("Fetching file:", fileUrl);
+
+      const response = await fetch(fileUrl, {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.statusText} (${response.status})`);
+      }
+
+      const fileData = await response.json();
+      const fileResponse = await fetch(fileData.download_url);
+
+      if (fileResponse.ok) {
+        const fileContent = await fileResponse.json();
+        setProduct(fileContent);
+        setQtyToAdd("");
+      } else {
+        throw new Error("Error loading product details");
+      }
+
+    } catch (error) {
+      console.error("Error searching for product:", error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
-
-    const fileData = await response.json();
-    const fileResponse = await fetch(fileData.download_url);
-    
-    if (fileResponse.ok) {
-      const fileContent = await fileResponse.json();
-      setProduct(fileContent);
-      setQtyToAdd("");
-    } else {
-      throw new Error("Error loading product details");
-    }
-
-  } catch (error) {
-    console.error("Error searching for product:", error);
-    setError(error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   // Function to handle suggestion click
   const handleSuggestionClick = (suggestion) => {
@@ -199,118 +199,129 @@ const generateFileName = (product) => {
 
   // Function to add product to inventory
   const addToInventory = async () => {
-  if (!product || !qtyToAdd || !bin) return;
-  setShowSuggestions(false);
-  setIsAdding(true);
-  setError(null);
-  setSuccessMessage("");
+    if (!product || !qtyToAdd || !bin) return;
+    setShowSuggestions(false);
+    setIsAdding(true);
+    setError(null);
+    setSuccessMessage("");
 
-  try {
-    const { token, repo, owner, path } = githubConfig;
-    if (!token || !repo || !owner) {
-      throw new Error("GitHub configuration is incomplete");
-    }
+    try {
+      const { token, repo, owner, path } = githubConfig;
+      if (!token || !repo || !owner) {
+        throw new Error("GitHub configuration is incomplete");
+      }
 
-    const qtyToAddNum = parseInt(qtyToAdd);
-    const existingBins = product.binLocations || [];
-    const totalQty = parseInt(product.avl_quantity || "0");
+      const qtyToAddNum = parseInt(qtyToAdd);
+      const existingBins = product.binLocations || [];
+      const totalQty = parseInt(product.avl_quantity || "0");
 
-    // Create updated product data
-    const binIndex = existingBins.findIndex(b => b.bin === bin);
-    const updatedBins = binIndex >= 0
-      ? existingBins.map((b, i) =>
+      // Create updated product data
+      const binIndex = existingBins.findIndex(b => b.bin === bin);
+      const updatedBins = binIndex >= 0
+        ? existingBins.map((b, i) =>
           i === binIndex
             ? { ...b, quantity: parseInt(b.quantity) + qtyToAddNum }
             : b
         )
-      : [...existingBins, { bin: bin, quantity: qtyToAddNum }];
+        : [...existingBins, { bin: bin, quantity: qtyToAddNum }];
 
-    const updatedProduct = {
-      ...product,
-      binLocations: updatedBins,
-      avl_quantity: (totalQty + qtyToAddNum).toString()
-    };
+      const updatedProduct = {
+        ...product,
+        binLocations: updatedBins,
+        avl_quantity: (totalQty + qtyToAddNum).toString()
+      };
 
-    try {
-      
-const fileName = generateFileName(product);
-  const jsonDirPath = path ? `${path}/jsons` : 'jsons';
-  const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}/${fileName}`;
+      try {
 
-  console.log("Attempting to update file:", fileUrl);
-console.log("Debug info:", {
-  product,
-  fileName: generateFileName(product),
-  path: jsonDirPath,
-  fullUrl: fileUrl
-});
-      // Get existing file to get its SHA
-      const fileResponse = await fetch(fileUrl, {
-        headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github.v3+json"
+        const fileName = generateFileName(product);
+        const jsonDirPath = path ? `${path}/jsons` : 'jsons';
+        const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}/${fileName}`;
+
+        console.log("Attempting to update file:", fileUrl);
+        console.log("Debug info:", {
+          product,
+          fileName: generateFileName(product),
+          path: jsonDirPath,
+          fullUrl: fileUrl
+        });
+        // Get existing file to get its SHA
+        const fileResponse = await fetch(fileUrl, {
+          headers: {
+            "Authorization": `token ${token}`,
+            "Accept": "application/vnd.github.v3+json"
+          }
+        });
+
+        if (!fileResponse.ok) {
+          throw new Error(`GitHub API error: ${fileResponse.status} - ${fileResponse.statusText}`);
         }
-      });
 
-      if (!fileResponse.ok) {
-        throw new Error(`GitHub API error: ${fileResponse.status} - ${fileResponse.statusText}`);
-      }
+        const fileData = await fileResponse.json();
+        const content = Buffer.from(JSON.stringify(updatedProduct, null, 2)).toString('base64');
 
-      const fileData = await fileResponse.json();
-      const content = Buffer.from(JSON.stringify(updatedProduct, null, 2)).toString('base64');
+        // Update the file
+        const updateResponse = await fetch(fileUrl, {
+          method: 'PUT',
+          headers: {
+            "Authorization": `token ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: `Update inventory for ${product.manufacturerPart}`,
+            content: content,
+            sha: fileData.sha
+          })
+        });
 
-      // Update the file
-      const updateResponse = await fetch(fileUrl, {
-        method: 'PUT',
-        headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `Update inventory for ${product.manufacturerPart}`,
-          content: content,
-          sha: fileData.sha
-        })
-      });
-
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.json();
-        throw new Error(`Failed to update file: ${errorData.message}`);
-      }
-
-      // Update local state
-      setProduct(updatedProduct);
-      setSuccessMessage(`Successfully added ${qtyToAdd} units to bin ${bin}. New total: ${updatedProduct.avl_quantity}`);
-      
-      // Update suggestions list
-      setAllProducts(prevProducts => {
-        const updatedProducts = [...prevProducts];
-        const index = updatedProducts.findIndex(p => 
-          p.manufacturerPart === product.manufacturerPart
-        );
-        if (index !== -1) {
-          updatedProducts[index] = updatedProduct;
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.json();
+          throw new Error(`Failed to update file: ${errorData.message}`);
         }
-        return updatedProducts;
+        if (updateResponse.ok) {
+      // Dispatch a custom event
+      const event = new CustomEvent('inventoryUpdated', {
+        detail: { timestamp: Date.now() }
       });
-
-      // Reset form
-      setBin("");
-      setQtyToAdd("");
-
-    } catch (githubError) {
-      console.error("GitHub API Error:", githubError);
-      throw new Error(`GitHub API Error: ${githubError.message}`);
+      window.dispatchEvent(event);
+      
+      setSuccessMessage(`Successfully added ${qtyToAdd} units`);
     }
+        
 
-  } catch (error) {
-    console.error("Error adding to inventory:", error);
-    setError(`Error adding to inventory: ${error.message}`);
-  } finally {
-    setIsAdding(false);
-  }
-};
+        // Update local state
+        setProduct(updatedProduct);
+        setSuccessMessage(`Successfully added ${qtyToAdd} units to bin ${bin}. New total: ${updatedProduct.avl_quantity}`);
+
+        // Update suggestions list
+        setAllProducts(prevProducts => {
+          const updatedProducts = [...prevProducts];
+          const index = updatedProducts.findIndex(p =>
+            p.manufacturerPart === product.manufacturerPart
+          );
+          if (index !== -1) {
+            updatedProducts[index] = updatedProduct;
+          }
+          return updatedProducts;
+        });
+
+        // Reset form
+        setBin("");
+        setQtyToAdd("");
+
+      } catch (githubError) {
+        console.error("GitHub API Error:", githubError);
+        throw new Error(`GitHub API Error: ${githubError.message}`);
+      }
+      
+
+    } catch (error) {
+      console.error("Error adding to inventory:", error);
+      setError(`Error adding to inventory: ${error.message}`);
+    } finally {
+      setIsAdding(false);
+    }
+  };
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       {/* Header */}
