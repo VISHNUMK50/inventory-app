@@ -1018,7 +1018,7 @@ const Addproductform = () => {
 
       // Add image file if exists
       if (data.image && data.imageData) {
-        const imageFilePath = `${path}/images/${itemIdentifier}_${data.image}`;
+        const imageFilePath = `${path}/images/${itemIdentifier}-${data.image}`;
         finalDataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
         fileUpdates.push({
           path: imageFilePath,
@@ -1028,7 +1028,7 @@ const Addproductform = () => {
 
       // Add datasheet file if exists
       if (data.datasheet && data.datasheetData) {
-        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${data.datasheet}`;
+        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}-${data.datasheet}`;
         finalDataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
         fileUpdates.push({
           path: datasheetFilePath,

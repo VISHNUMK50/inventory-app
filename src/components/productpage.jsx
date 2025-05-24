@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
 export default function ProductDetail({ params }) {
 
-  
+
 
   // Properly unwrap params using React.use()
   const unwrappedParams = use(params);
@@ -55,7 +55,7 @@ export default function ProductDetail({ params }) {
     datasheet: "",
     datasheetData: "",
     datasheetType: "",
-    avl_quantity:calculateTotalQuantity(binLocations), // This will now be calculated
+    avl_quantity: calculateTotalQuantity(binLocations), // This will now be calculated
     binLocations: [],
     customerRef: "",
     description: "",
@@ -232,20 +232,7 @@ export default function ProductDetail({ params }) {
 
       // If GitHub config is incomplete, use sample data
       if (!token || !repo || !owner) {
-        // Try to find product in localStorage
-        // const localItems = localStorage.getItem('inventoryItems');
-        // if (localItems) {
-        //   const items = JSON.parse(localItems);
-        //   const foundProduct = items.find(item => item.manufacturerPart === partNum);
-        //   if (foundProduct) {
-        //     setProduct(foundProduct);
-        //     setEditedProduct(foundProduct);
-        //   } else {
-        //     setError("Product not found");
-        //   }
-        // } else {
-        //   setError("sample data not found");
-        // }
+
         alert('Error: GitHub config is incomplete. Unable to fetch product details.');
 
         setIsLoading(false);
@@ -596,8 +583,11 @@ export default function ProductDetail({ params }) {
       const { token, repo, owner, path, branch = 'main' } = githubConfig;
 
       // Create a copy of the edited product to modify
-      const productToSave = { ...editedProduct };
-
+      const productToSave = {
+        ...editedProduct,
+        id: product.id, // Ensure original ID is preserved
+        lastModified: new Date().toISOString() // Add last modified timestamp
+      };
       // Prepare an array to hold all file changes
       const fileChanges = [];
 
@@ -650,52 +640,26 @@ export default function ProductDetail({ params }) {
         delete productToSave.datasheetModified;
       }
 
-      // Remove any lingering imageType/datasheetType that shouldn't be in the final JSON
-      // delete productToSave.imageType;
-      // delete productToSave.datasheetType;
+
 
       // First update local state
       setProduct(productToSave);
 
-      // Save to localStorage for persistence in demo mode
-      // const localItems = localStorage.getItem('inventoryItems');
-      // if (localItems) {
-      //   const items = JSON.parse(localItems);
-      //   const index = items.findIndex(item =>
-      //     item.manufacturerPart === product.manufacturerPart ||
-      //     item.partName === product.partName ||
-      //     item.id === product.id ||
-      //     item.image === product.image ||
-      //     item.datasheet === product.datasheet
-      //   );
 
-      //   if (index !== -1) {
-      //     items[index] = productToSave;
-      //     localStorage.setItem('inventoryItems', JSON.stringify(items));
-      //   } else {
-      //     localStorage.setItem('inventoryItems', JSON.stringify([...items, productToSave]));
-      //   }
-      // } else {
-      //   localStorage.setItem('inventoryItems', JSON.stringify([productToSave]));
-      // }
 
       // Now prepare the JSON file and add it to our changes
       if (token && repo && owner) {
         const jsonDirPath = `${path}/jsons`;
 
-        // Create sanitized filename
-        const sanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-        const sanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-        const fileName = `${product.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
-        const filePath = `${jsonDirPath}/${fileName}`;
+        // Create sanitized filename - FIXED: Use productToSave instead of product
+        const sanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+        const sanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+        const jsonFileName = `${productToSave.id}-${sanitizedPartName}-${sanitizedManufacturerPart}.json`;
+        const jsonFilePath = `${path}/jsons/${jsonFileName}`;
 
-        // Prepare file content
-        const fileContent = JSON.stringify(productToSave, null, 2);
-
-        // Add JSON file to changes array
         fileChanges.push({
-          path: filePath,
-          content: fileContent,
+          path: jsonFilePath,
+          content: JSON.stringify(productToSave, null, 2),
           isBase64: false
         });
 
@@ -1284,13 +1248,13 @@ export default function ProductDetail({ params }) {
               {/* Status Badge */}
               <div className="mt-4 md:mt-0 flex items-center">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${calculateTotalQuantity(product.binLocations) > 0
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
                   }`}>
                   {calculateTotalQuantity(product.binLocations) > 0 ? 'In Stock' : 'Out of Stock'}
                 </span>
               </div>
-              </div>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 space-y-6">
               {/* Left Column - Image and Quick Stats */}
@@ -1313,242 +1277,242 @@ export default function ProductDetail({ params }) {
 
                 {/* Quick Stats */}
                 <div className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-medium text-gray-500">Total Quantity</span>
-                  <span className="font-semibold text-lg">
-                    {calculateTotalQuantity(product.binLocations)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-medium text-gray-500">Category</span>
-                  {product.category ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {product.category}
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-medium text-gray-500">Total Quantity</span>
+                    <span className="font-semibold text-lg">
+                      {calculateTotalQuantity(product.binLocations)}
                     </span>
-                  ) : (
-                    <span className="text-gray-400">Not specified</span>
-                  )}
-                </div>
+                  </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-500">Manufacturer</span>
-                  <span className="font-medium">{product.manufacturer || "Not specified"}</span>
-                </div>
-              </div>
-              {/* Datasheet Preview */}
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                    <FileText className="h-5 w-5 mr-2 text-blue-600" /> Datasheet
-                  </h2>
-                </div>
-                <div className="p-4">
-                  {product.datasheet ? (
-                    <div className="space-y-4">
-                      <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-gray-100 h-48 flex items-center justify-center">
-                          <FileText
-                            className="h-16 w-16 text-gray-400"
-                            onClick={() => openPdfModal(product.datasheet)}
-                          />
-                        </div>
-                        <div className="p-3 border-t">
-                          <div className="flex items-center justify-between">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-medium text-gray-500">Category</span>
+                    {product.category ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {product.category}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Not specified</span>
+                    )}
+                  </div>
 
-                            <span className="text-sm truncate">
-                              {product.datasheet ? product.datasheet.split('/').pop() : "Datasheet"}
-                            </span>                              <div className="flex space-x-2">
-                              <a
-                                href={product.datasheet}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                              >
-                                <Download className="mr-1 h-3 w-3" /> Download
-                              </a>
-                              <button
-                                onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(product.datasheet)}`, '_blank')}
-                                className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                              >
-                                <Eye className="mr-1 h-3 w-3" /> View
-                              </button>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-500">Manufacturer</span>
+                    <span className="font-medium">{product.manufacturer || "Not specified"}</span>
+                  </div>
+                </div>
+                {/* Datasheet Preview */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-blue-600" /> Datasheet
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    {product.datasheet ? (
+                      <div className="space-y-4">
+                        <div className="border rounded-lg overflow-hidden">
+                          <div className="bg-gray-100 h-48 flex items-center justify-center">
+                            <FileText
+                              className="h-16 w-16 text-gray-400"
+                              onClick={() => openPdfModal(product.datasheet)}
+                            />
+                          </div>
+                          <div className="p-3 border-t">
+                            <div className="flex items-center justify-between">
+
+                              <span className="text-sm truncate">
+                                {product.datasheet ? product.datasheet.split('/').pop() : "Datasheet"}
+                              </span>                              <div className="flex space-x-2">
+                                <a
+                                  href={product.datasheet}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                  <Download className="mr-1 h-3 w-3" /> Download
+                                </a>
+                                <button
+                                  onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(product.datasheet)}`, '_blank')}
+                                  className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                  <Eye className="mr-1 h-3 w-3" /> View
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-6 text-gray-400 border border-dashed rounded-lg">
-                      <FileX className="h-12 w-12 mb-2" />
-                      <p className="text-sm">No datasheet available</p>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-6 text-gray-400 border border-dashed rounded-lg">
+                        <FileX className="h-12 w-12 mb-2" />
+                        <p className="text-sm">No datasheet available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Middle Column - Basic Information and Inventory Details */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <ClipboardList className="h-5 w-5 mr-2 text-blue-600" /> Basic Information
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    <table className="min-w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Part Name</td>
+                          <td className="py-2 text-sm text-gray-800">{product.partName || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer Part</td>
+                          <td className="py-2 text-sm text-gray-800">{product.manufacturerPart || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer</td>
+                          <td className="py-2 text-sm text-gray-800">{product.manufacturer || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Description</td>
+                          <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <Package className="h-5 w-5 mr-2 text-blue-600" /> Inventory Details
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    <table className="min-w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Bin Locations</td>
+                          <td className="py-2 text-sm text-gray-800">
+                            {product && product.binLocations && product.binLocations.length > 0 ? (
+                              <div className="space-y-1">
+                                {product.binLocations.map((location, index) => (
+                                  <div key={index} className="flex items-center space-x-2">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                      {location.bin}
+                                    </span>
+                                    <span className="text-xs text-gray-600">Qty: {location.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              "Not specified"
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
+                          <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
+                          <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
+              {/* Right Column - Pricing & References + Datasheet Preview */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <DollarSign className="h-5 w-5 mr-2 text-blue-600" /> Pricing
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    <table className="min-w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Cost Price</td>
+                          <td className="py-2 text-sm text-gray-800">
+                            {product.costPrice ? `$${product.costPrice}` : "Not specified"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Sale Price</td>
+                          <td className="py-2 text-sm text-gray-800">
+                            {product.salePrice ? `$${product.salePrice}` : "Not specified"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
+                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
+                      <Eye className="h-5 w-5 mr-2 text-blue-600" /> References
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    <table className="min-w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Vendor</td>
+                          <td className="py-2 text-sm text-gray-800">{product.vendor || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Vendor Part #</td>
+                          <td className="py-2 text-sm text-gray-800">{product.vendorPart || "Not specified"}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 text-sm font-medium text-gray-600">Customer Reference</td>
+                          <td className="py-2 text-sm text-gray-800">{product.customerRef || "Not specified"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            {/* Middle Column - Basic Information and Inventory Details */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                    <ClipboardList className="h-5 w-5 mr-2 text-blue-600" /> Basic Information
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <table className="min-w-full">
-                    <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Part Name</td>
-                        <td className="py-2 text-sm text-gray-800">{product.partName || "Not specified"}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Manufacturer Part</td>
-                        <td className="py-2 text-sm text-gray-800">{product.manufacturerPart || "Not specified"}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Manufacturer</td>
-                        <td className="py-2 text-sm text-gray-800">{product.manufacturer || "Not specified"}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Description</td>
-                        <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                    <Package className="h-5 w-5 mr-2 text-blue-600" /> Inventory Details
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <table className="min-w-full">
-                    <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Bin Locations</td>
-                        <td className="py-2 text-sm text-gray-800">
-                          {product && product.binLocations && product.binLocations.length > 0 ? (
-                            <div className="space-y-1">
-                              {product.binLocations.map((location, index) => (
-                                <div key={index} className="flex items-center space-x-2">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {location.bin}
-                                  </span>
-                                  <span className="text-xs text-gray-600">Qty: {location.quantity}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            "Not specified"
-                          )}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
-                        <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
-                        <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Pricing & References + Datasheet Preview */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2 text-blue-600" /> Pricing
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <table className="min-w-full">
-                    <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Cost Price</td>
-                        <td className="py-2 text-sm text-gray-800">
-                          {product.costPrice ? `$${product.costPrice}` : "Not specified"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Sale Price</td>
-                        <td className="py-2 text-sm text-gray-800">
-                          {product.salePrice ? `$${product.salePrice}` : "Not specified"}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                  <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                    <Eye className="h-5 w-5 mr-2 text-blue-600" /> References
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <table className="min-w-full">
-                    <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Vendor</td>
-                        <td className="py-2 text-sm text-gray-800">{product.vendor || "Not specified"}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Vendor Part #</td>
-                        <td className="py-2 text-sm text-gray-800">{product.vendorPart || "Not specified"}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-sm font-medium text-gray-600">Customer Reference</td>
-                        <td className="py-2 text-sm text-gray-800">{product.customerRef || "Not specified"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
           </div>
         )}
 
 
 
 
-      {/* Status Section */}
-      <div className="bg-gray-50 px-6 py-4 border-t rounded-lg border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <TimeStamp />
-          </div>
-          <div>
-            {Number(product.quantity) <= Number(product.reorderPoint) && Number(product.reorderPoint) > 0 && (
-              <div className="flex items-center text-amber-600">
-                <AlertCircle className="h-4 w-4 mr-1" />
-                <span className="text-sm font-medium">Low stock alert</span>
-              </div>
-            )}
+        {/* Status Section */}
+        <div className="bg-gray-50 px-6 py-4 border-t rounded-lg border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <TimeStamp />
+            </div>
+            <div>
+              {Number(product.quantity) <= Number(product.reorderPoint) && Number(product.reorderPoint) > 0 && (
+                <div className="flex items-center text-amber-600">
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">Low stock alert</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        {/* PDF Modal */}
+        <PdfViewerModal
+          isOpen={isPdfModalOpen}
+          pdfUrl={pdfUrl}
+          onClose={closePdfModal}
+        />
+
+
       </div>
-      {/* PDF Modal */}
-      <PdfViewerModal
-        isOpen={isPdfModalOpen}
-        pdfUrl={pdfUrl}
-        onClose={closePdfModal}
-      />
-
-
-    </div>
 
 
     </div >
