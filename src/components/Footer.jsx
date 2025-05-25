@@ -4,7 +4,7 @@ import Link from "next/link";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  
+
   return (
     <footer className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
       <div className="mx-auto py-4 px-6">
@@ -12,14 +12,17 @@ const Footer = () => {
           {/* Company Info */}
           <div className="flex flex-col">
             <div className="flex items-center space-x-2">
-              <Package className="h-6 w-6" />
-              <span className="text-xl font-bold">InventoryPro</span>
+              <img
+                src="/INVEXIS102.svg"
+                alt="Logo"
+                className="h-12"
+              />
             </div>
-            <p className="mt-2 text-sm text-gray-200">
+            <p className="mt-2  text-gray-200">
               Simple and powerful inventory management solution for businesses of all sizes.
             </p>
           </div>
-          
+
           {/* Quick Links */}
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold mb-2">Quick Links</h3>
@@ -44,7 +47,7 @@ const Footer = () => {
               </Link>
             </div>
           </div>
-          
+
           {/* Contact Info */}
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold mb-2">Contact</h3>
@@ -65,7 +68,7 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="border-t border-blue-600 mt-4 pt-4 flex justify-between items-center">
           <p className="text-sm text-gray-200">
             &copy; {currentYear} InventoryPro. All rights reserved.

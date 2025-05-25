@@ -22,7 +22,7 @@ const Dashboard = () => {
   //   { id: 3, name: "10uF Capacitor", category: "Capacitor", current: 22, minimum: 50 }
   // ];
 
-    const [inventoryStats, setInventoryStats] = useState({
+  const [inventoryStats, setInventoryStats] = useState({
     totalCount: 182,
     onHand: 182,
     onLoan: 0,
@@ -105,8 +105,11 @@ const Dashboard = () => {
       <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
         <div className="  px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Package className="h-8 w-8" />
-            <span className="text-2xl font-bold">InventoryPro</span>
+            <img
+              src="/INVEXIS102.svg"
+              alt="Logo"
+              className="h-12"
+            />
           </div>
           <div>
             <span className="mr-4">Welcome, Admin</span>
@@ -130,36 +133,36 @@ const Dashboard = () => {
       <div className="container mx-auto px-4 py-4">
         {/* Quick action buttons */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
-  <Link href="/manage-inventory" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-blue-600">
-    <Package className="h-10 w-10 text-blue-600 mb-2" />
-    <span className="font-medium">Manage Inventory</span>
-  </Link>
+          <Link href="/manage-inventory" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-blue-600">
+            <Package className="h-10 w-10 text-blue-600 mb-2" />
+            <span className="font-medium">Manage Inventory</span>
+          </Link>
 
-  <Link href="/add-product" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-green-600">
-    <PlusCircle className="h-10 w-10 text-green-600 mb-2" />
-    <span className="font-medium">Add a Product</span>
-  </Link>
+          <Link href="/add-product" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-green-600">
+            <PlusCircle className="h-10 w-10 text-green-600 mb-2" />
+            <span className="font-medium">Add a Product</span>
+          </Link>
 
-  <Link href="/receive-products" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-purple-600">
-    <Download className="h-10 w-10 text-purple-600 mb-2" />
-    <span className="font-medium">Receive Products</span>
-  </Link>
+          <Link href="/receive-products" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-purple-600">
+            <Download className="h-10 w-10 text-purple-600 mb-2" />
+            <span className="font-medium">Receive Products</span>
+          </Link>
 
-  <Link href="/reports" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-yellow-600">
-    <ArrowLeftRight className="h-10 w-10 text-yellow-600 mb-2" />
-    <span className="font-medium">Transactions</span>
-  </Link>
+          <Link href="/reports" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-yellow-600">
+            <ArrowLeftRight className="h-10 w-10 text-yellow-600 mb-2" />
+            <span className="font-medium">Transactions</span>
+          </Link>
 
-  <Link href="/create-order" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-red-600">
-    <ShoppingCart className="h-10 w-10 text-red-600 mb-2" />
-    <span className="font-medium">Create an Order</span>
-  </Link>
+          <Link href="/create-order" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-red-600">
+            <ShoppingCart className="h-10 w-10 text-red-600 mb-2" />
+            <span className="font-medium">Create an Order</span>
+          </Link>
 
-  <Link href="/datasheets" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-indigo-600">
-    <FileText className="h-10 w-10 text-indigo-600 mb-2" />
-    <span className="font-medium">Datasheets</span>
-  </Link>
-</div>
+          <Link href="/datasheets" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-indigo-600">
+            <FileText className="h-10 w-10 text-indigo-600 mb-2" />
+            <span className="font-medium">Datasheets</span>
+          </Link>
+        </div>
 
         {/* At A Glance Section */}
         <div className="mb-6">
@@ -251,49 +254,49 @@ const Dashboard = () => {
                 )} */}
 
                 {loadingReplenishment ? (
-          <div className="flex justify-center items-center h-48">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">{inventoryStats.productLines}</p>
-                <p className="text-gray-600 text-sm">Product Lines</p>
-              </div>
-
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-red-600">{inventoryStats.noStock}</p>
-                <p className="text-gray-600 text-sm">No Stock</p>
-              </div>
-
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
-                <p className="text-gray-600 text-sm">Low Stock</p>
-              </div>
-            </div>
-
-            {lowStockItems.length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
-                <div className="space-y-2">
-                  {lowStockItems.map(item => (
-                    <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-xs text-gray-500">{item.category}</p>
+                  <div className="flex justify-center items-center h-48">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-600">{inventoryStats.productLines}</p>
+                        <p className="text-gray-600 text-sm">Product Lines</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-red-600 font-medium">{item.current}/{item.minimum}</p>
-                        <p className="text-xs text-gray-500">Current/Min</p>
+
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-red-600">{inventoryStats.noStock}</p>
+                        <p className="text-gray-600 text-sm">No Stock</p>
+                      </div>
+
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
+                        <p className="text-gray-600 text-sm">Low Stock</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+
+                    {lowStockItems.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
+                        <div className="space-y-2">
+                          {lowStockItems.map(item => (
+                            <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
+                              <div>
+                                <p className="font-medium">{item.name}</p>
+                                <p className="text-xs text-gray-500">{item.category}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-red-600 font-medium">{item.current}/{item.minimum}</p>
+                                <p className="text-xs text-gray-500">Current/Min</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -435,26 +438,26 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-  {categoryStats.map((category) => (
-    <div key={category.name}>
-      <div className="flex justify-between items-center">
-        <span className="text-gray-600">{category.name}</span>
-        <span className="font-medium">
-          {category.count} units ({category.items} items)
-        </span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
-        <div
-          className="h-2.5 rounded-full"
-          style={{
-            width: `${(category.count / category.totalCount) * 100}%`,
-            backgroundColor: `var(--color-${category.color}-600)`
-          }}
-        ></div>
-      </div>
-    </div>
-  ))}
-</div>
+                  {categoryStats.map((category) => (
+                    <div key={category.name}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">{category.name}</span>
+                        <span className="font-medium">
+                          {category.count} units ({category.items} items)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div
+                          className="h-2.5 rounded-full"
+                          style={{
+                            width: `${(category.count / category.totalCount) * 100}%`,
+                            backgroundColor: `var(--color-${category.color}-600)`
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
               <div className="mt-4 text-center">
                 <Link href="/inventory-report" className="text-blue-600 hover:text-blue-800 font-medium">
