@@ -15,7 +15,7 @@ const Footer = () => {
               <img
                 src="/INVEXIS102.svg"
                 alt="Logo"
-                className="h-12"
+                className="h-8"
               />
             </div>
             <p className="mt-2  text-gray-200">

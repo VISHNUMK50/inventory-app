@@ -4,15 +4,14 @@ import Link from "next/link";
 
 const Header = ({ title = "Inventory Management System" }) => {
   return (
-    <header className="main-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-      <div className="mx-auto py-2 px-6">
-        <div className="flex items-center justify-between">
+      <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
+        <div className="  px-6 py-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Link href="/">
               <img
                 src="/INVEXIS102.svg"
                 alt="Logo"
-                className="h-12"
+                className="h-10"
 
               />
             </Link>
@@ -31,7 +30,6 @@ const Header = ({ title = "Inventory Management System" }) => {
             </button>
           </div>
         </div>
-      </div>
     </header>
   );
 };

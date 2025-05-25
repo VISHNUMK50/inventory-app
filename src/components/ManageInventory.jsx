@@ -23,8 +23,8 @@ const ManageInventory = () => {
   // State for sorting
   const [sortField, setSortField] = useState("part");
   const [sortDirection, setSortDirection] = useState("asc");
-const CACHE_DURATION = 30000; // 30 seconds in milliseconds
-const [lastFetchTime, setLastFetchTime] = useState(0);
+  const CACHE_DURATION = 30000; // 30 seconds in milliseconds
+  const [lastFetchTime, setLastFetchTime] = useState(0);
   // State for filters
   const [filters, setFilters] = useState({
     category: "",
@@ -60,14 +60,14 @@ const [lastFetchTime, setLastFetchTime] = useState(0);
   }, [sortField, sortDirection]);
 
   useEffect(() => {
-  const handleInventoryUpdate = (event) => {
-    console.log('Inventory updated, refreshing data...');
-    fetchInventoryData(true);
-  };
+    const handleInventoryUpdate = (event) => {
+      console.log('Inventory updated, refreshing data...');
+      fetchInventoryData(true);
+    };
 
-  window.addEventListener('inventoryUpdated', handleInventoryUpdate);
-  return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
-}, []);
+    window.addEventListener('inventoryUpdated', handleInventoryUpdate);
+    return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
+  }, []);
 
   useEffect(() => {
     console.log("Inventory items after fetch:", inventoryItems);
@@ -103,27 +103,27 @@ const [lastFetchTime, setLastFetchTime] = useState(0);
     }
   };
   const fetchInventoryData = async (force = false) => {
-  const now = Date.now();
-  if (!force && (now - lastFetchTime) < CACHE_DURATION) {
-    return; // Use cached data if within duration
-  }
+    const now = Date.now();
+    if (!force && (now - lastFetchTime) < CACHE_DURATION) {
+      return; // Use cached data if within duration
+    }
 
-  try {
-    // ... existing fetch code ...
-    setLastFetchTime(now);
-  } catch (error) {
-    console.error('Fetch error:', error);
-  }
-};
-useEffect(() => {
-  const handleInventoryUpdate = (event) => {
-    console.log('Inventory updated, refreshing data...');
-    fetchInventoryData(true);
+    try {
+      // ... existing fetch code ...
+      setLastFetchTime(now);
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
   };
+  useEffect(() => {
+    const handleInventoryUpdate = (event) => {
+      console.log('Inventory updated, refreshing data...');
+      fetchInventoryData(true);
+    };
 
-  window.addEventListener('inventoryUpdated', handleInventoryUpdate);
-  return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
-}, []);
+    window.addEventListener('inventoryUpdated', handleInventoryUpdate);
+    return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
+  }, []);
   const processFiles = async (files) => {
     // Fetch content of each JSON file
     const itemPromises = files.map(async (file) => {
@@ -486,166 +486,166 @@ useEffect(() => {
 
   // Add these helper functions after the existing GitHub config import
 
-// Function to move file to recycle bin
-const moveToRecycleBin = async (itemId) => {
-  const { token, repo, owner, path } = githubConfig;
-  
-  try {
-    // First create the recycle-bin folder if it doesn't exist
-    const recycleBinPath = `${path}/recycle-bin`;
-    
-    // Find the complete item to get filename
-    const item = inventoryItems.find(item => item.manufacturerPart === itemId);
-    if (!item) {
-      throw new Error("Item not found in inventory data");
-    }
+  // Function to move file to recycle bin
+  const moveToRecycleBin = async (itemId) => {
+    const { token, repo, owner, path } = githubConfig;
 
-    const fileName = `${item.id}-${item.partName}-${item.manufacturerPart}.json`.replace(/\s+/g, '_');
-    const sourceFilePath = `${path}/jsons/${fileName}`;
-    const targetFilePath = `${recycleBinPath}/${fileName}`;
-
-    // Get the source file's content and SHA
-    const fileResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${sourceFilePath}`, {
-      headers: {
-        "Authorization": `token ${token}`,
-        "Accept": "application/vnd.github.v3+json"
-      }
-    });
-
-    if (!fileResponse.ok) {
-      throw new Error(`Failed to get source file: ${fileResponse.status}`);
-    }
-
-    const fileData = await fileResponse.json();
-    
-    // Create the content in base64
-    const contentStr = JSON.stringify(item, null, 2);
-    const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
-
-    // Create file in recycle bin
-    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
-      method: 'PUT',
-      headers: {
-        "Authorization": `token ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: `Moved ${fileName} to recycle bin`,
-        content: contentBase64,
-        branch: 'master'
-      })
-    });
-
-    // Delete original file
-    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${sourceFilePath}`, {
-      method: 'DELETE',
-      headers: {
-        "Authorization": `token ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: `Moved to recycle bin: ${fileName}`,
-        sha: fileData.sha
-      })
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error moving file to recycle bin:", error);
-    throw error;
-  }
-};
-
-// Replace the existing handleDeleteItem function with this updated version:
-const handleDeleteItem = async (itemId) => {
-  if (confirm(`Are you sure you want to move this item to the recycle bin?`)) {
     try {
-      setIsLoading(true);
+      // First create the recycle-bin folder if it doesn't exist
+      const recycleBinPath = `${path}/recycle-bin`;
 
-      if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
-        throw new Error("Incomplete GitHub configuration");
+      // Find the complete item to get filename
+      const item = inventoryItems.find(item => item.manufacturerPart === itemId);
+      if (!item) {
+        throw new Error("Item not found in inventory data");
       }
 
-      // Move file to recycle bin
-      await moveToRecycleBin(itemId);
+      const fileName = `${item.id}-${item.partName}-${item.manufacturerPart}.json`.replace(/\s+/g, '_');
+      const sourceFilePath = `${path}/jsons/${fileName}`;
+      const targetFilePath = `${recycleBinPath}/${fileName}`;
 
-      // Update UI after successful move
-      const newItems = inventoryItems.filter(
-        item => item.manufacturerPart !== itemId
-      );
-
-      setInventoryItems(newItems);
-      setFilteredItems(prevFiltered => prevFiltered.filter(
-        item => item.manufacturerPart !== itemId
-      ));
-
-      // Remove from selected items if present
-      if (selectedItems.includes(itemId)) {
-        setSelectedItems(prevSelected => prevSelected.filter(id => id !== itemId));
-      }
-
-      alert(`Item moved to recycle bin successfully`);
-    } catch (error) {
-      console.error("Move to recycle bin operation failed:", error);
-      alert(`Error moving item to recycle bin: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-};
-
-// Also update the deleteSelectedItems function:
-const deleteSelectedItems = async () => {
-  if (selectedItems.length === 0) {
-    alert("No items selected to move");
-    return;
-  }
-
-  if (confirm(`Are you sure you want to move ${selectedItems.length} item(s) to the recycle bin?`)) {
-    try {
-      setIsLoading(true);
-      const results = { success: [], failed: [] };
-
-      // Move items one by one
-      for (const itemId of selectedItems) {
-        try {
-          await moveToRecycleBin(itemId);
-          results.success.push(itemId);
-        } catch (error) {
-          console.error(`Failed to move ${itemId}:`, error);
-          results.failed.push(itemId);
+      // Get the source file's content and SHA
+      const fileResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${sourceFilePath}`, {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json"
         }
+      });
+
+      if (!fileResponse.ok) {
+        throw new Error(`Failed to get source file: ${fileResponse.status}`);
       }
 
-      // Update UI for successful moves
-      if (results.success.length > 0) {
+      const fileData = await fileResponse.json();
+
+      // Create the content in base64
+      const contentStr = JSON.stringify(item, null, 2);
+      const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+      // Create file in recycle bin
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
+        method: 'PUT',
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `Moved ${fileName} to recycle bin`,
+          content: contentBase64,
+          branch: 'master'
+        })
+      });
+
+      // Delete original file
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${sourceFilePath}`, {
+        method: 'DELETE',
+        headers: {
+          "Authorization": `token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `Moved to recycle bin: ${fileName}`,
+          sha: fileData.sha
+        })
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error moving file to recycle bin:", error);
+      throw error;
+    }
+  };
+
+  // Replace the existing handleDeleteItem function with this updated version:
+  const handleDeleteItem = async (itemId) => {
+    if (confirm(`Are you sure you want to move this item to the recycle bin?`)) {
+      try {
+        setIsLoading(true);
+
+        if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
+          throw new Error("Incomplete GitHub configuration");
+        }
+
+        // Move file to recycle bin
+        await moveToRecycleBin(itemId);
+
+        // Update UI after successful move
         const newItems = inventoryItems.filter(
-          item => !results.success.includes(item.manufacturerPart)
+          item => item.manufacturerPart !== itemId
         );
 
         setInventoryItems(newItems);
         setFilteredItems(prevFiltered => prevFiltered.filter(
-          item => !results.success.includes(item.manufacturerPart)
+          item => item.manufacturerPart !== itemId
         ));
 
-        setSelectedItems([]);
-        setSelectAll(false);
-      }
+        // Remove from selected items if present
+        if (selectedItems.includes(itemId)) {
+          setSelectedItems(prevSelected => prevSelected.filter(id => id !== itemId));
+        }
 
-      // Show appropriate message
-      if (results.failed.length === 0) {
-        alert(`Successfully moved ${results.success.length} item(s) to recycle bin`);
-      } else {
-        alert(`Moved ${results.success.length} item(s) to recycle bin. Failed to move ${results.failed.length} item(s).`);
+        alert(`Item moved to recycle bin successfully`);
+      } catch (error) {
+        console.error("Move to recycle bin operation failed:", error);
+        alert(`Error moving item to recycle bin: ${error.message}`);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Move to recycle bin operation failed:", error);
-      alert(`Error moving items to recycle bin: ${error.message}`);
-    } finally {
-      setIsLoading(false);
     }
-  }
-};
+  };
+
+  // Also update the deleteSelectedItems function:
+  const deleteSelectedItems = async () => {
+    if (selectedItems.length === 0) {
+      alert("No items selected to move");
+      return;
+    }
+
+    if (confirm(`Are you sure you want to move ${selectedItems.length} item(s) to the recycle bin?`)) {
+      try {
+        setIsLoading(true);
+        const results = { success: [], failed: [] };
+
+        // Move items one by one
+        for (const itemId of selectedItems) {
+          try {
+            await moveToRecycleBin(itemId);
+            results.success.push(itemId);
+          } catch (error) {
+            console.error(`Failed to move ${itemId}:`, error);
+            results.failed.push(itemId);
+          }
+        }
+
+        // Update UI for successful moves
+        if (results.success.length > 0) {
+          const newItems = inventoryItems.filter(
+            item => !results.success.includes(item.manufacturerPart)
+          );
+
+          setInventoryItems(newItems);
+          setFilteredItems(prevFiltered => prevFiltered.filter(
+            item => !results.success.includes(item.manufacturerPart)
+          ));
+
+          setSelectedItems([]);
+          setSelectAll(false);
+        }
+
+        // Show appropriate message
+        if (results.failed.length === 0) {
+          alert(`Successfully moved ${results.success.length} item(s) to recycle bin`);
+        } else {
+          alert(`Moved ${results.success.length} item(s) to recycle bin. Failed to move ${results.failed.length} item(s).`);
+        }
+      } catch (error) {
+        console.error("Move to recycle bin operation failed:", error);
+        alert(`Error moving items to recycle bin: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
   // Improved GitHub file deletion function with better error handling
   const deleteFileFromGitHub = async (itemId) => {
     if (!itemId) {
@@ -1305,7 +1305,7 @@ const deleteSelectedItems = async () => {
                 </tr>
               ) : (
                 filteredItems.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
+                  <tr key={index} className="hover:bg-gray-50">{/* Remove whitespace */}
                     <td className="px-4 py-3 whitespace-nowrap">
                       <input
                         type="checkbox"
@@ -1315,8 +1315,7 @@ const deleteSelectedItems = async () => {
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{item.id || "N/A"}</td>
-
-                    <td className="px-4 py-3 ">
+                    <td className="px-4 py-3">
                       <ImagePreview
                         url={getImageUrl(item)}
                         alt={item.partName || item.manufacturerPart}
@@ -1324,14 +1323,10 @@ const deleteSelectedItems = async () => {
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Link
-                        href={`/product/${encodeURIComponent(item.manufacturerPart)}`}
-                        className="text-blue-600 hover:underline cursor-pointer"
-                      >
+                      <Link href={`/product/${encodeURIComponent(item.manufacturerPart)}`} className="text-blue-600 hover:underline cursor-pointer">
                         {item.partName || item.manufacturerPart || "N/A"}
                       </Link>
                     </td>
-                    {/* // Inside your table row where the part number is displayed */}
                     <td className="px-4 py-3 whitespace-nowrap">{item.manufacturerPart}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{item.vendor || "N/A"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{item.category || "Uncategorized"}</td>
@@ -1342,11 +1337,7 @@ const deleteSelectedItems = async () => {
                         {item.binLocations && Array.isArray(item.binLocations) ? (
                           <div className="grid grid-cols-2 gap-1 auto-cols-min">
                             {item.binLocations.map((location, idx) => (
-                              <span
-                                key={`${location.bin}-${idx}`}
-                                className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                                title={`Quantity: ${location.quantity}`}
-                              >
+                              <span key={`${location.bin}-${idx}`} className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-800" title={`Quantity: ${location.quantity}`}>
                                 {location.bin} ({location.quantity})
                               </span>
                             ))}
@@ -1355,24 +1346,16 @@ const deleteSelectedItems = async () => {
                           <span className="text-gray-500">No bin assigned</span>
                         )}
                       </div>
-                    </td>                   <td className="px-4 py-3 whitespace-nowrap">
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center space-x-3">
-                        <button
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => openPdfModal(item)}
-                        >
+                        <button className="text-blue-600 hover:text-blue-800" onClick={() => openPdfModal(item)}>
                           <FileSpreadsheet className="h-5 w-5" />
-
                         </button>
                         <Link href={`/product/${encodeURIComponent(item.manufacturerPart)}?editMode=true`}>
                           <Edit className="text-blue-600 hover:text-blue-800 w-5 h-5" />
                         </Link>
-
-
-                        <button
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() => handleDeleteItem(item.manufacturerPart)}
-                        >
+                        <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteItem(item.manufacturerPart)}>
                           <Trash className="h-5 w-5" />
                         </button>
                       </div>

@@ -103,12 +103,12 @@ const Dashboard = () => {
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="  px-4 py-4 flex items-center justify-between">
+        <div className="  px-6 py-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <img
               src="/INVEXIS102.svg"
               alt="Logo"
-              className="h-12"
+              className="h-10"
             />
           </div>
           <div>
