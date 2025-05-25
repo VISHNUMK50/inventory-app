@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bar, Line } from 'recharts';
 import { Download, Filter, Calendar, RefreshCw } from 'lucide-react';
+import Header from "@/components/Header";
 
 // Sample data - would be fetched from API in production
 const sampleData = {
@@ -41,7 +42,11 @@ const ReportsPage = () => {
   }, [dateRange, activeTab]);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="mx-auto bg-white shadow-xl overflow-hidden">
+      <Header title="Inventory Management System" />
+
+      <div className="px-4 py-6">
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Reports & Analytics</h1>
         <div className="flex space-x-2">
@@ -54,7 +59,7 @@ const ReportsPage = () => {
             Filter
           </button>
           <div className="relative">
-            <select 
+            <select
               className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded"
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
@@ -74,41 +79,37 @@ const ReportsPage = () => {
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`pb-4 font-medium text-sm ${
-              activeTab === 'overview'
+            className={`pb-4 font-medium text-sm ${activeTab === 'overview'
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`pb-4 font-medium text-sm ${
-              activeTab === 'inventory'
+            className={`pb-4 font-medium text-sm ${activeTab === 'inventory'
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Inventory
           </button>
           <button
             onClick={() => setActiveTab('sales')}
-            className={`pb-4 font-medium text-sm ${
-              activeTab === 'sales'
+            className={`pb-4 font-medium text-sm ${activeTab === 'sales'
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Sales
           </button>
           <button
             onClick={() => setActiveTab('custom')}
-            className={`pb-4 font-medium text-sm ${
-              activeTab === 'custom'
+            className={`pb-4 font-medium text-sm ${activeTab === 'custom'
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Custom Reports
           </button>
@@ -201,11 +202,10 @@ const ReportsPage = () => {
                         <tr key={alert.id} className="border-b">
                           <td className="py-3">{alert.product}</td>
                           <td className="py-3 text-center">
-                            <span className={`inline-block px-2 py-1 rounded text-xs ${
-                              alert.status === 'Out of Stock' 
-                                ? 'bg-red-100 text-red-800' 
+                            <span className={`inline-block px-2 py-1 rounded text-xs ${alert.status === 'Out of Stock'
+                                ? 'bg-red-100 text-red-800'
                                 : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                              }`}>
                               {alert.status}
                             </span>
                           </td>
@@ -245,6 +245,7 @@ const ReportsPage = () => {
           )}
         </>
       )}
+      </div>
     </div>
   );
 };
