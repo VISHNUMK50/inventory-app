@@ -109,7 +109,7 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
             >
               <img
-                src="/INVEXISLOGO.PNG" // Replace with the actual path to the profile photo
+                src="/INVEXIS512.png" // Replace with the actual path to the profile photo
                 alt="Profile"
                 className="h-9 w-9 rounded-full border-2 border-white"
               />
