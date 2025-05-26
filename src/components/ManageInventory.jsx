@@ -1007,7 +1007,7 @@ const ManageInventory = () => {
             <img
               src={imgSrc}
               alt={altText || "Product Image"}
-              className="max-h-[70vh] max-w-full object-contain"
+              className="max-h-[70vh] max-w-full object-contain bg-gradient-to-b from-gray-300 to-gray-600"
               onError={(e) => {
                 console.log(`Modal image error for: ${imgSrc}`);
                 setImgError(true);
