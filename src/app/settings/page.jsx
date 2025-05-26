@@ -1,8 +1,8 @@
 "use client"
 import Header from "@/components/Header";
-
 import React, { useState } from 'react';
-import { Save, User, Shield, Bell, Tag, CreditCard, Building, Mail, Server } from 'lucide-react';
+import { Save, User, Shield, Bell, Tag, CreditCard, Building, Github, Server } from 'lucide-react';
+import githubConfigImport from '@/config/githubConfig';
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -20,6 +20,25 @@ const SettingsPage = () => {
     theme: 'light'
   });
 
+    const [githubConfig, setGithubConfig] = useState(githubConfigImport);
+  // Initialize GitHub configuration state  
+
+
+
+  const handleGithubConfigChange = (e) => {
+    const { name, value } = e.target;
+    setGithubConfig({
+      ...githubConfig,
+      [name]: value,
+    });
+  };
+
+  const handleSaveGithubConfig = (e) => {
+    e.preventDefault();
+    // Save GitHub config to localStorage or backend
+    localStorage.setItem("githubConfig", JSON.stringify(githubConfig));
+    alert("GitHub Configuration saved successfully!");
+  };
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -78,6 +97,19 @@ const SettingsPage = () => {
                   >
                     <User className="h-4 w-4 mr-3" />
                     <span>Profile</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setActiveTab("githubConfig")}
+                    className={`flex items-center w-full px-3 py-2 text-left rounded ${
+                      activeTab === "githubConfig"
+                        ? "bg-blue-50 text-blue-600"
+                        : "hover:bg-gray-100"
+                    }`}
+                  >
+                    <Github className="h-4 w-4 mr-3" />
+                    <span>GitHub Configuration</span>
                   </button>
                 </li>
                 <li>
@@ -147,6 +179,92 @@ const SettingsPage = () => {
           {/* Main Content */}
           <div className="flex-1">
             <div className="bg-white p-6 rounded shadow">
+              {/* GitHub Configuration Settings */}
+              {activeTab === "githubConfig" && (
+                <form onSubmit={handleSaveGithubConfig}>
+                  <h2 className="text-lg font-semibold mb-6">
+                    GitHub Configuration
+                  </h2>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Token
+                      </label>
+                      <input
+                        type="password"
+                        name="token"
+                        value={githubConfig.token}
+                        onChange={handleGithubConfigChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="GitHub Personal Access Token"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Owner
+                      </label>
+                      <input
+                        type="text"
+                        name="owner"
+                        value={githubConfig.owner}
+                        onChange={handleGithubConfigChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="GitHub Username or Org"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Repository
+                      </label>
+                      <input
+                        type="text"
+                        name="repo"
+                        value={githubConfig.repo}
+                        onChange={handleGithubConfigChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="Repository Name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Branch
+                      </label>
+                      <input
+                        type="text"
+                        name="branch"
+                        value={githubConfig.branch}
+                        onChange={handleGithubConfigChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="main"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Path
+                      </label>
+                      <input
+                        type="text"
+                        name="path"
+                        value={githubConfig.path}
+                        onChange={handleGithubConfigChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="inventory"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <button
+                      type="submit"
+                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Configuration
+                    </button>
+                  </div>
+                </form>
+              )}
               {/* Profile Settings */}
               {activeTab === 'profile' && (
                 <form onSubmit={handleSave}>

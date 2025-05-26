@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/Footer";
@@ -19,10 +19,17 @@ export const metadata: Metadata = {
     icon: "/INVEXISICON.ico",
     apple: "/INVEXIS512.png",
     shortcut: "/INVEXIS512.png",
+    android: "/INVEXIS512.png",
   },
   description: "THE INVENTORY MANAGEMENT SYSTEM FOR YOUR BUSINESS",
 };
-
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5, // Changed from 1 to 5 for better accessibility
+  minimumScale: 1,
+  userScalable: true, // Changed to true for better accessibility
+};
 
 export default function RootLayout({
   children,

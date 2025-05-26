@@ -773,7 +773,7 @@ const Addproductform = () => {
       } else {
         // No existing item, save as new
         // await saveToGithub(finalFormData);
-              await processNewEntries();
+        await processNewEntries();
 
       }
 
@@ -972,7 +972,7 @@ const Addproductform = () => {
     setShowSavingModal(true); // Show the modal when starting to save
     setSaveSuccess(false); // Reset success state
 
-       try {
+    try {
       const data = dataToSave || formData;
       // Handle ID generation/update
       let currentId;
@@ -1336,14 +1336,19 @@ const Addproductform = () => {
             </h2>
           </div>
           <div className="flex space-x-3">
-            <button
+            {/* Github config */}
+            {/* <button
               type="button"
               onClick={() => setShowGithubConfig(!showGithubConfig)}
-              className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+              className="hidden sm:inline flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
             >
-              <Github className="h-4 w-4 mr-2" />
-              {showGithubConfig ? "Hide GitHub Config" : "Show GitHub Config"}
-            </button>
+              <span className="hidden sm:flex">
+                <Github className="h-4 w-4 mr-2" />
+                {showGithubConfig ? "Hide GitHub Config" : "Show GitHub Config"}
+              </span>
+              <Github className="h-4 w-4 sm:hidden" />
+            </button> */}
+
             <button
               type="button"
               onClick={() => document.getElementById('resetFormButton').click()}
@@ -1381,7 +1386,9 @@ const Addproductform = () => {
               }}
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Saving..." : "Add to Inventory"}
+              {/* Show "Add" on small screens */}
+              <span className="hidden sm:inline">{isSubmitting ? "Saving..." : "Add to Inventory"}</span>
+              <span className="sm:hidden">{isSubmitting ? "Saving..." : "Add"}</span>
             </button>
           </div>
         </div>
@@ -1391,7 +1398,7 @@ const Addproductform = () => {
           <p>Item created on: {new Date(formData.createdAt).toLocaleString()}</p>
         </div>
       )}
-      {/* GitHub Configuration Section */}
+      {/* GitHub Configuration Section
       {showGithubConfig && (
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-800 mb-3">GitHub Configuration</h3>
@@ -1453,7 +1460,7 @@ const Addproductform = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
       <div className="mx-auto bg-white shadow-xl overflow-hidden">
         <button
           id="resetFormButton"

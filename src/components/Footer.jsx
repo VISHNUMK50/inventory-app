@@ -7,7 +7,7 @@ const Footer = () => {
 
   return (
     <footer className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-      <div className="mx-auto py-4 px-6">
+      <div className="mx-auto py-4 px-2 sm:px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Company Info */}
           <div className="flex flex-col">
@@ -22,7 +22,7 @@ const Footer = () => {
               Simple and powerful inventory management solution for businesses of all sizes.
             </p>
           </div>
-
+          <div className="hidden md:block">
           {/* Quick Links */}
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold mb-2">Quick Links</h3>
@@ -47,6 +47,7 @@ const Footer = () => {
               </Link>
             </div>
           </div>
+</div>          <div className="hidden md:block">
 
           {/* Contact Info */}
           <div className="flex flex-col">
@@ -67,6 +68,9 @@ const Footer = () => {
               </div>
             </div>
           </div>
+</div>
+
+
         </div>
 
         <div className="border-t border-blue-600 mt-4 pt-4 flex justify-between items-center">

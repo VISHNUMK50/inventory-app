@@ -1,27 +1,18 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import githubConfig from '@/config/githubConfig';
-import { Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
+import { User, Settings, HelpCircle, Moon, Sun, LogOut, Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
 import Link from "next/link";
 
-const Dashboard = () => {
-  // Sample data - in a real app, this would come from your backend
-  // const inventoryStats = {
-  //   totalCount: 182,
-  //   onHand: 182,
-  //   onLoan: 0,
-  //   productLines: 12,
-  //   noStock: 0,
-  //   lowStock: 0
-  // };
-  // Sample low stock items
+const Dashboard = ({ title = "Inventory Management System" }) => {
 
-  // const lowStockItems = [
-  //   { id: 1, name: "ATmega328P", category: "IC", current: 5, minimum: 10 },
-  //   { id: 2, name: "USB-C Connector", category: "Connector", current: 8, minimum: 15 },
-  //   { id: 3, name: "10uF Capacitor", category: "Capacitor", current: 22, minimum: 50 }
-  // ];
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
+  const [darkMode, setDarkMode] = useState(false);
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    // Add logic to apply dark mode (e.g., toggling a CSS class or updating a context)
+  };
   const [inventoryStats, setInventoryStats] = useState({
     totalCount: 182,
     onHand: 182,
@@ -52,13 +43,7 @@ const Dashboard = () => {
         setLoadingReplenishment(false);
       });
   }, []);
-  // Sample recent activity data
-  // const recentActivity = [
-  //     { id: 1, action: "Added 25 units of ATmega328P", date: "Mar 5, 2025", user: "John D." },
-  //     { id: 2, action: "Shipped 12 units of 10K Resistors", date: "Mar 4, 2025", user: "Sarah M." },
-  //     { id: 3, action: "Created order #ORD-2025-0042", date: "Mar 3, 2025", user: "Michael K." },
-  //     { id: 4, action: "Received 100 units of LED 5mm Red", date: "Mar 2, 2025", user: "John D." }
-  //   ];
+
 
   const [recentActivity, setRecentActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
@@ -103,19 +88,88 @@ const Dashboard = () => {
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="  px-6 py-2 flex items-center justify-between">
+        <div className="px-2 sm:px-4 py-3 flex items-center justify-between">
+          {/* Logo Section */}
           <div className="flex items-center space-x-2">
             <img
               src="/INVEXIS102.svg"
               alt="Logo"
-              className="h-10"
+              className="h-8 sm:h-10 w-auto"
             />
           </div>
-          <div>
-            <span className="mr-4">Welcome, Admin</span>
-            <button className="bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition">
-              Logout
+          {/* Title Section */}
+          <div className="absolute left-1/2 transform -translate-x-20 sm:static sm:transform-none">
+            <h1 className="text-lg sm:text-xl font-bold hidden sm:block">{title}</h1>
+          </div>
+
+          {/* User Info Section */}
+          <div className="relative">
+            <button
+              className="flex items-center focus:outline-none"
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+            >
+              <img
+                src="/INVEXISLOGO.PNG" // Replace with the actual path to the profile photo
+                alt="Profile"
+                className="h-9 w-9 rounded-full border-2 border-white"
+              />
             </button>
+
+            {/* Profile Menu */}
+            {profileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded-md shadow-lg z-10">
+                <ul className="py-1">
+                  <li>
+                    <button
+                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
+                      onClick={() => console.log("My Profile clicked")}
+                    >
+                      <User className="h-5 w-5 mr-2" /> My Profile
+                    </button>
+                  </li>
+                  <li>
+                    <Link
+                      href="/settings"
+                       className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
+                    >
+                      <Settings className="h-5 w-5 mr-2" /> Settings
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/help"
+                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
+                    >
+                      <HelpCircle className="h-5 w-5 mr-2" /> Help Centre
+                    </Link>
+                  </li>
+                  <li>
+                    <button
+                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
+                      onClick={toggleDarkMode}
+                    >
+                      {darkMode ? (
+                        <>
+                          <Sun className="h-5 w-5 mr-2" /> Light Mode
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="h-5 w-5 mr-2" /> Dark Mode
+                        </>
+                      )}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
+                      onClick={() => console.log("Logout clicked")}
+                    >
+                      <LogOut className="h-5 w-5 mr-2" /> Logout
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -215,44 +269,6 @@ const Dashboard = () => {
                 </h3>
               </div>
               <div className="p-4">
-                {/* <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-blue-600">{inventoryStats.productLines}</p>
-                    <p className="text-gray-600 text-sm">Product Lines</p>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-red-600">{inventoryStats.noStock}</p>
-                    <p className="text-gray-600 text-sm">No Stock</p>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
-                    <p className="text-gray-600 text-sm">Low Stock</p>
-                  </div>
-                </div> */}
-
-                {/* Display when there are low stock items */}
-                {/* {lowStockItems.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
-                    <div className="space-y-2">
-                      {lowStockItems.map(item => (
-                        <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
-                          <div>
-                            <p className="font-medium">{item.name}</p>
-                            <p className="text-xs text-gray-500">{item.category}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-red-600 font-medium">{item.current}/{item.minimum}</p>
-                            <p className="text-xs text-gray-500">Current/Min</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )} */}
-
                 {loadingReplenishment ? (
                   <div className="flex justify-center items-center h-48">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -305,29 +321,6 @@ const Dashboard = () => {
 
         {/* Bottom section with activity and inventory breakdown */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Recent Activity */}
-          {/* <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gray-700 px-4 py-3">
-              <h3 className="text-lg font-medium text-white">Recent Activity</h3>
-            </div>
-            <div className="p-4">
-              <div className="divide-y">
-                {recentActivity.map(activity => (
-                  <div key={activity.id} className="py-3 flex justify-between">
-                    <div>
-                      <p className="font-medium">{activity.action}</p>
-                      <p className="text-xs text-gray-500">{activity.date} by {activity.user}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 text-center">
-                <Link href="/activity-log" className="text-blue-600 hover:text-blue-800 font-medium">
-                  View Full Activity Log →
-                </Link>
-              </div>
-            </div>
-          </div> */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="bg-gray-700 px-4 py-3">
               <h3 className="text-lg font-medium text-white">Recent Activity</h3>
@@ -378,55 +371,6 @@ const Dashboard = () => {
                 <Layers className="h-5 w-5 mr-2" /> Inventory by Category
               </h3>
             </div>
-            {/* <div className="p-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">ICs</span>
-                  <span className="font-medium">43 items</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '24%' }}></div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Resistors</span>
-                  <span className="font-medium">56 items</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-green-600 h-2.5 rounded-full" style={{ width: '31%' }}></div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Capacitors</span>
-                  <span className="font-medium">38 items</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: '21%' }}></div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Connectors</span>
-                  <span className="font-medium">27 items</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-yellow-600 h-2.5 rounded-full" style={{ width: '15%' }}></div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Other</span>
-                  <span className="font-medium">18 items</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-red-600 h-2.5 rounded-full" style={{ width: '9%' }}></div>
-                </div>
-              </div>
-
-              <div className="mt-4 text-center">
-                <Link href="/inventory-report" className="text-blue-600 hover:text-blue-800 font-medium">
-                  View Full Inventory Report →
-                </Link>
-              </div>
-            </div> */}
             <div className="p-4">
               {loadingCategories ? (
                 <div className="flex justify-center items-center h-48">
