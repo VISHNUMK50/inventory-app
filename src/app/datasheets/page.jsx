@@ -257,7 +257,7 @@ export default function Datasheets() {
                 <img
                     src={imgSrc}
                     alt={alt || "Product Image"}
-                    className="object-contain h-10 w-10"
+                    className="object-contain h-10 w-10 "
                     onError={(e) => {
                         console.log(`Image error for: ${imgSrc}`);
                         setImageError(true);
@@ -296,7 +296,7 @@ export default function Datasheets() {
                         <img
                             src={imgSrc}
                             alt={altText || "Product Image"}
-                            className="max-h-[70vh] max-w-full object-contain"
+                            className="max-h-[70vh] max-w-full object-contain bg-gradient-to-b from-gray-300 to-gray-600"
                             onError={(e) => {
                                 console.log(`Modal image error for: ${imgSrc}`);
                                 setImgError(true);

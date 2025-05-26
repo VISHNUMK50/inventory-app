@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/Footer";
@@ -22,7 +22,13 @@ export const metadata: Metadata = {
   },
   description: "THE INVENTORY MANAGEMENT SYSTEM FOR YOUR BUSINESS",
 };
-
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5, // Changed from 1 to 5 for better accessibility
+  minimumScale: 1,
+  userScalable: true, // Changed to true for better accessibility
+};
 
 export default function RootLayout({
   children,
@@ -31,6 +37,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/INVEXISICON.ico" />
+        <link rel="apple-touch-icon" href="/INVEXIS512.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >

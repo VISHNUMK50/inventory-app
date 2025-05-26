@@ -29,3 +29,16 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+@layer components {
+  .container-responsive {
+    @apply w-full max-w-7xl mx-auto;
+  }
+
+  .text-responsive {
+    @apply text-sm md:text-base lg:text-lg;
+  }
+
+  .spacing-responsive {
+    @apply p-2 md:p-4 lg:p-6;
+  }
+}
