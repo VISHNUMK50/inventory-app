@@ -19,7 +19,6 @@ export const metadata: Metadata = {
     icon: "/INVEXISICON.ico",
     apple: "/INVEXIS512.png",
     shortcut: "/INVEXIS512.png",
-    android: "/INVEXIS512.png",
   },
   description: "THE INVENTORY MANAGEMENT SYSTEM FOR YOUR BUSINESS",
 };
@@ -38,6 +37,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/INVEXISICON.ico" />
+        <link rel="apple-touch-icon" href="/INVEXIS512.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
