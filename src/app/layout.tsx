@@ -42,11 +42,12 @@ export default function RootLayout({
         <link rel="icon" href="/INVEXIS_WICON.ico" />
         <link rel="apple-touch-icon" href="/INVEXIS_BICON.png" />
         <meta name="theme-color" content="#1E40AF" /> {/* Status bar color */}
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="msapplication-navbutton-color" content="#1D4ED8" /> {/* Windows Phone */}
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
-      
+
       >
         <main className="flex-grow">
           {children}
