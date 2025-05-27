@@ -4,7 +4,7 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "theme_color": "#1E40AF",
   "icons": [
     {
       "src": "/INVEXIS_BICON.png",
@@ -12,7 +12,7 @@
       "type": "image/png"
     },
     {
-      "src": "/INVEXIS_BICON.png",
+      "src": "/INVEXIS_BICON.png", //  mobile icon
       "sizes": "192x192",
       "type": "image/png"
     }

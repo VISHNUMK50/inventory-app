@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "INVEXIS",
+  title: "Invexis",
   icons: {
     icon: "/INVEXIS_WICON.ico",
     apple: "/INVEXIS_BICON.png",
-    shortcut: "/INVEXIS_512.png",  // FEVICON
+    shortcut: "/INVEXIS_WICON.png",  // FEVICON
   },
   description: "THE INVENTORY MANAGEMENT SYSTEM FOR YOUR BUSINESS",
 };
@@ -41,9 +41,12 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/INVEXIS_WICON.ico" />
         <link rel="apple-touch-icon" href="/INVEXIS_BICON.png" />
+        <meta name="theme-color" content="#1E40AF" /> {/* Status bar color */}
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
+      
       >
         <main className="flex-grow">
           {children}
