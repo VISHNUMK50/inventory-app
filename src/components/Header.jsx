@@ -49,7 +49,7 @@ const Header = ({ title = "Inventory Management System" }) => {
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
             >
               <img
-                src="/INVEXISLOGO.png" // Replace with the actual path to the profile photo
+                src="/INVEXIS_WICON.png" // Replace with the actual path to the profile photo
                 alt="Profile"
                 className="h-8 w-8 rounded-full border-2 border-white"
               />
