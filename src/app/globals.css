@@ -42,3 +42,17 @@ body {
     @apply p-2 md:p-4 lg:p-6;
   }
 }
+
+/* Set the navigation bar color */
+@media (max-width: 768px) {
+  body {
+  background: linear-gradient(0deg, #1D4ED8, #3730A3); /* Gradient background */
+  }
+}
+
+/* For standalone PWA mode */
+html {
+  background: linear-gradient(0deg, #1D4ED8, #3730A3); /* Gradient background */
+}
+
+
