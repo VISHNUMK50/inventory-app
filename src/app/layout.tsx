@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "INVEXIS",
   icons: {
-    icon: "/INVEXIS_BICON.ico",
+    icon: "/INVEXIS_WICON.ico",
     apple: "/INVEXIS_BICON.png",
-    shortcut: "/INVEXIS_BICON.png",
+    shortcut: "/INVEXIS_512.png",  // FEVICON
   },
   description: "THE INVENTORY MANAGEMENT SYSTEM FOR YOUR BUSINESS",
 };
@@ -39,7 +39,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/INVEXIS_BICON.ico" />
+        <link rel="icon" href="/INVEXIS_WICON.ico" />
         <link rel="apple-touch-icon" href="/INVEXIS_BICON.png" />
       </head>
       <body
