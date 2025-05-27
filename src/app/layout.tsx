@@ -40,7 +40,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/INVEXISICON.ico" />
-        <link rel="apple-touch-icon" href="/INVEXIS512.png" />
+        <link rel="apple-touch-icon" href="/INVEXIS_BICON.png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
