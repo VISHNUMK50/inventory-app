@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import { useState, useEffect, useRef } from "react";
 import { Clipboard, Folder, Package, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, PlusCircle, Search, Home, Trash2 } from "lucide-react";
 import githubConfigImport from '../config/githubConfig';
+import { auth } from "@/config/firebase"; // Import Firebase auth
 
 const SavingModal = ({ isSuccess }) => {
   return (
@@ -57,7 +58,8 @@ const Addproductform = () => {
   });
   const [scrolled, setScrolled] = useState(false);
   const [showGithubConfig, setShowGithubConfig] = useState(false);
-
+  const [username, setUsername] = useState(""); // State for username
+  const [uid, setUid] = useState(""); // State for uid
   const [showSavingModal, setShowSavingModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [binLocations, setBinLocations] = useState([]);
@@ -178,11 +180,23 @@ const Addproductform = () => {
     }
   };
 
-  useEffect(() => {
-    fetchDropdownOptionsFromGithub();
-    fetchLastUsedId(); // Add this line
-  }, []);
+  
+useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        const email = currentUser.email;
+        const extractedUsername = email.split("@")[0]; // Extract username from email
+        setUsername(extractedUsername);
+        setUid(currentUser.uid);
 
+        // Initialize GitHub config with username and uid
+        const initialConfig = githubConfigImport(extractedUsername, currentUser.uid);
+        setGithubConfig(initialConfig);
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup the listener
+  }, []);
 
   // State for dropdown options - Added manufacturerParts
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -195,7 +209,10 @@ const Addproductform = () => {
       "Switch", "Sensor", "Microcontroller", "PCB", "Battery", "Module", "Tool", "Other"
     ]
   });
-
+useEffect(() => {
+    fetchDropdownOptionsFromGithub();
+    fetchLastUsedId(); // Add this line
+  }, []);
   // State for dropdown suggestions - Added manufacturerPart
   const [suggestions, setSuggestions] = useState({
     partName: [],
@@ -216,40 +233,7 @@ const Addproductform = () => {
   const [addingField, setAddingField] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // GitHub config state - renamed to avoid conflict
-  const [githubConfig, setGithubConfig] = useState(null);
-    useEffect(() => {
-    const fetchGithubConfig = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          throw new Error("User is not authenticated");
-        }
-  
-        // Get the Firebase token
-        const token = await currentUser.getIdToken();
-  
-        // Fetch the GitHub configuration
-        const response = await fetch("/api/githubConfig", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-  
-        if (!response.ok) {
-          throw new Error("Failed to fetch GitHub configuration");
-        }
-  
-        const config = await response.json();
-        setGithubConfig(config);
-      } catch (error) {
-        console.error("Error fetching GitHub configuration:", error);
-      }
-    };
-  
-    fetchGithubConfig();
-  }, []);
-
-
+  const [githubConfig, setGithubConfig] = useState(githubConfigImport);
   // New state to preview uploads
   const [imagePreview, setImagePreview] = useState(null);
   const [datasheetName, setDatasheetName] = useState(null);

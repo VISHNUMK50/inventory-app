@@ -1,15 +1,34 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lock, User } from "lucide-react";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../../config/firebase";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const router = useRouter(); // Initialize useRouter
+  const [username, setUsername] = useState("");
+  const [uid, setUid] = useState("");
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        const email = currentUser.email;
+        const extractedUsername = email.split("@")[0]; // Extract username from email
+        setUsername(extractedUsername);
+        setUid(currentUser.uid);
+
+        // Store username and uid in local storage
+        localStorage.setItem("username", extractedUsername);
+        localStorage.setItem("uid", currentUser.uid);
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup the listener
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -103,7 +122,7 @@ const LoginPage = () => {
             className="mt-2 w-full bg-gray-100 py-2 font-semibold rounded-md hover:bg-gray-200 transition flex items-center justify-center"
           >
             <img
-              src="/google-icon.svg" // Replace with the path to your Google icon
+              src="/google-icon.svg"
               alt="Google"
               className="h-5 w-5 mr-2"
             />
