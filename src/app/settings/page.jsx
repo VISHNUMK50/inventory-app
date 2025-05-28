@@ -1,11 +1,15 @@
-"use client"
+"use client";
 import Header from "@/components/Header";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import { Save, User, Shield, Bell, Tag, CreditCard, Building, Github, Server } from 'lucide-react';
-import githubConfigImport from '@/config/githubConfig';
+import githubConfigImport from "@/config/githubConfig";
+import { auth } from "@/config/firebase"; // Import Firebase auth
 
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState("profile");
+  const [githubConfig, setGithubConfig] = useState(null); // Initialize as null
+  const [username, setUsername] = useState(""); // State for username
+  const [uid, setUid] = useState(""); // State for uid
   const [formData, setFormData] = useState({
     name: 'John Smith',
     email: 'john.smith@example.com',
@@ -19,25 +23,36 @@ const SettingsPage = () => {
     },
     theme: 'light'
   });
+  // Fetch username and uid from Firebase Authentication
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        const email = currentUser.email;
+        const extractedUsername = email.split("@")[0]; // Extract username from email
+        setUsername(extractedUsername);
+        setUid(currentUser.uid);
 
-    const [githubConfig, setGithubConfig] = useState(githubConfigImport);
-  // Initialize GitHub configuration state  
+        // Initialize GitHub config with username and uid
+        const initialConfig = githubConfigImport(extractedUsername, currentUser.uid);
+        setGithubConfig(initialConfig);
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup the listener
+  }, []);
 
 
-
+  const handleSave = (e) => {
+    e.preventDefault();
+    // In a real app, this would save to backend
+    alert('Settings saved successfully!');
+  };
   const handleGithubConfigChange = (e) => {
     const { name, value } = e.target;
     setGithubConfig({
       ...githubConfig,
       [name]: value,
     });
-  };
-
-  const handleSaveGithubConfig = (e) => {
-    e.preventDefault();
-    // Save GitHub config to localStorage or backend
-    localStorage.setItem("githubConfig", JSON.stringify(githubConfig));
-    alert("GitHub Configuration saved successfully!");
   };
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -58,18 +73,18 @@ const SettingsPage = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSaveGithubConfig = (e) => {
     e.preventDefault();
-    // In a real app, this would save to backend
-    alert('Settings saved successfully!');
+    // Save GitHub config to localStorage or backend
+    localStorage.setItem("githubConfig", JSON.stringify(githubConfig));
+    alert("GitHub Configuration saved successfully!");
   };
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       <Header title="Inventory Management System" />
 
-      <div className=" px-4 py-6">
-
+      <div className="px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
         {/* Clear Local Storage Button */}
         <div className="mb-4">
@@ -180,7 +195,7 @@ const SettingsPage = () => {
           <div className="flex-1">
             <div className="bg-white p-6 rounded shadow">
               {/* GitHub Configuration Settings */}
-              {activeTab === "githubConfig" && (
+              {activeTab === "githubConfig" && githubConfig && (
                 <form onSubmit={handleSaveGithubConfig}>
                   <h2 className="text-lg font-semibold mb-6">
                     GitHub Configuration
@@ -477,7 +492,6 @@ const SettingsPage = () => {
         </div>
       </div>
     </div>
-
   );
 };
 

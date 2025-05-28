@@ -1,10 +1,24 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { auth } from "../../config/firebase";
 import githubConfig from '@/config/githubConfig';
 import { User, Settings, HelpCircle, Moon, Sun, LogOut, Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
 import Link from "next/link";
+import ProfileMenu from "@/components/ProfileMenu";
 
 const Dashboard = ({ title = "Inventory Management System" }) => {
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        router.push("/"); // Redirect to login if not authenticated
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -13,6 +27,11 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
     setDarkMode(!darkMode);
     // Add logic to apply dark mode (e.g., toggling a CSS class or updating a context)
   };
+const handleLogout = () => {
+    console.log("Logout clicked");
+    // Add logout logic here
+  };
+
   const [inventoryStats, setInventoryStats] = useState({
     totalCount: 182,
     onHand: 182,
@@ -29,13 +48,19 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
     fetch('/api/inventory/lowstock')
       .then((res) => res.json())
       .then((data) => {
-        setInventoryStats(prev => ({
-          ...prev,
-          productLines: data.stats.productLines,
-          noStock: data.stats.noStock,
-          lowStock: data.stats.lowStock
-        }));
-        setLowStockItems(data.lowStockItems);
+            console.log("API Response:", data); // Log the API response
+
+        if (data.stats) {
+          setInventoryStats((prev) => ({
+            ...prev,
+            productLines: data.stats.productLines || 0,
+            noStock: data.stats.noStock || 0,
+            lowStock: data.stats.lowStock || 0,
+          }));
+        } else {
+          console.warn("API response does not include 'stats'");
+        }
+        setLowStockItems(data.lowStockItems || []); // Ensure lowStockItems is an array
         setLoadingReplenishment(false);
       })
       .catch((error) => {
@@ -63,18 +88,24 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
   }, []);
 
 
-  const [categoryStats, setCategoryStats] = useState([]);
+  const [categoryStats, setCategoryStats] = useState([]); // Ensure initial state is an array
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   useEffect(() => {
     fetch('/api/inventory/categories')
       .then((res) => res.json())
       .then((data) => {
-        setCategoryStats(data);
+        if (Array.isArray(data)) {
+          setCategoryStats(data); // Set the category stats if the response is an array
+        } else {
+          console.warn("API response for categories is not an array:", data);
+          setCategoryStats([]); // Fallback to an empty array
+        }
         setLoadingCategories(false);
       })
       .catch((error) => {
         console.error('Error fetching category stats:', error);
+        setCategoryStats([]); // Fallback to an empty array in case of an error
         setLoadingCategories(false);
       });
   }, []);
@@ -92,7 +123,7 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
           {/* Logo Section */}
           <div className="flex items-center space-x-2">
             <img
-              src="/INVEXIS102.svg"
+              src="/INVEXIS_LOGO1020.png"
               alt="Logo"
               className="h-8 sm:h-10 w-auto"
             />
@@ -103,74 +134,11 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
           </div>
 
           {/* User Info Section */}
-          <div className="relative">
-            <button
-              className="flex items-center focus:outline-none"
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-            >
-              <img
-                src="/INVEXIS_WICON.png" // Replace with the actual path to the profile photo
-                alt="Profile"
-                className="h-9 w-9 rounded-full border-2 border-white"
-              />
-            </button>
-
-            {/* Profile Menu */}
-            {profileMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded-md shadow-lg z-10">
-                <ul className="py-1">
-                  <li>
-                    <button
-                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
-                      onClick={() => console.log("My Profile clicked")}
-                    >
-                      <User className="h-5 w-5 mr-2" /> My Profile
-                    </button>
-                  </li>
-                  <li>
-                    <Link
-                      href="/settings"
-                       className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
-                    >
-                      <Settings className="h-5 w-5 mr-2" /> Settings
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/help"
-                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
-                    >
-                      <HelpCircle className="h-5 w-5 mr-2" /> Help Centre
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
-                      onClick={toggleDarkMode}
-                    >
-                      {darkMode ? (
-                        <>
-                          <Sun className="h-5 w-5 mr-2" /> Light Mode
-                        </>
-                      ) : (
-                        <>
-                          <Moon className="h-5 w-5 mr-2" /> Dark Mode
-                        </>
-                      )}
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
-                      onClick={() => console.log("Logout clicked")}
-                    >
-                      <LogOut className="h-5 w-5 mr-2" /> Logout
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            )}
-          </div>
+          <ProfileMenu
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+            onLogout={handleLogout}
+          />
         </div>
       </header>
 
@@ -376,31 +344,33 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
                 <div className="flex justify-center items-center h-48">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
-              ) : categoryStats.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  No category data available
-                </div>
               ) : (
                 <div className="space-y-3">
-                  {categoryStats.map((category) => (
-                    <div key={category.name}>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">{category.name}</span>
-                        <span className="font-medium">
-                          {category.count} units ({category.items} items)
-                        </span>
+                  {Array.isArray(categoryStats) && categoryStats.length > 0 ? (
+                    categoryStats.map((category) => (
+                      <div key={category.name}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">{category.name}</span>
+                          <span className="font-medium">
+                            {category.count} units ({category.items} items)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div
+                            className="h-2.5 rounded-full"
+                            style={{
+                              width: `${(category.count / category.totalCount) * 100}%`,
+                              backgroundColor: `var(--color-${category.color}-600)`,
+                            }}
+                          ></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="h-2.5 rounded-full"
-                          style={{
-                            width: `${(category.count / category.totalCount) * 100}%`,
-                            backgroundColor: `var(--color-${category.color}-600)`
-                          }}
-                        ></div>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      No category data available
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
               <div className="mt-4 text-center">

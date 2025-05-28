@@ -216,7 +216,40 @@ const Addproductform = () => {
   const [addingField, setAddingField] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // GitHub config state - renamed to avoid conflict
-  const [githubConfig, setGithubConfig] = useState(githubConfigImport);
+  const [githubConfig, setGithubConfig] = useState(null);
+    useEffect(() => {
+    const fetchGithubConfig = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("User is not authenticated");
+        }
+  
+        // Get the Firebase token
+        const token = await currentUser.getIdToken();
+  
+        // Fetch the GitHub configuration
+        const response = await fetch("/api/githubConfig", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        if (!response.ok) {
+          throw new Error("Failed to fetch GitHub configuration");
+        }
+  
+        const config = await response.json();
+        setGithubConfig(config);
+      } catch (error) {
+        console.error("Error fetching GitHub configuration:", error);
+      }
+    };
+  
+    fetchGithubConfig();
+  }, []);
+
+
   // New state to preview uploads
   const [imagePreview, setImagePreview] = useState(null);
   const [datasheetName, setDatasheetName] = useState(null);
