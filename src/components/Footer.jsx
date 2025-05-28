@@ -13,7 +13,7 @@ const Footer = () => {
           <div className="flex flex-col">
             <div className="flex items-center space-x-2">
               <img
-                src="/INVEXIS102.svg"
+                src="/INVEXIS_LOGO1020.png"
                 alt="Logo"
                 className="h-8"
               />

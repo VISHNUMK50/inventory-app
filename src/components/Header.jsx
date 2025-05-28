@@ -19,7 +19,7 @@ const Header = ({ title = "Inventory Management System" }) => {
         <div className="flex items-center space-x-2">
           <Link href="/">
             <img
-              src="/INVEXIS102.svg" // Replace with the actual path to your logo
+              src="/INVEXIS_LOGO1020.png" // Replace with the actual path to your logo
               alt="Logo"
               className="h-8 sm:h-10 w-auto"
             />
