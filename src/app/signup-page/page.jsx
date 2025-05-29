@@ -5,6 +5,7 @@ import { auth } from "../../config/firebase";
 import { getFirestore, doc, setDoc } from "firebase/firestore"; // Firestore imports
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import githubConfig from "@/config/githubConfig"; // If you want to use defaults
 
 const db = getFirestore(); // Initialize Firestore
 
@@ -23,23 +24,38 @@ const SignupPage = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
-
-      // Generate a unique user ID (Firebase's `uid`)
       const userId = user.uid;
+      const username = formData.email.split("@")[0];
+
+      // Build initial GitHub config for this user
+      const userGithubConfig = {
+        token: "", // Empty by default
+        repo: githubConfig.repo || "inv-db",
+        owner: githubConfig.owner || "VISHNUMK50",
+        branch: githubConfig.branch || "master",
+        path: `${username}-${userId}/db`,
+        datasheets: `${username}-${userId}/db/datasheets`
+      };
 
       // Save user details to Firestore
       await setDoc(doc(db, "users", userId), {
         email: formData.email,
-        createdAt: new Date().toISOString(),
         userId: userId,
+        createdAt: new Date().toISOString(),
+        name: "", // You can add a name field if you want
+        phone: "",
+        address: "",
+        company: "",
+        position: "",
+        githubConfig: userGithubConfig
       });
 
       alert("Account created successfully!");
       setError("");
-      router.push("/dashboard"); // Redirect to the dashboard
+      router.push("/dashboard");
     } catch (err) {
-      console.error("Error creating account:", err.message); // Log the error
-      setError(err.message); // Display the exact error message
+      console.error("Error creating account:", err.message);
+      setError(err.message);
     }
   };
 
@@ -48,23 +64,38 @@ const SignupPage = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
-      // Generate a unique user ID (Firebase's `uid`)
       const userId = user.uid;
+      const username = user.email.split("@")[0];
+
+      // Build initial GitHub config for this user
+      const userGithubConfig = {
+        token: "",
+        repo: githubConfig.repo || "inv-db",
+        owner: githubConfig.owner || "VISHNUMK50",
+        branch: githubConfig.branch || "master",
+        path: `${username}-${userId}/db`,
+        datasheets: `${username}-${userId}/db/datasheets`
+      };
 
       // Save user details to Firestore
       await setDoc(doc(db, "users", userId), {
         email: user.email,
-        createdAt: new Date().toISOString(),
         userId: userId,
+        createdAt: new Date().toISOString(),
+        name: user.displayName || "",
+        phone: "",
+        address: "",
+        company: "",
+        position: "",
+        githubConfig: userGithubConfig
       });
 
       alert("Google Sign-Up successful!");
       setError("");
-      router.push("/dashboard"); // Redirect to the dashboard
+      router.push("/dashboard");
     } catch (err) {
-      console.error("Error with Google Sign-Up:", err.message); // Log the error
-      setError(err.message); // Display the exact error message
+      console.error("Error with Google Sign-Up:", err.message);
+      setError(err.message);
     }
   };
 
