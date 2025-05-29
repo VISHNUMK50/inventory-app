@@ -1,14 +1,16 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import githubConfig from '@/config/githubConfig';
-import {  Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
+import { Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
 import Link from "next/link";
 import { auth } from "../../config/firebase";
 import ProfileMenu from "@/components/ProfileMenu";
 import { useRouter } from "next/navigation";
 
-const Dashboard = ({ title = "Inventory Management System" }) => {
-  const router = useRouter();
+const Dashboard = () => {
+      const title = "Inventory Management System";
+
+    const router = useRouter();
 
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -38,7 +40,7 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
     }, [router]);
 
 
-        const handleLogout = () => {
+    const handleLogout = () => {
         // console.log("Logout clicked");
         auth.signOut()
             .then(() => {
@@ -132,10 +134,10 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
 
                     {/* User Info Section */}
                     <ProfileMenu
-            darkMode={darkMode}
-            toggleDarkMode={toggleDarkMode}
-            onLogout={handleLogout}
-          />
+                        darkMode={darkMode}
+                        toggleDarkMode={toggleDarkMode}
+                        onLogout={handleLogout}
+                    />
                 </div>
             </header>
 
