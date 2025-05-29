@@ -2,7 +2,11 @@
 import { useState, useEffect } from "react";
 import { Search, Edit, Trash, Download, AlertCircle, X, Eye, FileSpreadsheet, PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
 import Link from "next/link";
-import githubConfig from '../config/githubConfig';
+// import githubConfig from '../config/githubConfig';
+import { getGithubConfig } from "../config/githubConfig";
+
+
+
 import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
 
@@ -35,17 +39,36 @@ const ManageInventory = () => {
   });
 
   // Initialize state with the imported config
-  const [config, setConfig] = useState(githubConfig);
+  const [config, setConfig] = useState(null);
 
-  // You can still update it if needed
-  const updateConfig = (newConfig) => {
-    setConfig({ ...config, ...newConfig });
-  };
+
+
+
+
+
+  // Fetch GitHub config on component mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const githubConfig = await getGithubConfig(); // Fetch the new GitHub config
+        setConfig(githubConfig);
+        console.log("GitHub Config0:", githubConfig);
+      } catch (error) {
+        console.error("Error fetching GitHub config:", error);
+        setError("Failed to fetch GitHub configuration");
+      }
+    };
+
+    fetchConfig();
+  }, []);
 
   // Fetch inventory items on component mount
   useEffect(() => {
-    fetchInventoryItems();
-  }, []);
+    if (config) {
+      fetchInventoryItems();
+    }
+  }, [config]);
+
 
   // Apply filters and search when inventory items, search term, or filters change
   useEffect(() => {
@@ -61,7 +84,7 @@ const ManageInventory = () => {
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
-      console.log('Inventory updated, refreshing data...');
+      // console.log('Inventory updated, refreshing data...');
       fetchInventoryData(true);
     };
 
@@ -70,27 +93,29 @@ const ManageInventory = () => {
   }, []);
 
   useEffect(() => {
-    console.log("Inventory items after fetch:", inventoryItems);
-    console.log("View mode:", viewMode);
+    // console.log("Inventory items after fetch:", inventoryItems);
+    // console.log("View mode:", viewMode);
     if (inventoryItems.length > 0) {
       applyFiltersAndSearch();
     }
   }, [inventoryItems, searchTerm, filters, viewMode]);
 
   // Add this function before fetchInventoryItems
-  const testGitHubAccess = async () => {
+  const testGitHubAccess = async (config) => {
     try {
-      console.log(`Testing access to: https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`);
+      const { token, repo, owner } = config;
 
-      const response = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`, {
+      // console.log(`Testing access to: https://api.github.com/repos/${owner}/${repo}`);
+
+      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
         headers: {
-          "Authorization": `Bearer ${githubConfig.token}`
+          "Authorization": `Bearer ${token}`
         }
       });
 
-      console.log("Response status:", response.status);
+      // console.log("Response status:", response.status);
       const data = await response.json();
-      console.log("GitHub API response:", data);
+      // console.log("GitHub API response:", data);
 
       if (!response.ok) {
         setError(`GitHub API error: ${response.status} - ${data.message || 'Unknown error'}`);
@@ -117,7 +142,7 @@ const ManageInventory = () => {
   };
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
-      console.log('Inventory updated, refreshing data...');
+      // console.log('Inventory updated, refreshing data...');
       fetchInventoryData(true);
     };
 
@@ -129,7 +154,7 @@ const ManageInventory = () => {
     const itemPromises = files.map(async (file) => {
       if (file.type === "file" && file.name.endsWith(".json")) {
         try {
-          console.log(`Fetching file: ${file.name}`);
+          // console.log(`Fetching file: ${file.name}`);
 
           // Use the correct authentication method for raw content
           const fileResponse = await fetch(file.download_url, {
@@ -163,7 +188,7 @@ const ManageInventory = () => {
     });
 
     const items = (await Promise.all(itemPromises)).filter(item => item !== null);
-    console.log(`Successfully loaded ${items.length} items`);
+    // console.log(`Successfully loaded ${items.length} items`);
 
     setInventoryItems(items);
     setFilteredItems(items);
@@ -176,28 +201,33 @@ const ManageInventory = () => {
 
   // Fetch inventory items from GitHub or localStorage
   const fetchInventoryItems = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    console.log("GitHub config:", {
-      owner: githubConfig.owner,
-      repo: githubConfig.repo,
-      path: githubConfig.path,
-      hasToken: !!githubConfig.token
-    });
-
-    if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
+    if (!config) {
       console.error("GitHub configuration is incomplete");
       setError("GitHub configuration is incomplete");
       setIsLoading(false);
       return;
     }
 
-    try {
-      const { token, repo, owner, path } = githubConfig;
+    setIsLoading(true);
+    setError(null);
+    console.log("GitHub config1:", config);
 
+    console.log("GitHub config2:", {
+      owner: config.owner,
+      repo: config.repo,
+      path: config.path,
+      hasToken: !!config.token
+    });
+
+
+
+    try {
+      const { token, repo, owner, path } = config;
+      if (!token || !repo || !owner) {
+        throw new Error("Incomplete GitHub configuration");
+      }
       // First, test GitHub API access
-      const canAccessGitHub = await testGitHubAccess();
+      const canAccessGitHub = await testGitHubAccess(config);
       if (!canAccessGitHub) {
         throw new Error("Could not access GitHub API with provided credentials");
       }
@@ -206,11 +236,11 @@ const ManageInventory = () => {
       // The error shows /db/jsons/ but your code may use a different path
       // For debugging, let's try both path structures
       const jsonDirPath = path ? `${path}/jsons` : 'db/jsons';
-      console.log(`Trying to fetch from directory: ${jsonDirPath}`);
+      // console.log(`Trying to fetch from directory: ${jsonDirPath}`);
 
       // GitHub API URL for contents
       const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
-      console.log(`Fetching directory listing from: ${apiUrl}`);
+      // console.log(`Fetching directory listing from: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
         headers: {
@@ -220,7 +250,7 @@ const ManageInventory = () => {
       });
 
       // Log response details for debugging
-      console.log(`Directory listing response status: ${response.status}`);
+      // console.log(`Directory listing response status: ${response.status}`);
 
       if (response.status === 404) {
         // Try alternative path as fallback
@@ -245,7 +275,7 @@ const ManageInventory = () => {
         }
 
         const files = await altResponse.json();
-        console.log(`Found ${files.length} files in alternative directory`);
+        // console.log(`Found ${files.length} files in alternative directory`);
 
         // Update path for future use if this worked
         updateConfig({ path: altPath.split('/')[0] });
@@ -260,7 +290,7 @@ const ManageInventory = () => {
 
       const files = await response.json();
       const items = await processFiles(files);
-      console.log(`Found ${files.length} files in directory`);
+      // console.log(`Found ${files.length} files in directory`);
       setInventoryItems(items);
       setFilteredItems(items);
       return processFiles(files);
@@ -479,7 +509,7 @@ const ManageInventory = () => {
         return valA < valB ? 1 : valA > valB ? -1 : 0;
       }
     });
-    console.log("Filtered items:", result); // Move this line here
+    // console.log("Filtered items:", result); // Move this line here
 
     setFilteredItems(result);
   };
@@ -488,7 +518,7 @@ const ManageInventory = () => {
 
   // Function to move file to recycle bin
   const moveToRecycleBin = async (itemId) => {
-    const { token, repo, owner, path } = githubConfig;
+    const { token, repo, owner, path } = config;
 
     try {
       // First create the recycle-bin folder if it doesn't exist
@@ -562,7 +592,7 @@ const ManageInventory = () => {
       try {
         setIsLoading(true);
 
-        if (!githubConfig.token || !githubConfig.repo || !githubConfig.owner) {
+        if (!config.token || !config.repo || !config.owner) {
           throw new Error("Incomplete GitHub configuration");
         }
 
@@ -653,7 +683,7 @@ const ManageInventory = () => {
     }
 
     try {
-      const { token, repo, owner, path } = githubConfig;
+      const { token, repo, owner, path } = config;
 
       // Validate GitHub config
       if (!token || !repo || !owner) {
@@ -670,7 +700,7 @@ const ManageInventory = () => {
 
       // Path to the specific JSON file
       const filePath = `${path}/jsons/${fileName}`;
-      console.log(`Attempting to delete: ${filePath}`);
+      // console.log(`Attempting to delete: ${filePath}`);
 
       // First, we need to get the file's SHA
       const fileInfoUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
@@ -718,7 +748,7 @@ const ManageInventory = () => {
         throw new Error(`Delete failed with status ${deleteResponse.status}: ${errorData.message || deleteResponse.statusText}`);
       }
 
-      console.log(`Successfully deleted ${filePath} from GitHub`);
+      // console.log(`Successfully deleted ${filePath} from GitHub`);
       return true;
     } catch (error) {
       console.error("Error in deleteFileFromGitHub:", error);
@@ -924,15 +954,26 @@ const ManageInventory = () => {
     };
   }, []);
 
-  const getPlaceholderFromGitHub = () => {
-    const { owner, repo } = githubConfig;
-    // Try this path first
-    const placeholderUrl = `https://raw.githubusercontent.com/${owner}/${repo}/master/database/placeholder.svg`;
-    // Fallback to a hardcoded path if the above doesn't work
-    const fallbackUrl = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+ const getPlaceholderFromGitHub = () => {
+  // Return fallback URL if config is null
+  if (!config) {
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+  }
 
-    return placeholderUrl || fallbackUrl;
-  };
+  const { owner, repo } = config;
+  
+  // Additional check for required properties
+  if (!owner || !repo) {
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+  }
+
+  // Try this path first
+  const placeholderUrl = `https://raw.githubusercontent.com/${owner}/${repo}/master/database/placeholder.svg`;
+  // Fallback to a hardcoded path if the above doesn't work
+  const fallbackUrl = "https://raw.githubusercontent.com/VISHNUMK50/inventory-app/master/database/placeholder.svg";
+
+  return placeholderUrl || fallbackUrl;
+};
 
   // Improved image URL resolution with better fallbacks
   const getImageUrl = (item) => {
@@ -970,7 +1011,7 @@ const ManageInventory = () => {
           alt={alt || "Product Image"}
           className="object-contain h-10 w-10"
           onError={(e) => {
-            console.log(`Image error for: ${imgSrc}`);
+            // console.log(`Image error for: ${imgSrc}`);
             setImageError(true);
             e.target.src = ultimateFallback;
           }}
@@ -1009,7 +1050,7 @@ const ManageInventory = () => {
               alt={altText || "Product Image"}
               className="max-h-[70vh] max-w-full object-contain bg-gradient-to-b from-gray-300 to-gray-600"
               onError={(e) => {
-                console.log(`Modal image error for: ${imgSrc}`);
+                // console.log(`Modal image error for: ${imgSrc}`);
                 setImgError(true);
                 e.target.src = ultimateFallback;
               }}

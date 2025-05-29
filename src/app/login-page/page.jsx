@@ -24,6 +24,17 @@ const LoginPage = () => {
         // Store username and uid in local storage
         localStorage.setItem("username", extractedUsername);
         localStorage.setItem("uid", currentUser.uid);
+
+        // Define and store githubConfig in local storage
+        const githubConfig = {
+          token: process.env.NEXT_PUBLIC_DATABASE_PAT || '',
+          repo: process.env.GITHUB_REPO || "inv-db",
+          owner: process.env.GITHUB_OWNER || "VISHNUMK50",
+          branch: "master",
+          path: `${extractedUsername}-${currentUser.uid}/db`, // Dynamically set the path
+          datasheets: `${extractedUsername}-${currentUser.uid}/db/datasheets`, // Dynamically set the datasheets path
+        };
+        localStorage.setItem("githubConfig", JSON.stringify(githubConfig));
       }
     });
 
@@ -39,7 +50,7 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      alert("Login successful!");
+      // alert("Login successful!");
       setError(""); // Clear any previous error
       router.push("/dashboard"); // Redirect to the dashboard
     } catch (err) {
@@ -51,7 +62,7 @@ const LoginPage = () => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      alert("Google Sign-In successful!");
+      // alert("Google Sign-In successful!");
       setError(""); // Clear any previous error
       router.push("/dashboard"); // Redirect to the dashboard
     } catch (err) {

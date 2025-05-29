@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
-import githubConfig from '@/config/githubConfig';
+import { getGithubConfig } from '@/config/githubConfig';
 
 export async function GET() {
   try {
-    const { owner, repo, token } = githubConfig;
-    const path = 'db/jsons';
+    const config = await getGithubConfig();
+    if (!config) {
+      return NextResponse.json(
+        { error: 'GitHub configuration not available' },
+        { status: 401 }
+      );
+    }
+
+    const { owner, repo, token, path } = config;
+    const dbPath = `${path}/jsons`;
     
     const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=master`,
+      `https://api.github.com/repos/${owner}/${repo}/contents/${dbPath}?ref=master`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,

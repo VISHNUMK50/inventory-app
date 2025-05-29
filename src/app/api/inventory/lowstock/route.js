@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
-import githubConfig from '@/config/githubConfig';
+import { getGithubConfig } from '@/config/githubConfig';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const { owner, repo, token } = githubConfig;
-    const path = 'db/jsons';
+    const config = await getGithubConfig();
+    if (!config) {
+      return NextResponse.json(
+        { error: 'GitHub configuration not available' },
+        { status: 401 }
+      );
+    }
+
+    const { owner, repo, token, path } = config;
+    const dbPath = `${path}/jsons`;
     
+    // Fetch directory contents
     const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=master`,
+      `https://api.github.com/repos/${owner}/${repo}/contents/${dbPath}?ref=master`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -16,46 +25,55 @@ export async function GET() {
       }
     );
 
-    if (!response.ok) throw new Error('Failed to fetch directory');
-    const files = await response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch directory: ${response.status}`);
+    }
 
+    const files = await response.json();
     let inventory = [];
+
+    // Process all JSON files
     for (const file of files) {
       if (file.name.endsWith('.json')) {
         const fileContent = await fetch(file.download_url, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const item = await fileContent.json();
-        inventory.push(item);
+        
+        if (fileContent.ok) {
+          const item = await fileContent.json();
+          if (item && typeof item === 'object') {
+            inventory.push({
+              id: item.id || file.name.replace('.json', ''),
+              name: item.partName || 'Unknown Part',
+              category: item.category || 'Uncategorized',
+              current: parseInt(item.avl_quantity) || 0,
+              minimum: parseInt(item.reorderPoint) || 0
+            });
+          }
+        }
       }
     }
 
+    // Calculate statistics
     const stats = {
       productLines: inventory.length,
-      noStock: inventory.filter(item => parseInt(item.avl_quantity) === 0).length,
-      lowStock: inventory.filter(item => 
-        parseInt(item.avl_quantity) > 0 && 
-        parseInt(item.avl_quantity) <= parseInt(item.reorderPoint)
-      ).length
+      noStock: inventory.filter(item => item.current === 0).length,
+      lowStock: inventory.filter(item => item.current > 0 && item.current <= item.minimum).length
     };
 
+    // Get items that need attention (low stock or out of stock)
     const lowStockItems = inventory
-      .filter(item => 
-        parseInt(item.avl_quantity) > 0 && 
-        parseInt(item.avl_quantity) <= parseInt(item.reorderPoint)
-      )
-      .map(item => ({
-        id: item.id || Math.random().toString(36).substr(2, 9),
-        name: item.partName,
-        category: item.category,
-        current: parseInt(item.avl_quantity),
-        minimum: parseInt(item.reorderPoint)
-      }))
-      .slice(0, 5); // Show only top 5 low stock items
+      .filter(item => item.current <= item.minimum)
+      .sort((a, b) => (a.current / a.minimum) - (b.current / b.minimum))
+      .slice(0, 5);
 
-    return NextResponse.json({ stats, lowStockItems });
+    return NextResponse.json({
+      stats,
+      lowStockItems
+    });
+
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in lowstock API:', error);
     return NextResponse.json(
       { error: 'Failed to fetch inventory data' },
       { status: 500 }

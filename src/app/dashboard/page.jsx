@@ -2,13 +2,36 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "../../config/firebase";
-import githubConfig from '@/config/githubConfig';
+import githubConfigDefault from '@/config/githubConfig'; // Default config as fallback
 import { User, Settings, HelpCircle, Moon, Sun, LogOut, Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
 import Link from "next/link";
 import ProfileMenu from "@/components/ProfileMenu";
+import { getGithubConfig } from '@/config/githubConfig';
+import { fetchCategoryStats, fetchLowStockItems } from '@/utils/githubDataFetcher';
 
 const Dashboard = ({ title = "Inventory Management System" }) => {
   const router = useRouter();
+
+  // State for GitHub configuration
+  const [githubConfig, setGithubConfig] = useState(null);
+
+  useEffect(() => {
+    const loadGithubConfig = async () => {
+      try {
+        const config = await getGithubConfig();
+        setGithubConfig(config);
+        console.log("Loaded GitHub config:", config);
+      } catch (error) {
+        console.error("Failed to load GitHub config:", error);
+        // Optionally redirect to login if auth error
+        if (error.message === "No authenticated user found") {
+          router.push("/");
+        }
+      }
+    };
+
+    loadGithubConfig();
+  }, [router]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -27,7 +50,8 @@ const Dashboard = ({ title = "Inventory Management System" }) => {
     setDarkMode(!darkMode);
     // Add logic to apply dark mode (e.g., toggling a CSS class or updating a context)
   };
-const handleLogout = () => {
+
+  const handleLogout = () => {
     console.log("Logout clicked");
     // Add logout logic here
   };
@@ -43,72 +67,79 @@ const handleLogout = () => {
   const [lowStockItems, setLowStockItems] = useState([]);
   const [loadingReplenishment, setLoadingReplenishment] = useState(true);
 
-  // Add this new useEffect
+  // Fetch low stock items
+  // Replace the existing fetchLowStockData useEffect with this:
+
   useEffect(() => {
-    fetch('/api/inventory/lowstock')
-      .then((res) => res.json())
-      .then((data) => {
-            console.log("API Response:", data); // Log the API response
+    const fetchLowStockData = async () => {
+      if (!githubConfig?.owner || !githubConfig?.repo) return;
 
-        if (data.stats) {
-          setInventoryStats((prev) => ({
-            ...prev,
-            productLines: data.stats.productLines || 0,
-            noStock: data.stats.noStock || 0,
-            lowStock: data.stats.lowStock || 0,
-          }));
-        } else {
-          console.warn("API response does not include 'stats'");
-        }
-        setLowStockItems(data.lowStockItems || []); // Ensure lowStockItems is an array
-        setLoadingReplenishment(false);
-      })
-      .catch((error) => {
+      setLoadingReplenishment(true);
+      try {
+        // Use the fetchLowStockItems utility function directly
+        const { stats, lowStockItems: items } = await fetchLowStockItems(githubConfig);
+
+        // Update inventory stats
+        setInventoryStats(prev => ({
+          ...prev,
+          productLines: stats.productLines || 0,
+          noStock: stats.noStock || 0,
+          lowStock: stats.lowStock || 0
+        }));
+
+        // Update low stock items
+        setLowStockItems(items || []);
+      } catch (error) {
         console.error('Error fetching low stock data:', error);
+      } finally {
         setLoadingReplenishment(false);
-      });
-  }, []);
+      }
+    };
 
+    fetchLowStockData();
+  }, [githubConfig?.owner, githubConfig?.repo]);
 
   const [recentActivity, setRecentActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
 
-  // Add this useEffect after your existing useEffect
+  // Fetch recent activity
   useEffect(() => {
-    fetch('/api/activity/commits')
-      .then((res) => res.json())
-      .then((data) => {
-        setRecentActivity(data);
-        setLoadingActivity(false);
-      })
-      .catch((error) => {
-        console.error('Error fetching commits:', error);
-        setLoadingActivity(false);
-      });
-  }, []);
-
+    if (githubConfig?.owner && githubConfig?.repo) {
+      fetch('/api/activity/commits')
+        .then((res) => res.json())
+        .then((data) => {
+          setRecentActivity(data);
+          setLoadingActivity(false);
+        })
+        .catch((error) => {
+          console.error('Error fetching commits:', error);
+          setLoadingActivity(false);
+        });
+    }
+  }, [githubConfig?.owner, githubConfig?.repo]);
 
   const [categoryStats, setCategoryStats] = useState([]); // Ensure initial state is an array
   const [loadingCategories, setLoadingCategories] = useState(true);
 
+  // Fetch category stats
   useEffect(() => {
-    fetch('/api/inventory/categories')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setCategoryStats(data); // Set the category stats if the response is an array
-        } else {
-          console.warn("API response for categories is not an array:", data);
-          setCategoryStats([]); // Fallback to an empty array
-        }
+    const fetchCategories = async () => {
+      if (!githubConfig?.owner || !githubConfig?.repo) return;
+
+      setLoadingCategories(true);
+      try {
+        const categories = await fetchCategoryStats(githubConfig);
+        setCategoryStats(categories);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
         setLoadingCategories(false);
-      })
-      .catch((error) => {
-        console.error('Error fetching category stats:', error);
-        setCategoryStats([]); // Fallback to an empty array in case of an error
-        setLoadingCategories(false);
-      });
-  }, []);
+      }
+    };
+
+    fetchCategories();
+  }, [githubConfig?.owner, githubConfig?.repo]);
+
   // Sample low stock items that would appear in alerts
   const inventoryAlerts = [
     { id: 1, partNumber: "ATM328", manufacturer: "Microchip", inStock: 5, reorderPoint: 10 },
@@ -265,13 +296,18 @@ const handleLogout = () => {
                         <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
                         <div className="space-y-2">
                           {lowStockItems.map(item => (
-                            <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
+                            <div
+                              key={item.id}
+                              className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors"
+                            >
                               <div>
                                 <p className="font-medium">{item.name}</p>
                                 <p className="text-xs text-gray-500">{item.category}</p>
                               </div>
                               <div className="text-right">
-                                <p className="text-red-600 font-medium">{item.current}/{item.minimum}</p>
+                                <p className={`font-medium ${item.current === 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+                                  {item.current}/{item.minimum}
+                                </p>
                                 <p className="text-xs text-gray-500">Current/Min</p>
                               </div>
                             </div>
@@ -320,7 +356,7 @@ const handleLogout = () => {
                   ))}
                 </div>
               )}
-              <div className="mt-4 text-center">
+              {githubConfig ? (
                 <a
                   href={`https://github.com/${githubConfig.owner}/${githubConfig.repo}/commits/master`}
                   target="_blank"
@@ -329,7 +365,9 @@ const handleLogout = () => {
                 >
                   View Commit History →
                 </a>
-              </div>
+              ) : (
+                <span className="text-gray-400">Loading commit history...</span>
+              )}
             </div>
           </div>
           {/* Inventory by Category */}
