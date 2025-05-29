@@ -50,7 +50,7 @@ const SignupPage = () => {
         githubConfig: userGithubConfig
       });
 
-      alert("Account created successfully!");
+      // alert("Account created successfully!");
       setError("");
       router.push("/dashboard");
     } catch (err) {
