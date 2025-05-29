@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import githubConfig from '@/config/githubConfig';
-import { User, Settings, HelpCircle, Moon, Sun, LogOut, Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, BarChart3, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
+import {  Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
 import Link from "next/link";
 import { auth } from "../../config/firebase";
 import ProfileMenu from "@/components/ProfileMenu";
