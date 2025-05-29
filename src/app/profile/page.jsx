@@ -11,8 +11,8 @@ const ProfilePage = () => {
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
+    name: "",
+    email: "",
     phone: "(555) 123-4567",
     address: "123 Main Street, Springfield, USA",
     company: "Doe Enterprises",
@@ -35,6 +35,11 @@ const ProfilePage = () => {
       setGithubPath(path);
       // Remove the function call and just set the config
       setConfig(githubConfig);
+      setFormData(prev => ({
+        ...prev,
+        name: username, // Set name from Firebase username
+        email: email // Set email from Firebase
+      }));
       fetchProfileData(username);
 
     }
@@ -179,6 +184,7 @@ const ProfilePage = () => {
                   type="text"
                   value={userId}
                   readOnly
+                  onFocus={(e) => e.target.blur()} // Prevents editing
                   className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
@@ -188,6 +194,7 @@ const ProfilePage = () => {
                   type="text"
                   value={githubPath}
                   readOnly
+                  onFocus={(e) => e.target.blur()} // Prevents editing
                   className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
@@ -209,8 +216,9 @@ const ProfilePage = () => {
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  readOnly
+                  onFocus={(e) => e.target.blur()} // Prevents editing
+                  className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
             </div>
