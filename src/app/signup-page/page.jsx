@@ -6,7 +6,7 @@ import { getFirestore, doc, setDoc } from "firebase/firestore"; // Firestore imp
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import githubConfig from "@/config/githubConfig"; // If you want to use defaults
-
+import { db } from "@/config/firebase";
 const db = getFirestore(); // Initialize Firestore
 
 const SignupPage = () => {
