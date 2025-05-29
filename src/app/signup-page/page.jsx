@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import githubConfig from "@/config/githubConfig"; // If you want to use defaults
 import { db } from "@/config/firebase";
-const db = getFirestore(); // Initialize Firestore
+// const db = getFirestore(); // Initialize Firestore
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
