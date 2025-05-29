@@ -1044,77 +1044,76 @@ const ManageInventory = () => {
             <Store className="mr-2 h-5 w-5" /> Manage Products
           </h2>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="p-1 flex gap-2">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2 justify-between ">
+
+            <button
+              className="p-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
+              onClick={() => setShowFilters(!showFilters)}
+              title="Filter"
+            >
+              <Filter className="w-4 h-4" />
+            </button>
+
+            <button
+              className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+              onClick={fetchInventoryItems}
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+
+            <div className="relative">
               <button
-                className="p-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
-                onClick={() => setShowFilters(!showFilters)}
-                title="Filter"
+                className="p-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
+                title="View Options"
               >
-                <Filter className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4" />
               </button>
-
-              <button
-                className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
-                onClick={fetchInventoryItems}
-                title="Refresh"
+              <select
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value)}
               >
-                <RefreshCw className="w-4 h-4" />
-              </button>
+                <option value="all">All Items</option>
+                <option value="active">In Stock</option>
+                <option value="inactive">Out of Stock</option>
+              </select>
+            </div>
+            <div className="hidden sm:flex flex-row gap-2">
 
-              <div className="relative">
-                <button
-                  className="p-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
-                  title="View Options"
-                >
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                <select
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  value={viewMode}
-                  onChange={(e) => setViewMode(e.target.value)}
-                >
-                  <option value="all">All Items</option>
-                  <option value="active">In Stock</option>
-                  <option value="inactive">Out of Stock</option>
-                </select>
-              </div>
-              <div className="hidden sm:flex flex-row gap-2">
+              {selectedItems.length > 0 && (
+                <>
+                  <button
+                    className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center text-sm"
+                    onClick={deleteSelectedItems}
+                  >
+                    <Trash className="w-3 h-3 mr-1" /> Delete
+                  </button>
 
-                {selectedItems.length > 0 && (
-                  <>
-                    <button
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center text-sm"
-                      onClick={deleteSelectedItems}
-                    >
-                      <Trash className="w-3 h-3 mr-1" /> Delete
-                    </button>
+                  <button
+                    className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center text-sm"
+                    onClick={exportToCSV}
+                  >
+                    <Download className="w-3 h-3 mr-1" /> Export
+                  </button>
 
-                    <button
-                      className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center text-sm"
-                      onClick={exportToCSV}
-                    >
-                      <Download className="w-3 h-3 mr-1" /> Export
-                    </button>
-
-                    <button
-                      className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center text-sm"
-                      onClick={copyToClipboard}
-                    >
-                      <Clipboard className="w-3 h-3 mr-1" /> Copy
-                    </button>
-                  </>
-                )}            </div>
-
+                  <button
+                    className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center text-sm"
+                    onClick={copyToClipboard}
+                  >
+                    <Clipboard className="w-3 h-3 mr-1" /> Copy
+                  </button>
+                </>
+              )}
             </div>
 
-            <div className="relative ">
+            <div className="relative flex-1 min-w-[120px] max-w-xs sm:max-w-xs md:max-w-sm lg:max-w-md">
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-8 pr-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-48 text-sm bg-white"
+                className="pl-8 pr-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-full text-sm bg-white transition-all"
               />
               <Search className="w-4 h-4 text-gray-400 absolute left-2 top-2.5" />
             </div>

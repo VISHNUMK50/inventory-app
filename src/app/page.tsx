@@ -1,10 +1,7 @@
-import Dashboard from '../components/dashboard';
-
-
+import LoginPage from '@/app/login-page/page';
 
 export default function Home() {
   return (
-      <Dashboard/>
-      
+    <LoginPage />
   );
 }
