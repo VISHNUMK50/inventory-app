@@ -791,9 +791,6 @@ const Addproductform = () => {
                     setDropdownOptions // pass this if you want to update state
                 });
             }
-
-            // Continue with the rest of your submit logic...
-            // await processNewEntries();
             const existingItem = await checkItemExists();
 
             if (existingItem) {
@@ -811,9 +808,8 @@ const Addproductform = () => {
                 }
             } else {
                 // No existing item, save as new
-                // await saveToGithub(finalFormData);
                 await processNewEntries();
-
+                await saveToGithub(finalFormData);
             }
 
             setSaveSuccess(true);
