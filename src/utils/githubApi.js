@@ -4,7 +4,7 @@ export const safeBase64Encode = (str) => {
         const utf8Bytes = new TextEncoder().encode(str);
         const binaryStr = String.fromCharCode.apply(null, utf8Bytes);
         return btoa(binaryStr);
-    } catch (unusedError) {
+    } catch {
         return btoa(unescape(encodeURIComponent(str)));
     }
 };
@@ -16,7 +16,7 @@ export const safeBase64Decode = (str) => {
             utf8Bytes[i] = binaryStr.charCodeAt(i);
         }
         return new TextDecoder().decode(utf8Bytes);
-    } catch (unusedError) {
+    } catch  {
         return decodeURIComponent(escape(atob(str)));
     }
 };
