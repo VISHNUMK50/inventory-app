@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Search, Edit, Trash, Download, AlertCircle, X, Eye, FileSpreadsheet, PlusCircle, Filter, RefreshCw, ChevronDown, Upload, Store, ClipboardList, Clipboard, Home } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, Edit, Trash, Download, AlertCircle, X, FileSpreadsheet, PlusCircle, Filter, RefreshCw, ChevronDown, Store, Clipboard } from "lucide-react";
 import Link from "next/link";
 import githubConfigImport from '@/config/githubConfig';
+import { fetchInventoryFromGitHub } from "@/app/api/fetchInventoryFromGitHub";
 
 import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
@@ -26,8 +27,6 @@ const ManageInventory = () => {
   // State for sorting
   const [sortField, setSortField] = useState("part");
   const [sortDirection, setSortDirection] = useState("asc");
-  const CACHE_DURATION = 30000; // 30 seconds in milliseconds
-  const [lastFetchTime, setLastFetchTime] = useState(0);
   // State for filters
   const [filters, setFilters] = useState({
     category: "",
@@ -36,12 +35,11 @@ const ManageInventory = () => {
     minStock: "",
     maxStock: ""
   });
-  // console.log("Initial githubConfigImport:", githubConfigImport);
 
   const [githubConfig, setGithubConfig] = useState(githubConfigImport);
   const [config, setConfig] = useState(githubConfig);
-  const [configLoaded, setConfigLoaded] = useState(false); // <-- Add this
-
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [userDatasheet, setUserDatasheet] = useState(null);
   useEffect(() => {
     console.log("useEffect (onAuthStateChanged) - githubConfig before:", githubConfig);
 
@@ -64,8 +62,8 @@ const ManageInventory = () => {
             config = {
               ...githubConfigImport,
               ...data.githubConfig,
-              token: data.githubConfig.token || githubConfigImport.token, // fallback to default if empty
-            };                        // Ensure path is correct even if Firestore has old value
+              token: data.githubConfig.token || githubConfigImport.token,
+            };
             const username = currentUser.displayName || currentUser.email.split('@')[0] || "user";
             const uid = currentUser.uid || "nouid";
             config.path = `${username}-${uid}/db`;
@@ -75,7 +73,7 @@ const ManageInventory = () => {
           if (data.datasheet) setUserDatasheet(data.datasheet);
         }
         setGithubConfig(config);
-        setConfig(config); // <-- Add this line to keep config in sync!
+        setConfig(config);
 
         setConfigLoaded(true);
         console.log("useEffect (onAuthStateChanged) - githubConfig after set:", config);
@@ -89,82 +87,20 @@ const ManageInventory = () => {
 
 
   // Fetch inventory items on component mount
- useEffect(() => {
-  if (configLoaded) {
-    fetchInventoryItems();
-  }
-}, [configLoaded]); // <-- Only runs when configLoaded becomes true
+  useEffect(() => {
+    if (configLoaded) {
+      fetchInventoryItems();
+    }
+  }, [configLoaded]);
 
   // Apply filters and search when inventory items, search term, or filters change
   useEffect(() => {
-    if (inventoryItems.length > 0) {
-      applyFiltersAndSearch();
-    }
-  }, [inventoryItems, searchTerm, filters, viewMode]);
-  useEffect(() => {
-    if (inventoryItems.length > 0) {
-      applyFiltersAndSearch();
-    }
-  }, [sortField, sortDirection]);
-
-  useEffect(() => {
-    const handleInventoryUpdate = (event) => {
-      console.log('Inventory updated, refreshing data...');
-      fetchInventoryData(true);
-    };
-
-    window.addEventListener('inventoryUpdated', handleInventoryUpdate);
-    return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
-  }, []);
-
-  useEffect(() => {
     console.log("Inventory items after fetch:", inventoryItems);
-    // console.log("View mode:", viewMode);
     if (inventoryItems.length > 0) {
       applyFiltersAndSearch();
     }
-  }, [inventoryItems, searchTerm, filters, viewMode]);
+  }, [inventoryItems, searchTerm, filters, viewMode, sortField, sortDirection]);
 
-  // Add this function before fetchInventoryItems
-  const testGitHubAccess = async () => {
-    try {
-      console.log("testGitHubAccess - config:", config);
-
-      console.log(`Testing access to: https://api.github.com/repos/${config.owner}/${config.repo}`);
-
-      const response = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}`, {
-        headers: {
-          "Authorization": `Bearer ${config.token}`
-        }
-      });
-
-      // console.log("Response status:", response.status);
-      const data = await response.json();
-      // console.log("GitHub API response:", data);
-
-      if (!response.ok) {
-        setError(`GitHub API error: ${response.status} - ${data.message || 'Unknown error'}`);
-      }
-
-      return response.ok;
-    } catch (error) {
-      console.error("GitHub access test failed:", error);
-      return false;
-    }
-  };
-  const fetchInventoryData = async (force = false) => {
-    const now = Date.now();
-    if (!force && (now - lastFetchTime) < CACHE_DURATION) {
-      return; // Use cached data if within duration
-    }
-
-    try {
-      // ... existing fetch code ...
-      setLastFetchTime(now);
-    } catch (error) {
-      console.error('Fetch error:', error);
-    }
-  };
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
       console.log('Inventory updated, refreshing data...');
@@ -174,158 +110,27 @@ const ManageInventory = () => {
     window.addEventListener('inventoryUpdated', handleInventoryUpdate);
     return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
   }, []);
-  const processFiles = async (files) => {
-    // Fetch content of each JSON file
-    const itemPromises = files.map(async (file) => {
-      if (file.type === "file" && file.name.endsWith(".json")) {
-        try {
-          // console.log(`Fetching file: ${file.name}`);
 
-          // Use the correct authentication method for raw content
-          const fileResponse = await fetch(file.download_url, {
-            headers: {
-              // Note: GitHub doesn't support token auth for raw.githubusercontent.com
-              // Instead, we can use this header if we have a valid token
-              "Accept": "application/vnd.github.v3.raw"
-            }
-          });
+  useEffect(() => {
+    const handleInventoryUpdate = (event) => {
+      console.log('Inventory updated, refreshing data...');
+      fetchInventoryData(true);
+    };
 
-          if (!fileResponse.ok) {
-            console.error(`Error fetching ${file.name}: ${fileResponse.status}`);
-            return null;
-          }
+    window.addEventListener('inventoryUpdated', handleInventoryUpdate);
+    return () => window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
+  }, []);
 
-          const itemData = await fileResponse.json();
-
-          // Extract ID from filename if it follows the pattern id-PartName-ManufacturerPart.json
-          const fileNameMatch = file.name.match(/^(\d+)-.*\.json$/);
-          if (fileNameMatch && !itemData.id) {
-            itemData.id = fileNameMatch[1];
-          }
-
-          return itemData;
-        } catch (error) {
-          console.error(`Error processing file ${file.name}:`, error);
-          return null;
-        }
-      }
-      return null;
-    });
-
-    const items = (await Promise.all(itemPromises)).filter(item => item !== null);
-    // console.log(`Successfully loaded ${items.length} items`);
-
-    setInventoryItems(items);
-    setFilteredItems(items);
-
-    // // Save to localStorage as backup
-    // localStorage.setItem('inventoryItems', JSON.stringify(items));
-
-    return items;
-  };
-
-  // Fetch inventory items from GitHub or localStorage
   const fetchInventoryItems = async () => {
     setIsLoading(true);
     setError(null);
 
-    console.log("fetchInventoryItems - current config:", config);
-
-
-    if (!config.token || !config.repo || !config.owner) {
-      console.error("GitHub configuration is incomplete");
-      setError("GitHub configuration is incomplete");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const { token, repo, owner, path } = config;
-      console.log("fetchInventoryItems - config before testGitHubAccess:", { token, repo, owner, path });
-
-      // First, test GitHub API access
-      const canAccessGitHub = await testGitHubAccess();
-      if (!canAccessGitHub) {
-        throw new Error("Could not access GitHub API with provided credentials");
-      }
-
-      // Ensure correct path structure
-      // The error shows /db/jsons/ but your code may use a different path
-      // For debugging, let's try both path structures
-      console.log("fetchInventoryItems - config before directory fetch:", { token, repo, owner, path });
-
-      const jsonDirPath = path ? `${path}/jsons` : 'db/jsons';
-      console.log(`Trying to fetch from directory: ${jsonDirPath}`);
-
-      // GitHub API URL for contents
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${jsonDirPath}`;
-      // console.log(`Fetching directory listing from: ${apiUrl}`);
-
-      const response = await fetch(apiUrl, {
-        headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github.v3+json"
-        }
-      });
-
-      // Log response details for debugging
-      // console.log(`Directory listing response status: ${response.status}`);
-
-      if (response.status === 404) {
-        // Try alternative path as fallback
-        const altPath = path ? 'db/jsons' : 'database/jsons';
-        // console.log(`Directory not found. Trying alternative path: ${altPath}`);
-
-        const altApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${altPath}`;
-        const altResponse = await fetch(altApiUrl, {
-          headers: {
-            "Authorization": `token ${token}`,
-            "Accept": "application/vnd.github.v3+json"
-          }
-        });
-
-        if (altResponse.status === 404) {
-          throw new Error("Inventory directory not found in either location");
-        }
-
-        if (!altResponse.ok) {
-          const errorData = await altResponse.json().catch(() => ({}));
-          throw new Error(`GitHub API error: ${altResponse.status} - ${errorData.message || altResponse.statusText}`);
-        }
-
-        const files = await altResponse.json();
-        // console.log(`Found ${files.length} files in alternative directory`);
-
-        // Update path for future use if this worked
-        updateConfig({ path: altPath.split('/')[0] });
-
-        return processFiles(files);
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`GitHub API error: ${response.status} - ${errorData.message || response.statusText}`);
-      }
-
-      const files = await response.json();
-      const items = await processFiles(files);
-      // console.log(`Found ${files.length} files in directory`);
+      const items = await fetchInventoryFromGitHub(config);
       setInventoryItems(items);
       setFilteredItems(items);
-      return processFiles(files);
-
     } catch (error) {
-      console.error("Error fetching inventory items:", error);
       setError(error.message);
-
-      // Try to load from localStorage as fallback
-      // const localItems = localStorage.getItem('inventoryItems');
-      // if (localItems) {
-      //   console.log("Loading items from localStorage as fallback");
-      //   const items = JSON.parse(localItems);
-      //   setInventoryItems(items);
-      //   setFilteredItems(items);
-      // }
     } finally {
       setIsLoading(false);
     }
@@ -533,8 +338,6 @@ const ManageInventory = () => {
     setFilteredItems(result);
   };
 
-  // Add these helper functions after the existing GitHub config import
-
   // Function to move file to recycle bin
   const moveToRecycleBin = async (itemId) => {
     const { token, repo, owner, path } = config;
@@ -695,85 +498,7 @@ const ManageInventory = () => {
       }
     }
   };
-  // Improved GitHub file deletion function with better error handling
-  const deleteFileFromGitHub = async (itemId) => {
-    if (!itemId) {
-      throw new Error("Invalid item ID for deletion");
-    }
 
-    try {
-      const { token, repo, owner, path } = config;
-
-      // Validate GitHub config
-      if (!token || !repo || !owner) {
-        throw new Error("Incomplete GitHub configuration");
-      }
-
-      // Find the complete item to get all necessary fields for filename
-      const item = inventoryItems.find(item => item.manufacturerPart === itemId);
-      if (!item) {
-        throw new Error("Item not found in inventory data");
-      }
-      // Use the correct file naming format
-      const fileName = `${item.id}-${item.partName}-${item.manufacturerPart}.json`.replace(/\s+/g, '_');
-
-      // Path to the specific JSON file
-      const filePath = `${path}/jsons/${fileName}`;
-      console.log(`Attempting to delete: ${filePath}`);
-
-      // First, we need to get the file's SHA
-      const fileInfoUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-
-      const infoResponse = await fetch(fileInfoUrl, {
-        headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github.v3+json"
-        }
-      });
-
-      // Handle file not found case
-      if (infoResponse.status === 404) {
-        console.warn(`File ${filePath} not found on GitHub`);
-        return true; // Consider it a success if the file doesn't exist
-      }
-
-      // Handle other API errors
-      if (!infoResponse.ok) {
-        const errorData = await infoResponse.json().catch(() => ({}));
-        throw new Error(`GitHub API error ${infoResponse.status}: ${errorData.message || infoResponse.statusText}`);
-      }
-
-      const fileInfo = await infoResponse.json();
-      if (!fileInfo || !fileInfo.sha) {
-        throw new Error("Failed to get file SHA from GitHub");
-      }
-
-      // Now delete the file using the SHA
-      const deleteResponse = await fetch(fileInfoUrl, {
-        method: 'DELETE',
-        headers: {
-          "Authorization": `token ${token}`,
-          "Content-Type": "application/json",
-          "Accept": "application/vnd.github.v3+json"
-        },
-        body: JSON.stringify({
-          message: `Delete inventory item: ${itemId}`,
-          sha: fileInfo.sha
-        })
-      });
-
-      if (!deleteResponse.ok) {
-        const errorData = await deleteResponse.json().catch(() => ({}));
-        throw new Error(`Delete failed with status ${deleteResponse.status}: ${errorData.message || deleteResponse.statusText}`);
-      }
-
-      // console.log(`Successfully deleted ${filePath} from GitHub`);
-      return true;
-    } catch (error) {
-      console.error("Error in deleteFileFromGitHub:", error);
-      throw error; // Re-throw to allow handling in the caller
-    }
-  };
   // Handle sort click
   const handleSort = (field) => {
     if (sortField === field) {
@@ -808,10 +533,14 @@ const ManageInventory = () => {
   };
 
   // Handle search input change
+  const searchTimeout = useRef();
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+    const value = e.target.value;
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setSearchTerm(value);
+    }, 300); // 300ms debounce
   };
-
   // Handle filter changes
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -1072,11 +801,7 @@ const ManageInventory = () => {
     );
   };
 
-  // Helper function to open PDF in viewer
-  const openPdfViewer = (pdfUrl, itemId) => {
-    // Use Mozilla's PDF.js viewer (most reliable)
-    window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`, '_blank');
-  };
+
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
