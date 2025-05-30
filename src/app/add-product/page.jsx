@@ -2,7 +2,7 @@
 import Header from "@/components/Header";
 
 import { useState, useEffect, useRef } from "react";
-import { Clipboard, Folder, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, Github, ChevronDown, PlusCircle, Trash2 } from "lucide-react";
+import { Clipboard, Folder, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, ChevronDown, PlusCircle, Trash2 } from "lucide-react";
 import githubConfigImport from '@/config/githubConfig';
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
@@ -145,13 +145,7 @@ const Addproductform = () => {
         setBinLocations([]);
         setNewBinLocation("");
         setNewBinQuantity("");
-        // Set quantity to 0 if tracking total separately
-        setFormData(prev => ({
-            ...prev,
-            binLocations: []
-        }));
 
-        // Clear previews
         setImagePreview(null);
         setDatasheetName(null);
 
@@ -1207,54 +1201,7 @@ const Addproductform = () => {
                                     {/* Part Name */}
                                     {renderAutocomplete("partName", "Part Name", true)}
                                     {/* Category */}
-                                    {/* <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Category <span className="text-red-500">*</span>
-                                        </label>
-                                        {addingField === "category" ? (
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="text"
-                                                    id="new-category"
-                                                    name="category"
-                                                    value={newEntries.category}
-                                                    onChange={handleNewEntryChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    placeholder="Enter new category"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => addNewEntry("category")}
-                                                    className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
-                                                >
-                                                    Add
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center">
-                                                <select
-                                                    name="category"
-                                                    value={formData.category}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                >
-                                                    <option value="">Select a category</option>
-                                                    {dropdownOptions.categories.map((category, index) => (
-                                                        <option key={index} value={category}>
-                                                            {category}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setAddingField(addingField === "category" ? null : "category")}
-                                                    className="px-3 py-2 border border-blue-100 bg-blue-100 text-blue-700 rounded-r-md hover:bg-blue-200 flex items-center"
-                                                >
-                                                    <PlusCircle className="h-4 w-4 mr-1" /> New
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div> */}
+                                
                                     {renderAutocomplete("category", "Category", true)}
 
                                     {/* Customer Reference */}
@@ -1402,6 +1349,7 @@ const Addproductform = () => {
                                                         required={true}
 
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        
                                                         placeholder="Bin identifier"
                                                     />
                                                 </div>
