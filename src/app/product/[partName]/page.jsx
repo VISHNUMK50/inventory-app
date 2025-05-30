@@ -423,33 +423,67 @@ export default function ProductDetail({ params }) {
   };
 
   // --- SAVE CHANGES ---
-  const saveChanges = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      const { token, repo, owner, path, branch = 'main' } = config;
-      const productToSave = {
-        ...editedProduct,
-        id: product.id,
-        lastModified: new Date().toISOString()
-      };
+const saveChanges = async () => {
+  setIsSaving(true);
+  setSaveError(null);
+  try {
+    const { token, repo, owner, path, branch = 'main' } = config;
+    const productToSave = {
+      ...editedProduct,
+      id: product.id,
+      lastModified: new Date().toISOString()
+    };
 
-      const fileUpdates = [];
+    const fileUpdates = [];
 
-      // Compute old and new JSON filenames
-      const oldSanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-      const oldSanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-      const oldJsonFileName = `${product.id}-${oldSanitizedPartName}-${oldSanitizedManufacturerPart}.json`;
-      const oldJsonFilePath = `${path}/jsons/${oldJsonFileName}`;
+    // Compute old and new JSON filenames
+    const oldSanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+    const oldSanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+    const oldJsonFileName = `${product.id}-${oldSanitizedPartName}-${oldSanitizedManufacturerPart}.json`;
+    const oldJsonFilePath = `${path}/jsons/${oldJsonFileName}`;
 
-      const newSanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-      const newSanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-      const newJsonFileName = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}.json`;
-      const newJsonFilePath = `${path}/jsons/${newJsonFileName}`;
+    const newSanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+    const newSanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+    const newJsonFileName = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}.json`;
+    const newJsonFilePath = `${path}/jsons/${newJsonFileName}`;
 
-      // If filename changed, delete the old file
-      if (oldJsonFilePath !== newJsonFilePath) {
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldJsonFilePath}`;
+    // If filename changed, delete the old JSON file
+    if (oldJsonFilePath !== newJsonFilePath) {
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldJsonFilePath}`;
+      const resp = await fetch(apiUrl, {
+        headers: { "Authorization": `token ${token}` }
+      });
+      if (resp.ok) {
+        const fileData = await resp.json();
+        await fetch(apiUrl, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: `Delete old product file ${oldJsonFileName}`,
+            sha: fileData.sha,
+            branch
+          })
+        });
+      }
+    }
+
+    // --- DELETE OLD IMAGE IF CHANGED ---
+    if (
+      product.image &&
+      productToSave.image &&
+      product.image !== productToSave.image &&
+      product.image.startsWith("https://") // Only delete if it's a GitHub URL
+    ) {
+      // Extract old image filename
+      const oldImageUrl = product.image;
+      const oldImagePath = decodeURIComponent(
+        oldImageUrl.split(`/${owner}/${repo}/${branch}/`)[1] || ""
+      );
+      if (oldImagePath) {
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldImagePath}`;
         const resp = await fetch(apiUrl, {
           headers: { "Authorization": `token ${token}` }
         });
@@ -462,66 +496,101 @@ export default function ProductDetail({ params }) {
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
-              message: `Delete old product file ${oldJsonFileName}`,
+              message: `Delete old image file ${oldImagePath}`,
               sha: fileData.sha,
               branch
             })
           });
         }
       }
-
-      // Handle image upload
-      if (productToSave.imageModified && productToSave.imageData) {
-        const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
-        const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
-        fileUpdates.push({
-          path: imageFilePath,
-          content: productToSave.imageData,
-        });
-        productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-        delete productToSave.imageData;
-        delete productToSave.imageModified;
-      }
-
-      // Handle datasheet upload
-      if (productToSave.datasheetModified && productToSave.datasheetData) {
-        const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
-        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
-        fileUpdates.push({
-          path: datasheetFilePath,
-          content: productToSave.datasheetData,
-        });
-        productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-        delete productToSave.datasheetData;
-        delete productToSave.datasheetModified;
-      }
-
-      // Always save the product JSON with the new name
-      fileUpdates.push({
-        path: newJsonFilePath,
-        content: safeBase64Encode(JSON.stringify(productToSave, null, 2)),
-      });
-
-      // Commit all files in one batch
-      if (token && repo && owner && fileUpdates.length > 0) {
-        await batchCommitToGithub({
-          token,
-          repo,
-          owner,
-          branch,
-          fileUpdates,
-          commitMessage: "Update product information and assets"
-        });
-      }
-
-      setProduct(productToSave);
-      setEditMode(false);
-    } catch (error) {
-      setSaveError(error.message || "Failed to save changes");
-    } finally {
-      setIsSaving(false);
     }
-  };
+
+    // --- DELETE OLD DATASHEET IF CHANGED ---
+    if (
+      product.datasheet &&
+      productToSave.datasheet &&
+      product.datasheet !== productToSave.datasheet &&
+      product.datasheet.startsWith("https://")
+    ) {
+      const oldDatasheetUrl = product.datasheet;
+      const oldDatasheetPath = decodeURIComponent(
+        oldDatasheetUrl.split(`/${owner}/${repo}/${branch}/`)[1] || ""
+      );
+      if (oldDatasheetPath) {
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldDatasheetPath}`;
+        const resp = await fetch(apiUrl, {
+          headers: { "Authorization": `token ${token}` }
+        });
+        if (resp.ok) {
+          const fileData = await resp.json();
+          await fetch(apiUrl, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `token ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              message: `Delete old datasheet file ${oldDatasheetPath}`,
+              sha: fileData.sha,
+              branch
+            })
+          });
+        }
+      }
+    }
+
+    // Handle image upload
+    if (productToSave.imageModified && productToSave.imageData) {
+      const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
+      const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
+      fileUpdates.push({
+        path: imageFilePath,
+        content: productToSave.imageData,
+      });
+      productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
+      delete productToSave.imageData;
+      delete productToSave.imageModified;
+    }
+
+    // Handle datasheet upload
+    if (productToSave.datasheetModified && productToSave.datasheetData) {
+      const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
+      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
+      fileUpdates.push({
+        path: datasheetFilePath,
+        content: productToSave.datasheetData,
+      });
+      productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
+      delete productToSave.datasheetData;
+      delete productToSave.datasheetModified;
+    }
+
+    // Always save the product JSON with the new name
+    fileUpdates.push({
+      path: newJsonFilePath,
+      content: safeBase64Encode(JSON.stringify(productToSave, null, 2)),
+    });
+
+    // Commit all files in one batch
+    if (token && repo && owner && fileUpdates.length > 0) {
+      await batchCommitToGithub({
+        token,
+        repo,
+        owner,
+        branch,
+        fileUpdates,
+        commitMessage: "Update product information and assets"
+      });
+    }
+
+    setProduct(productToSave);
+    setEditMode(false);
+  } catch (error) {
+    setSaveError(error.message || "Failed to save changes");
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // --- AUTOCOMPLETE RENDER ---
   const renderAutocomplete = (field, label, required = false) => {

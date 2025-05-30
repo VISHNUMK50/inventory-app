@@ -1,8 +1,11 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { FileText, Download, Search, AlertCircle, X } from 'lucide-react';
-import githubConfig from '@/config/githubConfig';
+import githubConfigImport from '@/config/githubConfig';
 import Header from "@/components/Header";
+import { doc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/config/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function Datasheets() {
     const [datasheets, setDatasheets] = useState([]);
@@ -15,6 +18,69 @@ export default function Datasheets() {
     const [selectedImage, setSelectedImage] = useState('');
     const [imageUrls, setImageUrls] = useState({});
     const [quantityData, setQuantityData] = useState({});
+    const [githubConfig, setGithubConfig] = useState(githubConfigImport);
+    const [configLoaded, setConfigLoaded] = useState(false);
+
+    // Fetch user config (like manage-inventory)
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (!currentUser) {
+                setConfigLoaded(true);
+                return;
+            }
+            const fetchUserConfig = async () => {
+                const docId = currentUser.email.replace(/\./g, "_");
+                const userDoc = await getDoc(doc(db, "users", docId));
+                let config = githubConfigImport;
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    if (data.githubConfig) {
+                        config = {
+                            ...githubConfigImport,
+                            ...data.githubConfig,
+                            token: data.githubConfig.token || githubConfigImport.token,
+                        };
+                        const username = currentUser.displayName || currentUser.email.split('@')[0] || "user";
+                        const uid = currentUser.uid || "nouid";
+                        config.path = `${username}-${uid}/db`;
+                        config.datasheets = `${username}-${uid}/db/datasheets`;
+                    }
+                }
+                setGithubConfig(config);
+                setConfigLoaded(true);
+            };
+            fetchUserConfig();
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // Fetch datasheets with POST and config
+    useEffect(() => {
+        if (!configLoaded) return;
+        const fetchDatasheets = async () => {
+            setLoading(true);
+            try {
+                const response = await fetch(`/api/datasheets`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ githubConfig }),
+                });
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    setDatasheets(data);
+                } else if (data.error) {
+                    setError(data.error);
+                } else {
+                    setError('Invalid data format received');
+                }
+            } catch (error) {
+                setError('Failed to fetch datasheets');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDatasheets();
+    }, [configLoaded, githubConfig]);
 
     const fetchDatasheetDetails = async (datasheet) => {
         // Check if we already have the data cached
@@ -51,30 +117,7 @@ export default function Datasheets() {
 
         return 0;
     };
-    useEffect(() => {
-        const fetchDatasheets = async () => {
-            try {
-                const response = await fetch(`/api/datasheets`);
-                const data = await response.json();
 
-                // Verify that data is an array
-                if (Array.isArray(data)) {
-                    setDatasheets(data);
-                } else if (data.error) {
-                    setError(data.error);
-                } else {
-                    setError('Invalid data format received');
-                }
-            } catch (error) {
-                console.error('Error fetching datasheets:', error);
-                setError('Failed to fetch datasheets');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchDatasheets();
-    }, []);
 
     const [imageLoadErrors, setImageLoadErrors] = useState({});
 
@@ -90,15 +133,7 @@ export default function Datasheets() {
         )
         : [];
 
-    if (error) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="text-red-600 bg-red-50 p-4 rounded-lg">
-                    Error: {error}
-                </div>
-            </div>
-        );
-    }
+
     const openPdfModal = (pdfUrl) => {
         setSelectedPdf(pdfUrl);
         setIsPdfModalOpen(true);
@@ -311,40 +346,48 @@ export default function Datasheets() {
             </div>
         );
     };
-useEffect(() => {
-    const fetchAllQuantities = async () => {
-        const quantities = {};
-        for (const datasheet of datasheets) {
-            const qty = await fetchDatasheetDetails(datasheet);
-            quantities[datasheet.id] = qty;
-        }
-        setQuantityData(quantities);
-    };
+    useEffect(() => {
+        const fetchAllQuantities = async () => {
+            const quantities = {};
+            for (const datasheet of datasheets) {
+                const qty = await fetchDatasheetDetails(datasheet);
+                quantities[datasheet.id] = qty;
+            }
+            setQuantityData(quantities);
+        };
 
-    if (datasheets.length > 0) {
-        fetchAllQuantities();
-    }
-}, [datasheets]);
+        if (datasheets.length > 0) {
+            fetchAllQuantities();
+        }
+    }, [datasheets]);
     return (
         <div className="min-h-screen bg-white shadow-xl">
             {/* Main header - with class for targeting */}
 
             <Header title="Component Datasheets" />
 
-
-            <div className="px-5 py-5">
-                <div className="relative max-w-2xl mx-auto">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                        type="text"
-                        placeholder="Search datasheets..."
-                        className="w-full pl-12 pr-4 py-3 border border-gray-500 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+            {error ? (
+                <div className="container mx-auto px-4 py-8">
+                    <div className="text-red-600 bg-red-50 p-4 rounded-lg">
+                        Error: {error}
+                    </div>
                 </div>
-            </div>
+            ) : (
 
+
+                <div className="px-5 py-5">
+                    <div className="relative max-w-2xl mx-auto">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                        <input
+                            type="text"
+                            placeholder="Search datasheets..."
+                            className="w-full pl-12 pr-4 py-3 border border-gray-500 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+            )}
             {loading ? (
                 <div className="flex justify-center items-center h-64">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -352,28 +395,26 @@ useEffect(() => {
             ) : (
                 <div className="px-5 py-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredDatasheets.map((datasheet) => (
-    <div
-        key={datasheet.id}
-        className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 relative overflow-hidden border-t-4 ${
-            quantityData[datasheet.id] > 0 
-                ? 'border-t-green-600' 
-                : 'border-t-red-600'
-        }`}
-        onClick={() => openPdfModal(datasheet.downloadUrl)}
-    >
-        <div className="flex justify-between items-start space-x-4">
-            <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2">
-                    {datasheet.name}
-                </h3>
-                <p className={`text-sm font-medium ${
-                    quantityData[datasheet.id] > 0 
-                        ? 'text-green-600' 
-                        : 'text-red-600'
-                }`}>
-                    {datasheet.partNumber} ({quantityData[datasheet.id] || 0} available)
-                </p>
-            </div>
+                        <div
+                            key={datasheet.id}
+                            className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 relative overflow-hidden border-t-4 ${quantityData[datasheet.id] > 0
+                                ? 'border-t-green-600'
+                                : 'border-t-red-600'
+                                }`}
+                            onClick={() => openPdfModal(datasheet.downloadUrl)}
+                        >
+                            <div className="flex justify-between items-start space-x-4">
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2">
+                                        {datasheet.name}
+                                    </h3>
+                                    <p className={`text-sm font-medium ${quantityData[datasheet.id] > 0
+                                        ? 'text-green-600'
+                                        : 'text-red-600'
+                                        }`}>
+                                        {datasheet.partNumber} ({quantityData[datasheet.id] || 0} available)
+                                    </p>
+                                </div>
                                 <div className="relative">
                                     <ImagePreview
                                         url={getImageUrl(datasheet)}
@@ -421,6 +462,7 @@ useEffect(() => {
                 altText="Component Image"
                 onClose={() => setIsImageModalOpen(false)}
             />
+
         </div>
     );
 }
