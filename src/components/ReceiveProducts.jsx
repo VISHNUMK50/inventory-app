@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Package, Search, AlertCircle, Plus, RefreshCw } from "lucide-react";
 import githubConfig from '../config/githubConfig';
-import Header from "@/components/Header";
 
 
 const ReceiveProducts = () => {
@@ -325,7 +324,6 @@ const ReceiveProducts = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       {/* Header */}
-      <Header title="Receive Products" />
 
       {/* Main Content - Flex-grow to fill available space */}
       <main className="flex-grow">

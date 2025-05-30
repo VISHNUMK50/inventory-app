@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import Header from "@/components/Header";
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({
@@ -34,7 +33,6 @@ export default function ContactUs() {
 
   return (
     <>
-          <Header title="Inventory Management System" />
 
       <Head>
         <title>Contact Us | Your Company</title>

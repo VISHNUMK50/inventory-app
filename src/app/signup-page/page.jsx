@@ -2,11 +2,11 @@
 import { useState } from "react";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../../config/firebase";
-import { getFirestore, doc, setDoc } from "firebase/firestore"; // Firestore imports
+import { doc, setDoc } from "firebase/firestore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-const db = getFirestore(); // Initialize Firestore
+import githubConfig from "@/config/githubConfig";
+import { db } from "@/config/firebase";
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -23,23 +23,41 @@ const SignupPage = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
-
-      // Generate a unique user ID (Firebase's `uid`)
       const userId = user.uid;
+      const username = formData.email.split("@")[0];
+
+      // Build initial GitHub config for this user
+      const userGithubConfig = {
+        token: "",
+        repo: githubConfig.repo || "inv-db",
+        owner: githubConfig.owner || "VISHNUMK50",
+        branch: githubConfig.branch || "master",
+        path: `${username}-${userId}/db`,
+        datasheets: `${username}-${userId}/db/datasheets`
+      };
 
       // Save user details to Firestore
-      await setDoc(doc(db, "users", userId), {
-        email: formData.email,
+      const docId = user.email.replace(/\./g, "_");
+      await setDoc(doc(db, "users", docId), {
         createdAt: new Date().toISOString(),
-        userId: userId,
+        user: {
+          uid: userId,
+          email: user.email,
+          displayName: user.displayName || "",
+          photoURL: user.photoURL || "",
+          phone: "",
+          address: "",
+          company: "",
+          position: ""
+        },
+        githubConfig: userGithubConfig
       });
 
-      alert("Account created successfully!");
       setError("");
-      router.push("/dashboard"); // Redirect to the dashboard
+      router.push("/profile");
     } catch (err) {
-      console.error("Error creating account:", err.message); // Log the error
-      setError(err.message); // Display the exact error message
+      console.error("Error creating account:", err.message);
+      setError(err.message);
     }
   };
 
@@ -48,23 +66,42 @@ const SignupPage = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
-      // Generate a unique user ID (Firebase's `uid`)
       const userId = user.uid;
+      const username = user.email.split("@")[0];
+
+      // Build initial GitHub config for this user
+      const userGithubConfig = {
+        token: "",
+        repo: githubConfig.repo || "inv-db",
+        owner: githubConfig.owner || "VISHNUMK50",
+        branch: githubConfig.branch || "master",
+        path: `${username}-${userId}/db`,
+        datasheets: `${username}-${userId}/db/datasheets`
+      };
 
       // Save user details to Firestore
-      await setDoc(doc(db, "users", userId), {
-        email: user.email,
+      const docId = user.email.replace(/\./g, "_");
+      await setDoc(doc(db, "users", docId), {
         createdAt: new Date().toISOString(),
-        userId: userId,
+        user: {
+          uid: userId,
+          email: user.email,
+          displayName: user.displayName || "",
+          photoURL: user.photoURL || "",
+          phone: "",
+          address: "",
+          company: "",
+          position: ""
+        },
+        githubConfig: userGithubConfig
       });
 
       alert("Google Sign-Up successful!");
       setError("");
-      router.push("/dashboard"); // Redirect to the dashboard
+      router.push("/profile");
     } catch (err) {
-      console.error("Error with Google Sign-Up:", err.message); // Log the error
-      setError(err.message); // Display the exact error message
+      console.error("Error with Google Sign-Up:", err.message);
+      setError(err.message);
     }
   };
 
@@ -124,7 +161,7 @@ const SignupPage = () => {
             className="mt-2 w-full bg-gray-100 py-2 font-semibold rounded-md hover:bg-gray-200 transition flex items-center justify-center"
           >
             <img
-              src="/google-icon.svg" // Replace with the path to your Google icon
+              src="/google-icon.svg"
               alt="Google"
               className="h-5 w-5 mr-2"
             />

@@ -6,7 +6,6 @@ import {
     ShoppingCart, Download, Save, Trash2, Calendar, User
 } from "lucide-react";
 import githubConfig from '../config/githubConfig';
-import Header from "@/components/Header";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 const OrderCheckout = () => {
@@ -522,7 +521,6 @@ const OrderCheckout = () => {
     return (
         <div className="flex flex-col min-h-screen bg-gray-100">
             {/* Header */}
-            <Header title="Create Order / Checkout" />
 
             {/* Main Content */}
             <main className="flex-grow p-6">

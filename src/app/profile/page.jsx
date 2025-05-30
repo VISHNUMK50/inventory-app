@@ -1,21 +1,23 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { Save, Upload, Camera } from "lucide-react";
-import { auth } from "@/config/firebase"; // Adjust the path to your firebase.js file
-import githubConfig from "@/config/githubConfig"; // Update import name
-import Header from "@/components/Header"; // Adjust the import path as necessary
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db, auth } from "@/config/firebase";
+import githubConfig from "@/config/githubConfig";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 
 const ProfilePage = () => {
+  const router = useRouter();
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "(555) 123-4567",
-    address: "123 Main Street, Springfield, USA",
-    company: "Doe Enterprises",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    company: "",
     position: "Manager",
   });
   const [userId, setUserId] = useState(""); // State to store the User ID
@@ -23,6 +25,8 @@ const ProfilePage = () => {
   const [config, setConfig] = useState(null); // State to store the GitHub config
   const [photoPreview, setPhotoPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+
+
   // Fetch the User ID and generate the GitHub path
   useEffect(() => {
     const currentUser = auth.currentUser;
@@ -35,7 +39,11 @@ const ProfilePage = () => {
       setGithubPath(path);
       // Remove the function call and just set the config
       setConfig(githubConfig);
-      fetchProfileData(username);
+      setFormData(prev => ({
+        ...prev,
+        name: username, // Set name from Firebase username
+        email: email // Set email from Firebase
+      }));
 
     }
   }, []);
@@ -48,24 +56,43 @@ const ProfilePage = () => {
     });
   };
 
-  const fetchProfileData = async (username) => {
-    try {
-      const response = await fetch(`/api/profile/${username}`);
-      if (response.ok) {
-        const data = await response.json();
-        setFormData(prev => ({ ...prev, ...data }));
-        if (data.profilePhoto) {
-          setPhotoPreview(data.profilePhoto);
+
+  // Fetch profile data from Firestore when the component mounts
+  useEffect(() => {
+    const fetchProfileFromFirestore = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const uid = currentUser.uid;
+        const email = currentUser.email;
+        const username = email.split("@")[0];
+        setUserId(uid);
+        setGithubPath(`${username}-${uid}`);
+        const docId = email.replace(/\./g, "_");
+        const userDoc = await getDoc(doc(db, "users", docId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          const userData = data.user || {};
+          setFormData({
+            name: userData.displayName || "",
+            email: userData.email || email,
+            phone: userData.phone || "",
+            address: userData.address || "",
+            company: userData.company || "",
+            position: userData.position || "Manager",
+          });
+          if (userData.photoURL) setPhotoPreview(userData.photoURL);
+        } else {
+          setFormData(prev => ({ ...prev, email }));
         }
       }
-    } catch (error) {
-      console.error("Error loading profile data:", error);
-    }
-  };
+    };
+    fetchProfileFromFirestore();
+  }, []);
 
   const handlePhotoClick = () => {
     fileInputRef.current?.click();
   };
+
   const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -103,20 +130,26 @@ const ProfilePage = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/profile/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: formData,
-          path: githubPath
-        })
-      });
-
-      if (response.ok) {
-        alert("Profile updated successfully!");
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        alert("User not authenticated");
+        return;
       }
+      const docId = currentUser.email.replace(/\./g, "_");
+      await updateDoc(doc(db, "users", docId), {
+        user: {
+          uid: userId,
+          email: currentUser.email,
+          displayName: formData.name,
+          photoURL: photoPreview || currentUser.photoURL,
+          phone: formData.phone,
+          address: formData.address,
+          company: formData.company,
+          position: formData.position,
+        }
+      });
+      alert("Profile updated successfully!");
+      router.push("/dashboard");
     } catch (error) {
       console.error("Error saving profile:", error);
       alert("Failed to update profile");
@@ -126,9 +159,8 @@ const ProfilePage = () => {
 
 
 
-
   return (
-    <div className="mx-auto bg-white shadow-xl overflow-hidden">      <Header title="My Profile" />
+    <div className="mx-auto bg-white shadow-xl overflow-hidden">      
 
       <div className="flex flex-col items-center w-full gap-6">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 flex flex-col items-center">
@@ -179,6 +211,7 @@ const ProfilePage = () => {
                   type="text"
                   value={userId}
                   readOnly
+                  onFocus={(e) => e.target.blur()} // Prevents editing
                   className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
@@ -188,6 +221,7 @@ const ProfilePage = () => {
                   type="text"
                   value={githubPath}
                   readOnly
+                  onFocus={(e) => e.target.blur()} // Prevents editing
                   className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
@@ -209,8 +243,9 @@ const ProfilePage = () => {
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  readOnly
+                  onFocus={(e) => e.target.blur()} // Prevents editing
+                  className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
             </div>

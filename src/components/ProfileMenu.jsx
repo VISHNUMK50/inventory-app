@@ -4,8 +4,10 @@ import { User, Settings, HelpCircle, Moon, Sun, LogOut } from "lucide-react";
 import Link from "next/link";
 import { signOut } from "firebase/auth";
 import { auth } from "../config/firebase"; // Adjust the path to your firebase.js file
+import { useRouter } from "next/navigation";
 
 const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
+    const router = useRouter();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const menuRef = useRef(null); // Reference to the menu container
 
