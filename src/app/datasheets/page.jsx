@@ -93,7 +93,25 @@ export default function Datasheets() {
         });
         return () => unsubscribe();
     }, []);
-
+useEffect(() => {
+    if (!configLoaded) return;
+    const fetchLastUsedId = async () => {
+        try {
+            const idTrackerPath = `${githubConfig.path}/lastUsedId.json`;
+            const url = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/${githubConfig.branch}/${idTrackerPath}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.lastUsedId) {
+                    localStorage.setItem('lastUsedId', data.lastUsedId.toString());
+                }
+            }
+        } catch (e) {
+            // fallback: do nothing, will use localStorage or default
+        }
+    };
+    fetchLastUsedId();
+}, [configLoaded, githubConfig]);
     // Fetch datasheets with POST and config
     useEffect(() => {
         if (!configLoaded) return;
