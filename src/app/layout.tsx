@@ -45,10 +45,7 @@ export default function RootLayout({
         <meta name="msapplication-navbutton-color" content="#1D4ED8" /> {/* Windows Phone */}
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
-
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         <main className="flex-grow">
           {children}
         </main>

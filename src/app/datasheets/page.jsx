@@ -30,15 +30,33 @@ export default function Datasheets() {
 
     const [showAddProductModal, setShowAddProductModal] = useState(false);
     const [addProductForm, setAddProductForm] = useState({
+        id: "",  // Add this line
+        createdAt: "",
         partName: "",
+        manufacturer: "",
         manufacturerPart: "",
+        vendor: "",
+        vendorProductLink: "", // Changed from vendorPart
         image: "",
         imageData: "",
         imageType: "",
         datasheet: "",
         datasheetData: "",
-        datasheetType: ""
+        datasheetType: "",
+        avl_quantity: "",
+        binLocations: [],
+        customerRef: "",
+        description: "",
+        reorderPoint: "",
+        reorderQty: "",
+        costPrice: "",
+        salePrice: "",
+        category: ""
     });
+
+
+    
+
     const [addProductImagePreview, setAddProductImagePreview] = useState(null);
     const [addProductDatasheetName, setAddProductDatasheetName] = useState(null);
     const [isSavingProduct, setIsSavingProduct] = useState(false);
