@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { batchCommitToGithub, safeBase64Encode, saveLastUsedIdToGithub } from "@/utils/githubApi";
 
 export default function Datasheets() {
     const [datasheets, setDatasheets] = useState([]);
@@ -26,6 +27,22 @@ export default function Datasheets() {
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [datasheetToDelete, setDatasheetToDelete] = useState(null);
+
+    const [showAddProductModal, setShowAddProductModal] = useState(false);
+    const [addProductForm, setAddProductForm] = useState({
+        partName: "",
+        manufacturerPart: "",
+        image: "",
+        imageData: "",
+        imageType: "",
+        datasheet: "",
+        datasheetData: "",
+        datasheetType: ""
+    });
+    const [addProductImagePreview, setAddProductImagePreview] = useState(null);
+    const [addProductDatasheetName, setAddProductDatasheetName] = useState(null);
+    const [isSavingProduct, setIsSavingProduct] = useState(false);
+
     // Fetch user config (like manage-inventory)
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -366,6 +383,80 @@ export default function Datasheets() {
         }
     }, [datasheets]);
 
+    async function saveMinimalProduct() {
+        const { token, repo, owner, branch, path } = githubConfig;
+        // Fetch last used ID
+        let lastUsedId = parseInt(localStorage.getItem('lastUsedId') || "1000");
+        const currentId = lastUsedId + 1;
+        const sanitizedManufacturerPart = addProductForm.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+        const sanitizedPartName = addProductForm.partName.replace(/[^a-z0-9():]/gi, "_").replace(/\s+/g, "_");
+        const itemIdentifier = `${currentId}-${sanitizedPartName}-${sanitizedManufacturerPart}`;
+
+        // Prepare data object
+        const dataToSave = {
+            id: currentId.toString(),
+            partName: addProductForm.partName,
+            manufacturerPart: addProductForm.manufacturerPart,
+            image: "",
+            datasheet: "",
+            createdAt: new Date().toISOString()
+        };
+
+        const fileUpdates = [];
+
+        // Image
+        if (addProductForm.image && addProductForm.imageData) {
+            const imageFilePath = `${path}/images/${itemIdentifier}-${addProductForm.image}`;
+            dataToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
+            fileUpdates.push({
+                path: imageFilePath,
+                content: addProductForm.imageData
+            });
+        }
+
+        // Datasheet
+        if (addProductForm.datasheet && addProductForm.datasheetData) {
+            const datasheetFilePath = `${path}/datasheets/${itemIdentifier}-${addProductForm.datasheet}`;
+            dataToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
+            fileUpdates.push({
+                path: datasheetFilePath,
+                content: addProductForm.datasheetData
+            });
+        }
+
+        // JSON
+        const jsonFilePath = `${path}/jsons/${itemIdentifier}.json`;
+        const jsonString = JSON.stringify(dataToSave, null, 2);
+        const jsonContent = safeBase64Encode(jsonString);
+        fileUpdates.push({
+            path: jsonFilePath,
+            content: jsonContent
+        });
+
+        // Update lastUsedId
+        const idTrackerPath = `${path}/lastUsedId.json`;
+        const idString = JSON.stringify({ lastUsedId: currentId }, null, 2);
+        const idContent = safeBase64Encode(idString);
+        fileUpdates.push({
+            path: idTrackerPath,
+            content: idContent
+        });
+
+        // Commit all
+        await batchCommitToGithub({
+            token,
+            repo,
+            owner,
+            branch,
+            fileUpdates,
+            commitMessage: `Added (ID: ${dataToSave.id})-${dataToSave.partName} via datasheet modal.`
+        });
+
+        localStorage.setItem('lastUsedId', currentId.toString());
+        setShowAddProductModal(false);
+        // Optionally: show a success modal or refresh the list
+        window.location.reload();
+    }
     async function uploadDatasheet(file) {
         if (!file) return;
         setLoading(true);
@@ -461,7 +552,9 @@ export default function Datasheets() {
                         <div>
                             <button
                                 className="bg-blue-600 text-white px-2 py-2 rounded-full hover:bg-blue-700 w-full sm:w-auto flex items-center justify-center gap-1"
-                                onClick={() => document.getElementById('datasheet-upload-input').click()}
+                                // onClick={() => document.getElementById('datasheet-upload-input').click()}
+                                onClick={() => setShowAddProductModal(true)}
+
                             >
                                 <PlusCircle className="w-5 h-5" />
                                 <span className="hidden sm:inline">Add Files</span>
@@ -479,7 +572,7 @@ export default function Datasheets() {
                                 }}
                             />
                         </div>
-                        
+
                     </div>
                 </div>
 
@@ -632,6 +725,146 @@ export default function Datasheets() {
                         >
                             Close
                         </button>
+                    </div>
+                </div>
+            )}
+
+
+                      {showAddProductModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center shadow-xl ">
+                    <div className="relative max-w-md w-full">
+                        {/* Accent bar */}
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-32 h-2 rounded-full bg-gradient-to-r from-blue-400 via-blue-600 to-blue-400 blur-sm opacity-70"></div>
+                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-blue-200 p-8 animate-[fadeInScale_0.3s_ease]">
+                            <button
+                                className="absolute top-4 right-4 text-gray-400 hover:text-blue-700 transition-colors"
+                                onClick={() => setShowAddProductModal(false)}
+                                aria-label="Close"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                            <div className="flex flex-col items-center mb-6">
+                                <div className="bg-blue-100 rounded-full p-3 mb-2 shadow">
+                                    <PlusCircle className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-blue-700 mb-1">Add New Product</h2>
+                                <p className="text-gray-500 text-sm text-center">Fill in the details below to add a new part to your inventory.</p>
+                            </div>
+                            <form
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    setIsSavingProduct(true);
+                                    await saveMinimalProduct();
+                                    setIsSavingProduct(false);
+                                }}
+                                className="space-y-5"
+                            >
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1 text-blue-700">Part Name<span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:outline-none transition bg-white/70"
+                                        value={addProductForm.partName}
+                                        onChange={e => setAddProductForm(f => ({ ...f, partName: e.target.value }))}
+                                        placeholder="e.g. 74HC595"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1 text-blue-700">Manufacturer Part<span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:outline-none transition bg-white/70"
+                                        value={addProductForm.manufacturerPart}
+                                        onChange={e => setAddProductForm(f => ({ ...f, manufacturerPart: e.target.value }))}
+                                        placeholder="e.g. SN74HC595N"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1 text-blue-700">Image</label>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="block w-full border border-blue-200 rounded-lg text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            onChange={e => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                setAddProductImagePreview(URL.createObjectURL(file));
+                                                const reader = new FileReader();
+                                                reader.onload = (event) => {
+                                                    const base64String = event.target.result;
+                                                    const base64Data = base64String.split(',')[1];
+                                                    setAddProductForm(f => ({
+                                                        ...f,
+                                                        image: file.name,
+                                                        imageData: base64Data,
+                                                        imageType: file.type
+                                                    }));
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }}
+                                        />
+                                        {addProductImagePreview && (
+                                            <img src={addProductImagePreview} alt="Preview" className="h-12 w-12 object-contain rounded border border-blue-200 shadow" />
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1 text-blue-700">Datasheet</label>
+                                    <input
+                                        type="file"
+                                        accept=".pdf"
+                                        className="block w-full text-sm border border-blue-200 rounded-lg text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                        onChange={e => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+                                            setAddProductDatasheetName(file.name);
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => {
+                                                const base64String = event.target.result;
+                                                const base64Data = base64String.split(',')[1];
+                                                setAddProductForm(f => ({
+                                                    ...f,
+                                                    datasheet: file.name,
+                                                    datasheetData: base64Data,
+                                                    datasheetType: file.type
+                                                }));
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }}
+                                    />
+                                    {addProductDatasheetName && (
+                                        <div className="text-xs mt-1 text-blue-600">{addProductDatasheetName}</div>
+                                    )}
+                                </div>
+                                <div className="flex justify-end gap-2 mt-6">
+                                    <button
+                                        type="button"
+                                        className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+                                        onClick={() => setShowAddProductModal(false)}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold hover:from-blue-600 hover:to-blue-800 shadow transition"
+                                        disabled={isSavingProduct}
+                                    >
+                                        {isSavingProduct ? (
+                                            <span className="flex items-center gap-2">
+                                                <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                                </svg>
+                                                Saving...
+                                            </span>
+                                        ) : "Save"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
