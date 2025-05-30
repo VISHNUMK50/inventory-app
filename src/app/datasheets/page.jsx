@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { FileText, Download, Search, AlertCircle, X } from 'lucide-react';
+import { FileText, Download, Search, Trash, PlusCircle, AlertCircle, X } from 'lucide-react';
 import githubConfigImport from '@/config/githubConfig';
 import Header from "@/components/Header";
 import { doc, getDoc } from "firebase/firestore";
@@ -20,7 +20,12 @@ export default function Datasheets() {
     const [quantityData, setQuantityData] = useState({});
     const [githubConfig, setGithubConfig] = useState(githubConfigImport);
     const [configLoaded, setConfigLoaded] = useState(false);
-
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [datasheetToDelete, setDatasheetToDelete] = useState(null);
     // Fetch user config (like manage-inventory)
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -360,7 +365,71 @@ export default function Datasheets() {
             fetchAllQuantities();
         }
     }, [datasheets]);
+
+    async function uploadDatasheet(file) {
+        if (!file) return;
+        setLoading(true);
+        try {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const base64 = event.target.result.split(',')[1];
+                const filePath = `${githubConfig.datasheets}/${file.name}`;
+                const res = await fetch('/api/github-uploaddatasheet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        githubConfig,
+                        filePath,
+                        content: base64,
+                        message: `Upload datasheet ${file.name}`,
+                    }),
+                });
+                if (res.ok) {
+                    setSuccessMessage('Upload successful');
+                    setShowSuccessModal(true);
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    setErrorMessage('Upload failed');
+                    setShowErrorModal(true);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (err) {
+            setErrorMessage('Upload error');
+            setShowErrorModal(true);
+        }
+        setLoading(false);
+    }
+
+    async function deleteDatasheet(datasheet) {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/github-deletedatasheet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    githubConfig,
+                    filePath: `${githubConfig.datasheets}/${datasheet.originalFileName}`,
+                    message: `Delete datasheet ${datasheet.originalFileName}`,
+                }),
+            });
+            if (res.ok) {
+                setSuccessMessage('Deleted successfully');
+                setShowSuccessModal(true);
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                setErrorMessage('Delete failed');
+                setShowErrorModal(true);
+            }
+        } catch (err) {
+            setErrorMessage('Delete error');
+            setShowErrorModal(true);
+        }
+        setLoading(false);
+    }
+
     return (
+
         <div className="min-h-screen bg-white shadow-xl">
             {/* Main header - with class for targeting */}
 
@@ -375,44 +444,76 @@ export default function Datasheets() {
             ) : (
 
 
-                <div className="px-5 py-5">
-                    <div className="relative max-w-2xl mx-auto">
-                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                        <input
-                            type="text"
-                            placeholder="Search datasheets..."
-                            className="w-full pl-12 pr-4 py-3 border border-gray-500 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                <div className="px-2 py-2">
+                    <div className="flex flex-row items-center justify-center sm:gap-4 gap-3">
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                            <input
+                                type="text"
+                                placeholder="Search datasheets..."
+                                // className="w-full min-w-[260px] max-w-xs pl-12 pr-4 py-3 border border-gray-500 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300"
+                                className="w-full pl-12 pr-4 py-2 border border-gray-500 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300"
+
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <button
+                                className="bg-blue-600 text-white px-2 py-2 rounded-full hover:bg-blue-700 w-full sm:w-auto flex items-center justify-center gap-1"
+                                onClick={() => document.getElementById('datasheet-upload-input').click()}
+                            >
+                                <PlusCircle className="w-5 h-5" />
+                                <span className="hidden sm:inline">Add Files</span>
+                            </button>
+                            <input
+                                id="datasheet-upload-input"
+                                type="file"
+                                accept=".pdf"
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                    if (e.target.files.length > 0) {
+                                        await uploadDatasheet(e.target.files[0]);
+                                        e.target.value = ""; // reset input
+                                    }
+                                }}
+                            />
+                        </div>
+                        
                     </div>
                 </div>
+
             )}
             {loading ? (
                 <div className="flex justify-center items-center h-64">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
             ) : (
-                <div className="px-5 py-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="px-5 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredDatasheets.map((datasheet) => (
                         <div
                             key={datasheet.id}
-                            className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 relative overflow-hidden border-t-4 ${quantityData[datasheet.id] > 0
-                                ? 'border-t-green-600'
-                                : 'border-t-red-600'
+                            className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 relative overflow-hidden border-t-4 ${quantityData[datasheet.id] === undefined
+                                ? 'border-t-black'
+                                : quantityData[datasheet.id] > 0
+                                    ? 'border-t-green-600'
+                                    : 'border-t-red-600'
                                 }`}
                             onClick={() => openPdfModal(datasheet.downloadUrl)}
                         >
+
                             <div className="flex justify-between items-start space-x-4">
                                 <div className="flex-1">
                                     <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2">
                                         {datasheet.name}
                                     </h3>
-                                    <p className={`text-sm font-medium ${quantityData[datasheet.id] > 0
-                                        ? 'text-green-600'
-                                        : 'text-red-600'
+                                    <p className={`text-sm font-medium ${quantityData[datasheet.id] === undefined
+                                        ? 'text-black'
+                                        : quantityData[datasheet.id] > 0
+                                            ? 'text-green-600'
+                                            : 'text-red-600'
                                         }`}>
-                                        {datasheet.partNumber} ({quantityData[datasheet.id] || 0} available)
+                                        {datasheet.partNumber} ({quantityData[datasheet.id] ?? 'N/A'} available)
                                     </p>
                                 </div>
                                 <div className="relative">
@@ -427,6 +528,7 @@ export default function Datasheets() {
                                     />
                                 </div>
                             </div>
+
                             <div className="mt-4 flex items-center justify-between">
                                 <div className="text-xs text-gray-500 flex items-center">
                                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -434,15 +536,27 @@ export default function Datasheets() {
                                     </svg>
                                     {new Date(datasheet.updatedAt).toLocaleDateString()}
                                 </div>
-                                <a
-                                    href={datasheet.downloadUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <Download className="h-5 w-5 text-blue-600" />
-                                </a>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        className="p-2 text-xs text-red-600 hover:text-red-300"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDatasheetToDelete(datasheet);
+                                            setShowDeleteModal(true);
+                                        }}
+                                    >
+                                        <Trash className="h-5 w-5" />
+                                    </button>
+                                    <a
+                                        href={datasheet.downloadUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-2 text-blue-600 hover:text-blue-300 rounded-lg "
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <Download className="h-5 w-5 " />
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     ))}
@@ -462,7 +576,67 @@ export default function Datasheets() {
                 altText="Component Image"
                 onClose={() => setIsImageModalOpen(false)}
             />
+            {
+                showDeleteModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center shadow-xl ">
+                        {/* className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4" */}
 
+                        <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
+                            <h2 className="text-lg font-semibold mb-4">Delete Datasheet</h2>
+                            <p className="mb-6">Are you sure you want to delete <span className="font-bold">{datasheetToDelete?.name}</span>?</p>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                                    onClick={() => setShowDeleteModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                                    onClick={async () => {
+                                        await deleteDatasheet(datasheetToDelete);
+                                        setShowDeleteModal(false);
+                                        setDatasheetToDelete(null);
+                                    }}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center shadow-xl ">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-xs w-full text-center">
+                        <div className="text-green-600 text-lg font-semibold mb-2">Success</div>
+                        <div className="mb-4">{successMessage}</div>
+                        <button
+                            className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                            onClick={() => setShowSuccessModal(false)}
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
+            {showErrorModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center shadow-xl ">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-xs w-full text-center">
+                        <div className="text-red-600 text-lg font-semibold mb-2">Error</div>
+                        <div className="mb-4">{errorMessage}</div>
+                        <button
+                            className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                            onClick={() => setShowErrorModal(false)}
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
+
+
 }

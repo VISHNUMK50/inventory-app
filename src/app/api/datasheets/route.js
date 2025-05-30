@@ -47,6 +47,7 @@ export async function POST(req) {
             },
         });
         const jsonFiles = await jsonsResponse.json();
+
         const jsonFilesMap = new Map(jsonFiles.map(file => {
             const name = file.name.replace('.json', '');
             return [name, file];
@@ -61,7 +62,11 @@ export async function POST(req) {
                 const manufacturerPart = parts[2] || '';
                 const originalFileName = parts.slice(3).join('-');
                 const jsonIdentifier = `${id}-${partName}-${manufacturerPart}`;
-                const matchingJsonFile = jsonFilesMap.get(jsonIdentifier);
+
+                // Find the first JSON file whose name starts with the id
+                const matchingJsonFile = Array.from(jsonFilesMap.values()).find(jsonFile =>
+                    jsonFile.name.startsWith(id)
+                );
 
                 let jsonContent = null;
                 if (matchingJsonFile) {
@@ -74,7 +79,7 @@ export async function POST(req) {
                         });
                         jsonContent = await jsonResponse.json();
                     } catch (error) {
-                        console.error(`[API] Error fetching JSON content for ${jsonIdentifier}:`, error);
+                        console.error(`[API] Error fetching JSON content for ${id}:`, error);
                     }
                 }
 
