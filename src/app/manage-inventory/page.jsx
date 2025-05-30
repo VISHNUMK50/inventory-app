@@ -6,7 +6,7 @@ import githubConfigImport from '@/config/githubConfig';
 
 import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 const ManageInventory = () => {
@@ -36,53 +36,64 @@ const ManageInventory = () => {
     minStock: "",
     maxStock: ""
   });
-    const [githubConfig, setGithubConfig] = useState(githubConfigImport);
-const [config, setConfig] = useState(githubConfig);
+  // console.log("Initial githubConfigImport:", githubConfigImport);
 
-useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            console.log("Auth state changed. Current user:", currentUser);
-            if (!currentUser) {
-                setConfigLoaded(true);
-                return;
-            }
-            const fetchUserConfig = async () => {
-                const docId = currentUser.email.replace(/\./g, "_");
-                // console.log("Firestore docId:", docId);
-                // const userDoc = await getDoc(doc(db, "users", docId));
-                console.log("userDoc.exists():", userDoc.exists());
-                let config = githubConfigImport;
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    console.log("Firestore user data:", data);
-                    if (data.githubConfig) {
-                        config = {
-                            ...githubConfigImport,
-                            ...data.githubConfig,
-                            token: data.githubConfig.token || githubConfigImport.token, // fallback to default if empty
-                        };                        // Ensure path is correct even if Firestore has old value
-                        const username = currentUser.displayName || currentUser.email.split('@')[0] || "user";
-                        const uid = currentUser.uid || "nouid";
-                        config.path = `${username}-${uid}/db`;
-                        config.datasheets = `${username}-${uid}/db/datasheets`;
-                        console.log("githubConfig from Firestore (with dynamic path):", config);
-                    }
-                    if (data.datasheet) setUserDatasheet(data.datasheet);
-                }
-                setGithubConfig(config);
-                setConfigLoaded(true);
-            };
-            fetchUserConfig();
-        });
-        return () => unsubscribe();
-    }, []);
+  const [githubConfig, setGithubConfig] = useState(githubConfigImport);
+  const [config, setConfig] = useState(githubConfig);
+  const [configLoaded, setConfigLoaded] = useState(false); // <-- Add this
+
+  useEffect(() => {
+    console.log("useEffect (onAuthStateChanged) - githubConfig before:", githubConfig);
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log("Auth state changed. Current user:", currentUser);
+      if (!currentUser) {
+        setConfigLoaded(true);
+        return;
+      }
+      const fetchUserConfig = async () => {
+        const docId = currentUser.email.replace(/\./g, "_");
+        // console.log("Firestore docId:", docId);
+        const userDoc = await getDoc(doc(db, "users", docId));
+        console.log("userDoc.exists():", userDoc.exists());
+        let config = githubConfigImport;
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          console.log("Firestore user data:", data);
+          if (data.githubConfig) {
+            config = {
+              ...githubConfigImport,
+              ...data.githubConfig,
+              token: data.githubConfig.token || githubConfigImport.token, // fallback to default if empty
+            };                        // Ensure path is correct even if Firestore has old value
+            const username = currentUser.displayName || currentUser.email.split('@')[0] || "user";
+            const uid = currentUser.uid || "nouid";
+            config.path = `${username}-${uid}/db`;
+            config.datasheets = `${username}-${uid}/db/datasheets`;
+            console.log("githubConfig from Firestore (with dynamic path):", config);
+          }
+          if (data.datasheet) setUserDatasheet(data.datasheet);
+        }
+        setGithubConfig(config);
+        setConfig(config); // <-- Add this line to keep config in sync!
+
+        setConfigLoaded(true);
+        console.log("useEffect (onAuthStateChanged) - githubConfig after set:", config);
+
+      };
+      fetchUserConfig();
+    });
+    return () => unsubscribe();
+  }, []);
 
 
 
   // Fetch inventory items on component mount
-  useEffect(() => {
+ useEffect(() => {
+  if (configLoaded) {
     fetchInventoryItems();
-  }, []);
+  }
+}, [configLoaded]); // <-- Only runs when configLoaded becomes true
 
   // Apply filters and search when inventory items, search term, or filters change
   useEffect(() => {
@@ -117,6 +128,8 @@ useEffect(() => {
   // Add this function before fetchInventoryItems
   const testGitHubAccess = async () => {
     try {
+      console.log("testGitHubAccess - config:", config);
+
       console.log(`Testing access to: https://api.github.com/repos/${config.owner}/${config.repo}`);
 
       const response = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}`, {
@@ -216,12 +229,8 @@ useEffect(() => {
     setIsLoading(true);
     setError(null);
 
-    console.log("GitHub config:", {
-      owner: config.owner,
-      repo: config.repo,
-      path: config.path,
-      hasToken: !!config.token
-    });
+    console.log("fetchInventoryItems - current config:", config);
+
 
     if (!config.token || !config.repo || !config.owner) {
       console.error("GitHub configuration is incomplete");
@@ -232,6 +241,7 @@ useEffect(() => {
 
     try {
       const { token, repo, owner, path } = config;
+      console.log("fetchInventoryItems - config before testGitHubAccess:", { token, repo, owner, path });
 
       // First, test GitHub API access
       const canAccessGitHub = await testGitHubAccess();
@@ -242,6 +252,8 @@ useEffect(() => {
       // Ensure correct path structure
       // The error shows /db/jsons/ but your code may use a different path
       // For debugging, let's try both path structures
+      console.log("fetchInventoryItems - config before directory fetch:", { token, repo, owner, path });
+
       const jsonDirPath = path ? `${path}/jsons` : 'db/jsons';
       console.log(`Trying to fetch from directory: ${jsonDirPath}`);
 
