@@ -4,7 +4,6 @@ import { Save, Upload, Camera } from "lucide-react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
 import githubConfig from "@/config/githubConfig";
-import Header from "@/components/Header";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -161,7 +160,7 @@ const ProfilePage = () => {
 
 
   return (
-    <div className="mx-auto bg-white shadow-xl overflow-hidden">      <Header title="My Profile" />
+    <div className="mx-auto bg-white shadow-xl overflow-hidden">      
 
       <div className="flex flex-col items-center w-full gap-6">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 flex flex-col items-center">

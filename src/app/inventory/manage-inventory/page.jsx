@@ -5,7 +5,6 @@ import Link from "next/link";
 import githubConfigImport from '@/config/githubConfig';
 import { fetchInventoryFromGitHub } from "@/app/api/fetchInventoryFromGitHub";
 
-import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
 import { doc, getDoc, } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
@@ -806,9 +805,6 @@ const ManageInventory = () => {
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       {/* Main header - with class for targeting */}
-
-      <Header title="Inventory Management System" />
-
 
       {/* Fixed position action bar with a placeholder for when it's fixed */}
       <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-1 px-3 sm:px-6 `}>

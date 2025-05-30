@@ -1,5 +1,4 @@
 "use client";
-import Header from "@/components/Header";
 
 import { useState, useEffect, useRef } from "react";
 import { Clipboard, Folder, DollarSign, Tag, MapPin, ShoppingCart, AlertCircle, ChevronDown, PlusCircle, Trash2 } from "lucide-react";
@@ -1118,7 +1117,6 @@ const Addproductform = () => {
     return (
         <div className="mx-auto bg-white shadow-xl overflow-hidden">
             {/* Main header - with class for targeting */}
-            <Header title="Inventory Management System" />
 
 
             {/* Fixed action bar that appears on scroll */}

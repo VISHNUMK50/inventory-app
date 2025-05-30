@@ -48,11 +48,14 @@ export async function POST(req) {
         });
         const jsonFiles = await jsonsResponse.json();
 
-        const jsonFilesMap = new Map(jsonFiles.map(file => {
+        const safeJsonFiles = Array.isArray(jsonFiles) ? jsonFiles : [];
+        if (!Array.isArray(jsonFiles)) {
+    console.error('[API] jsonFiles is not an array:', jsonFiles);
+}
+        const jsonFilesMap = new Map(safeJsonFiles.map(file => {
             const name = file.name.replace('.json', '');
             return [name, file];
         }));
-
         const datasheets = await Promise.all(files
             .filter(file => file.name.toLowerCase().endsWith('.pdf'))
             .map(async (file) => {
@@ -67,7 +70,9 @@ export async function POST(req) {
                 const matchingJsonFile = Array.from(jsonFilesMap.values()).find(jsonFile =>
                     jsonFile.name.startsWith(id)
                 );
-
+console.log('[API] JSON files fetched:', safeJsonFiles.map(f => f.name));
+                console.log('[API] Matching JSON file for', id, ':', matchingJsonFile ? matchingJsonFile.name : 'None');
+                // Fetch the content of the matching JSON file
                 let jsonContent = null;
                 if (matchingJsonFile) {
                     try {

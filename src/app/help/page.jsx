@@ -5,7 +5,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
-import Header from "@/components/Header";
 
 export default function HelpCenter() {
   const [formData, setFormData] = useState({
@@ -44,7 +43,6 @@ export default function HelpCenter() {
 
   return (
     <>
-          <Header title="Inventory Management System" />
 
       <Head>
         <title>Help Center & Contact Us | Your Company</title>

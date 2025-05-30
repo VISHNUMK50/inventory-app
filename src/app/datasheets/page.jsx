@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { FileText, Download, Search, Trash, PlusCircle, AlertCircle, X } from 'lucide-react';
 import githubConfigImport from '@/config/githubConfig';
-import Header from "@/components/Header";
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -55,7 +54,7 @@ export default function Datasheets() {
     });
 
 
-    
+
 
     const [addProductImagePreview, setAddProductImagePreview] = useState(null);
     const [addProductDatasheetName, setAddProductDatasheetName] = useState(null);
@@ -93,25 +92,25 @@ export default function Datasheets() {
         });
         return () => unsubscribe();
     }, []);
-useEffect(() => {
-    if (!configLoaded) return;
-    const fetchLastUsedId = async () => {
-        try {
-            const idTrackerPath = `${githubConfig.path}/lastUsedId.json`;
-            const url = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/${githubConfig.branch}/${idTrackerPath}`;
-            const res = await fetch(url);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.lastUsedId) {
-                    localStorage.setItem('lastUsedId', data.lastUsedId.toString());
+    useEffect(() => {
+        if (!configLoaded) return;
+        const fetchLastUsedId = async () => {
+            try {
+                const idTrackerPath = `${githubConfig.path}/lastUsedId.json`;
+                const url = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/${githubConfig.branch}/${idTrackerPath}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.lastUsedId) {
+                        localStorage.setItem('lastUsedId', data.lastUsedId.toString());
+                    }
                 }
+            } catch (e) {
+                // fallback: do nothing, will use localStorage or default
             }
-        } catch (e) {
-            // fallback: do nothing, will use localStorage or default
-        }
-    };
-    fetchLastUsedId();
-}, [configLoaded, githubConfig]);
+        };
+        fetchLastUsedId();
+    }, [configLoaded, githubConfig]);
     // Fetch datasheets with POST and config
     useEffect(() => {
         if (!configLoaded) return;
@@ -560,7 +559,6 @@ useEffect(() => {
         <div className="min-h-screen bg-white shadow-xl">
             {/* Main header - with class for targeting */}
 
-            <Header title="Component Datasheets" />
 
             {error ? (
                 <div className="container mx-auto px-4 py-8">
@@ -766,7 +764,7 @@ useEffect(() => {
             )}
 
 
-                      {showAddProductModal && (
+            {showAddProductModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center shadow-xl ">
                     <div className="relative max-w-md w-full">
                         {/* Accent bar */}

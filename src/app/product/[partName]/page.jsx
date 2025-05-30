@@ -5,7 +5,6 @@ import {
   ChevronDown, PlusCircle, ArrowLeft, Save, Package, Clipboard, X, FileText, Download, Eye, FileX, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home
 } from "lucide-react";
 import githubConfigImport from '@/config/githubConfig';
-import Header from "@/components/Header";
 import TimeStamp from '@/components/TimeStamp';
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
@@ -771,8 +770,6 @@ const saveChanges = async () => {
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
       {/* Header */}
-      <Header title="Product Detail" />
-
 
       {/* Navigation and Action Buttons */}
       <div className="bg-gray-100 px-6 py-3 flex items-center justify-between border-b border-gray-200">

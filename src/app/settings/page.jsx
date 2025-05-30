@@ -1,5 +1,4 @@
 "use client"
-import Header from "@/components/Header";
 import React, { useState } from 'react';
 import { Save, User, Shield, Bell, Tag, CreditCard, Building, Settings, Github, Server } from 'lucide-react';
 import githubConfigImport from '@/config/githubConfig';
@@ -67,7 +66,6 @@ const SettingsPage = () => {
   // ...existing code...
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden min-h-screen">
-      <Header title="Inventory Management System" />
 
       <div className="px-2 sm:px-4 py-4 sm:py-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Settings</h1>

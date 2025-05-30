@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bar, Line } from 'recharts';
 import { Download, Filter, Calendar, RefreshCw } from 'lucide-react';
-import Header from "@/components/Header";
+import InventoryReport from "@/app/inventory/reports/page";
 
 // Sample data - would be fetched from API in production
 const sampleData = {
@@ -43,7 +43,6 @@ const ReportsPage = () => {
 
   return (
     <div className="mx-auto bg-white shadow-xl overflow-hidden">
-      <Header title="Inventory Management System" />
 
       <div className="px-4 py-6">
 
@@ -221,10 +220,9 @@ const ReportsPage = () => {
 
           {/* Placeholder for other tabs */}
           {activeTab === 'inventory' && (
-            <div className="bg-white p-6 rounded shadow">
-              <h2 className="text-lg font-semibold mb-4">Inventory Reports</h2>
-              <p className="text-gray-600">Detailed inventory analytics and reports would be displayed here.</p>
-            </div>
+  <InventoryReport />
+
+            
           )}
 
           {activeTab === 'sales' && (

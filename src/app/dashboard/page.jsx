@@ -1,16 +1,54 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import githubConfig from '@/config/githubConfig';
 import { Package, LayoutDashboard, ArrowLeftRight, PlusCircle, Download, ShoppingCart, AlertTriangle, Archive, Layers, FileText } from "lucide-react";
 import Link from "next/link";
-import { auth } from "../../config/firebase";
+import githubConfigImport from '@/config/githubConfig';
+import { doc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/config/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import ProfileMenu from "@/components/ProfileMenu";
 import { useRouter } from "next/navigation";
 
 const Dashboard = () => {
-      const title = "Inventory Management System";
+    const title = "Inventory Management System";
 
     const router = useRouter();
+
+    const [githubConfig, setGithubConfig] = useState(githubConfigImport);
+    const [configLoaded, setConfigLoaded] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (!currentUser) {
+                setConfigLoaded(true);
+                router.push("/");
+                return;
+            }
+            const fetchUserConfig = async () => {
+                const docId = currentUser.email.replace(/\./g, "_");
+                const userDoc = await getDoc(doc(db, "users", docId));
+                let config = githubConfigImport;
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    if (data.githubConfig) {
+                        config = {
+                            ...githubConfigImport,
+                            ...data.githubConfig,
+                            token: data.githubConfig.token || githubConfigImport.token,
+                        };
+                        const username = currentUser.displayName || currentUser.email.split('@')[0] || "user";
+                        const uid = currentUser.uid || "nouid";
+                        config.path = `${username}-${uid}/db`;
+                        config.datasheets = `${username}-${uid}/db/datasheets`;
+                    }
+                }
+                setGithubConfig(config);
+                setConfigLoaded(true);
+            };
+            fetchUserConfig();
+        });
+        return () => unsubscribe();
+    }, [router]);
 
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -20,8 +58,8 @@ const Dashboard = () => {
         // Add logic to apply dark mode (e.g., toggling a CSS class or updating a context)
     };
     const [inventoryStats, setInventoryStats] = useState({
-        totalCount: 182,
-        onHand: 182,
+        totalCount: 0,
+        onHand: 0,
         onLoan: 0,
         productLines: 0,
         noStock: 0,
@@ -41,12 +79,9 @@ const Dashboard = () => {
 
 
     const handleLogout = () => {
-        // console.log("Logout clicked");
         auth.signOut()
             .then(() => {
-                // Clear all items from localStorage
                 localStorage.clear();
-                // Redirect to root URL
                 router.push('/');
             })
             .catch((error) => {
@@ -56,14 +91,27 @@ const Dashboard = () => {
 
     // Add this new useEffect
     useEffect(() => {
-        fetch('/api/inventory/lowstock')
+        if (!configLoaded) return;
+        const [username, uid] = githubConfig.path
+            ? githubConfig.path.replace('/db', '').split('-')
+            : ["user", "nouid"];
+
+        fetch('/api/inventory/lowstock', {
+            headers: {
+                'x-username': username,
+                'x-uid': uid
+            }
+        })
             .then((res) => res.json())
             .then((data) => {
                 setInventoryStats(prev => ({
                     ...prev,
                     productLines: data.stats.productLines,
                     noStock: data.stats.noStock,
-                    lowStock: data.stats.lowStock
+                    lowStock: data.stats.lowStock,
+                    totalCount: data.stats.totalCount,
+                    onHand: data.stats.onHand,
+                    onLoan: data.stats.onLoan
                 }));
                 setLowStockItems(data.lowStockItems);
                 setLoadingReplenishment(false);
@@ -72,14 +120,33 @@ const Dashboard = () => {
                 console.error('Error fetching low stock data:', error);
                 setLoadingReplenishment(false);
             });
-    }, []);
+    }, [configLoaded]);
 
-
+  const colorMap = {
+    blue: "#2563eb",
+    green: "#22c55e",
+    red: "#dc2626",
+    yellow: "#eab308",
+    purple: "#9333ea",
+    indigo: "#4f46e5",
+    orange: "#ea580c",
+    teal: "#14b8a6",
+    pink: "#db2777",
+    cyan: "#06b6d4",
+    violet: "#8b5cf6",
+    emerald: "#10b981",
+    amber: "#f59e42",
+    lime: "#84cc16",
+    rose: "#f43f5e",
+    fuchsia: "#d946ef",
+    sky: "#0ea5e9"
+  };
     const [recentActivity, setRecentActivity] = useState([]);
     const [loadingActivity, setLoadingActivity] = useState(true);
 
     // Add this useEffect after your existing useEffect
     useEffect(() => {
+        if (!configLoaded) return;
         fetch('/api/activity/commits')
             .then((res) => res.json())
             .then((data) => {
@@ -90,14 +157,24 @@ const Dashboard = () => {
                 console.error('Error fetching commits:', error);
                 setLoadingActivity(false);
             });
-    }, []);
+    }, [configLoaded]);
 
 
     const [categoryStats, setCategoryStats] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
 
     useEffect(() => {
-        fetch('/api/inventory/categories')
+        if (!configLoaded) return;
+        const [username, uid] = githubConfig.path
+            ? githubConfig.path.replace('/db', '').split('-')
+            : ["user", "nouid"];
+
+        fetch('/api/inventory/categories', {
+            headers: {
+                'x-username': username,
+                'x-uid': uid
+            }
+        })
             .then((res) => res.json())
             .then((data) => {
                 setCategoryStats(data);
@@ -107,7 +184,7 @@ const Dashboard = () => {
                 console.error('Error fetching category stats:', error);
                 setLoadingCategories(false);
             });
-    }, []);
+    }, [configLoaded]);
     // Sample low stock items that would appear in alerts
     const inventoryAlerts = [
         { id: 1, partNumber: "ATM328", manufacturer: "Microchip", inStock: 5, reorderPoint: 10 },
@@ -117,44 +194,17 @@ const Dashboard = () => {
 
     return (
         <div className="mx-auto bg-white shadow-xl overflow-hidden">
-            <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-                <div className="px-2 sm:px-4 py-3 flex items-center justify-between">
-                    {/* Logo Section */}
-                    <div className="flex items-center space-x-2">
-                        <img
-                            src="/INVEXIS_LOGO1020.png"
-                            alt="Logo"
-                            className="h-8 sm:h-10 w-auto"
-                        />
-                    </div>
-                    {/* Title Section */}
-                    <div className="absolute left-1/2 transform -translate-x-20 sm:static sm:transform-none">
-                        <h1 className="text-lg sm:text-xl font-bold hidden sm:block">{title}</h1>
-                    </div>
-
-                    {/* User Info Section */}
-                    <ProfileMenu
-                        darkMode={darkMode}
-                        toggleDarkMode={toggleDarkMode}
-                        onLogout={handleLogout}
-                    />
-                </div>
-            </header>
-
-            {/* Navigation breadcrumb */}
+            
             <div className="bg-gray-300 shadow-md py-1 px-4">
                 <h2 className="text-2xl font-bold text-black flex items-center">
                     <LayoutDashboard className="mr-2 h-5 w-5" /> Dashboard
                 </h2>
             </div>
-
             {/* Main content */}
-
-
             <div className="container mx-auto px-4 py-4">
                 {/* Quick action buttons */}
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
-                    <Link href="/manage-inventory" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-blue-600">
+                    <Link href="/inventory/manage-inventory" className="flex flex-col items-center bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition border-t-4 border-blue-600">
                         <Package className="h-10 w-10 text-blue-600 mb-2" />
                         <span className="font-medium">Manage Inventory</span>
                     </Link>
@@ -205,11 +255,25 @@ const Dashboard = () => {
                                         </tr>
                                         <tr>
                                             <td className="py-1">On Hand</td>
-                                            <td className="py-1 text-right">{inventoryStats.onHand} ({(inventoryStats.onHand / inventoryStats.totalCount * 100).toFixed(1)}%)</td>
+                                            <td className="py-1 text-right">
+                                                {inventoryStats.onHand} (
+                                                {inventoryStats.totalCount > 0
+                                                    ? ((inventoryStats.onHand / inventoryStats.totalCount) * 100).toFixed(1)
+                                                    : 0
+                                                }%)
+                                            </td>
+                                            {/* <td className="py-1 text-right">{inventoryStats.onHand} ({(inventoryStats.onHand / inventoryStats.totalCount * 100).toFixed(1)}%)</td> */}
                                         </tr>
                                         <tr>
                                             <td className="py-1">On Loan</td>
-                                            <td className="py-1 text-right">{inventoryStats.onLoan} ({(inventoryStats.onLoan / inventoryStats.totalCount * 100).toFixed(1)}%)</td>
+                                            <td className="py-1 text-right">
+                                                {inventoryStats.onLoan} (
+                                                {inventoryStats.totalCount > 0
+                                                    ? ((inventoryStats.onLoan / inventoryStats.totalCount) * 100).toFixed(1)
+                                                    : 0
+                                                }%)
+                                            </td>
+                                            {/* <td className="py-1 text-right">{inventoryStats.onLoan} ({(inventoryStats.onLoan / inventoryStats.totalCount * 100).toFixed(1)}%)</td> */}
                                         </tr>
                                     </tbody>
                                 </table>
@@ -263,7 +327,7 @@ const Dashboard = () => {
                                             <div className="mt-4">
                                                 <h4 className="font-medium text-gray-700 mb-2">Attention Required</h4>
                                                 <div className="space-y-2">
-                                                    {lowStockItems.map(item => (
+                                                    {lowStockItems.slice(0, 5).map(item => (
                                                         <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded border border-yellow-200">
                                                             <div>
                                                                 <p className="font-medium">{item.name}</p>
@@ -276,6 +340,13 @@ const Dashboard = () => {
                                                         </div>
                                                     ))}
                                                 </div>
+                                                {lowStockItems.length > 5 && (
+                                                    <div className="mt-2 text-center">
+                                                        <Link href="/inventory/reports" className="text-blue-600 hover:text-blue-800 font-medium">
+                                                            View All Low Stock →
+                                                        </Link>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </>
@@ -349,29 +420,37 @@ const Dashboard = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    {categoryStats.map((category) => (
-                                        <div key={category.name}>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-gray-600">{category.name}</span>
-                                                <span className="font-medium">
-                                                    {category.count} units ({category.items} items)
-                                                </span>
-                                            </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                                <div
-                                                    className="h-2.5 rounded-full"
-                                                    style={{
-                                                        width: `${(category.count / category.totalCount) * 100}%`,
-                                                        backgroundColor: `var(--color-${category.color}-600)`
-                                                    }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                    {categoryStats
+                                        .slice() // copy array
+                                        .sort((a, b) => b.count - a.count) // sort by count descending
+                                        .slice(0, 6) // take top 5
+                                        .map((category, idx, arr) => {
+                                            // Find the highest count among the displayed categories
+                                            const maxCount = arr[0]?.count || 1;
+                                            return (
+                                                <div key={category.name}>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-gray-600">{category.name}</span>
+                                                        <span className="font-medium">
+                                                            {category.count} units ({category.items} items)
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                                        <div
+                                                            className="h-2.5 rounded-full"
+                                                            style={{
+                                                                width: `${(category.count / maxCount) * 100}%`,
+                                                                backgroundColor: colorMap[category.color] || "#2563eb" // fallback to blue
+                                                            }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                 </div>
                             )}
                             <div className="mt-4 text-center">
-                                <Link href="/inventory-report" className="text-blue-600 hover:text-blue-800 font-medium">
+                                <Link href="/inventory/reports" className="text-blue-600 hover:text-blue-800 font-medium">
                                     View Full Inventory Report →
                                 </Link>
                             </div>
