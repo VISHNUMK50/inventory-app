@@ -15,7 +15,13 @@ export async function fetchInventoryFromGitHub(config) {
   // Helper to fetch and parse JSON files
   const processFiles = async (files) => {
     const itemPromises = files.map(async (file) => {
-      if (file.type === "file" && file.name.endsWith(".json")) {
+      // Skip files starting with '#' or '1000', and non-json files
+      if (
+        file.type === "file" &&
+        file.name.endsWith(".json") &&
+        !file.name.startsWith("#") &&
+        !file.name.startsWith("1000")
+      ) {
         const fileResponse = await fetch(file.download_url, {
           headers: { "Accept": "application/vnd.github.v3.raw" }
         });
@@ -23,6 +29,8 @@ export async function fetchInventoryFromGitHub(config) {
         const itemData = await fileResponse.json();
         const fileNameMatch = file.name.match(/^(\d+)-.*\.json$/);
         if (fileNameMatch && !itemData.id) itemData.id = fileNameMatch[1];
+        // Skip if id is '1000'
+        if (itemData.id === "1000") return null;
         return itemData;
       }
       return null;
@@ -41,6 +49,7 @@ export async function fetchInventoryFromGitHub(config) {
   if (response.status === 404) {
     throw new Error("Inventory directory not found");
   }
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(`GitHub API error: ${response.status} - ${errorData.message || response.statusText}`);

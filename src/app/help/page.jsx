@@ -25,7 +25,7 @@ export default function HelpCenter() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    // console.log('Form submitted:', formData);
     // Here you would normally send the data to your backend
     // For demo purposes, we'll just show a success message
     setSubmitted(true);

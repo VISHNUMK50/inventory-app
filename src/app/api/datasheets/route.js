@@ -3,15 +3,15 @@ import { NextResponse } from 'next/server';
 export async function POST(req) {
     try {
         const { githubConfig } = await req.json();
-        console.log('[API] Received githubConfig:', githubConfig);
+        // console.log('[API] Received githubConfig:', githubConfig);
 
         if (!githubConfig) {
-            console.error('[API] No githubConfig provided');
+            // console.error('[API] No githubConfig provided');
             return NextResponse.json({ error: "Missing githubConfig" }, { status: 400 });
         }
 
         const url = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.datasheets}`;
-        console.log('[API] Fetching datasheets from:', url);
+        // console.log('[API] Fetching datasheets from:', url);
 
         const response = await fetch(url, {
             headers: {
@@ -38,7 +38,7 @@ export async function POST(req) {
 
         // Fetch JSON files from db/jsons directory
         const jsonsUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/db/jsons`;
-        console.log('[API] Fetching JSONs from:', jsonsUrl);
+        // console.log('[API] Fetching JSONs from:', jsonsUrl);
         const jsonsResponse = await fetch(jsonsUrl, {
             headers: {
                 'Authorization': `Bearer ${githubConfig.token}`,
@@ -50,15 +50,17 @@ export async function POST(req) {
 
         const safeJsonFiles = Array.isArray(jsonFiles) ? jsonFiles : [];
         if (!Array.isArray(jsonFiles)) {
-    console.error('[API] jsonFiles is not an array:', jsonFiles);
-}
+            console.error('[API] jsonFiles is not an array:', jsonFiles);
+        }
         const jsonFilesMap = new Map(safeJsonFiles.map(file => {
             const name = file.name.replace('.json', '');
             return [name, file];
         }));
         const datasheets = await Promise.all(files
-            .filter(file => file.name.toLowerCase().endsWith('.pdf'))
-            .map(async (file) => {
+            .filter(file =>
+                file.name.toLowerCase().endsWith('.pdf') &&
+                file.name.toLowerCase() !== 'profile.pdf' // Skip profile.pdf
+            ).map(async (file) => {
                 const parts = file.name.split('-');
                 const id = parts[0];
                 const partName = parts[1] || '';
@@ -70,8 +72,8 @@ export async function POST(req) {
                 const matchingJsonFile = Array.from(jsonFilesMap.values()).find(jsonFile =>
                     jsonFile.name.startsWith(id)
                 );
-console.log('[API] JSON files fetched:', safeJsonFiles.map(f => f.name));
-                console.log('[API] Matching JSON file for', id, ':', matchingJsonFile ? matchingJsonFile.name : 'None');
+                // console.log('[API] JSON files fetched:', safeJsonFiles.map(f => f.name));
+                // console.log('[API] Matching JSON file for', id, ':', matchingJsonFile ? matchingJsonFile.name : 'None');
                 // Fetch the content of the matching JSON file
                 let jsonContent = null;
                 if (matchingJsonFile) {

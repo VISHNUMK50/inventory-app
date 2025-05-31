@@ -717,7 +717,7 @@ const Addproductform = () => {
         e.preventDefault();
         const { token, repo, owner, branch, path } = githubConfig;
 
-        console.log("githubConfig when handleSubmit:", githubConfig);
+        // console.log("githubConfig when handleSubmit:", githubConfig);
 
         if (!githubConfig || !githubConfig.token || !githubConfig.repo || !githubConfig.owner || !githubConfig.path) {
             alert("GitHub configuration not loaded yet. Please wait a moment and try again.");
@@ -866,14 +866,14 @@ const Addproductform = () => {
     // Function to save files to GitHub
     const saveToGithub = async (dataToSave = null) => {
         const { token, repo, owner, branch, path } = githubConfig;
-        console.log("githubConfig before saveToGithub:", githubConfig);
+        // console.log("githubConfig before saveToGithub:", githubConfig);
 
         if (!token || !repo || !owner) {
             alert("Please fill in all GitHub configuration fields");
             return false;
         }
         if (isSaving) {
-            console.log("Save already in progress, please wait");
+            // console.log("Save already in progress, please wait");
             return false;
         }
 
@@ -1017,10 +1017,31 @@ const Addproductform = () => {
 
         return (
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 ">
+                <label
+                    className="block text-sm font-medium mb-1"
+                    style={{
+                        // Use section color if in a section, fallback to accent/foreground
+                        color:
+                            field === "partName" || field === "category"
+                                ? "var(--section-indigo-label, #6366f1)"
+                                : field === "manufacturer" || field === "manufacturerPart" || field === "vendor"
+                                    ? "var(--section-pink-label, #fbcfe8)"
+                                    : "var(--foreground)"
+                    }}
+                >
                     {label} {required && <span className="text-red-500">*</span>}
                 </label>
-                <div className="relative flex items-center border border-gray-300 rounded-md ">
+                <div
+                    className="relative flex items-center border border-gray-300 rounded-md"
+                    style={{
+                        background:
+                            field === "partName" || field === "category"
+                                ? "var(--section-indigo)"
+                                : field === "manufacturer" || field === "manufacturerPart" || field === "vendor"
+                                    ? "var(--section-pink)"
+                                    : "var(--card)"
+                    }}
+                >
                     {addingField === field ? (
                         <div className="flex items-center w-full">
                             <input
@@ -1031,6 +1052,15 @@ const Addproductform = () => {
                                 onChange={handleNewEntryChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder={`Enter new ${field}`}
+                                style={{
+                                    background: "transparent",
+                                    color:
+                                        field === "partName" || field === "category"
+                                            ? "var(--section-indigo-text, #3730a3)"
+                                            : field === "manufacturer" || field === "manufacturerPart" || field === "vendor"
+                                                ? "var(--section-pink-text, #be185d)"
+                                                : "var(--foreground)"
+                                }}
                             />
                             <button
                                 type="button"
@@ -1051,9 +1081,18 @@ const Addproductform = () => {
                                     onChange={handleChange}
                                     onFocus={() => openDropdown(field)}
                                     required={required}
-                                    className="autocomplete-input w-full px-3 py-2  rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="autocomplete-input w-full px-3 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder={`Type to search or select ${field}`}
                                     autoComplete="off"
+                                    style={{
+                                        background: "transparent",
+                                        color:
+                                            field === "partName" || field === "category"
+                                                ? "var(--section-indigo-text, #3730a3)"
+                                                : field === "manufacturer" || field === "manufacturerPart" || field === "vendor"
+                                                    ? "var(--section-pink-text, #be185d)"
+                                                    : "var(--foreground)"
+                                    }}
                                 />
                                 {/* Autocomplete suggestions */}
                                 {activeDropdown === field && suggestions[field] && suggestions[field].length > 0 && (
@@ -1091,20 +1130,12 @@ const Addproductform = () => {
                             <button
                                 type="button"
                                 tabIndex={-1}
-                                className=" p-2 "
+                                className="p-2"
                                 onClick={() => setShowDropdown(prev => ({ ...prev, [field]: !prev[field] }))}
                                 aria-label="Show all options"
                             >
-                                <ChevronDown className="h-4 w-4 text-gray-400 " />
+                                <ChevronDown className="h-4 w-4 text-gray-400" />
                             </button>
-                            {/* New entry button */}
-                            {/* <button
-                                type="button"
-                                onClick={() => toggleAddField(field)}
-                                className="ml-2 px-3 py-2 border border-blue-100 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 flex items-center"
-                            >
-                                <PlusCircle className="h-4 w-4 mr-1" /> New
-                            </button> */}
                         </>
                     )}
                 </div>
@@ -1115,24 +1146,38 @@ const Addproductform = () => {
 
 
     return (
-        <div className="mx-auto bg-white shadow-xl overflow-hidden">
-            {/* Main header - with class for targeting */}
-
-
-            {/* Fixed action bar that appears on scroll */}
-            <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-3 px-6`}>
-                <div className="bg-gray-300  flex justify-between items-center">
+        <div className="mx-auto shadow-xl overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)", minHeight: "100vh" }}>
+            {/* 1. Add Product Bar */}
+            <div
+                className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50 shadow-md' : 'relative'} shadow-md py-3 px-6`}
+                style={{
+                    background: "var(--bar-bg)",
+                    borderBottom: "1px solid var(--border)"
+                }}
+            >
+                <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-4">
-
-                        <h2 className="text-2xl font-bold text-black flex items-center">
-                            <PlusCircle className="mr-2 h-5 w-5" /> Add Product
+                        <h2
+                            className="text-2xl font-bold flex items-center"
+                            style={{
+                                color: "var(--bar-text)", // Make Add Product bar title blue for both themes
+                                letterSpacing: "0.01em"
+                            }}
+                        >
+                            <PlusCircle className="mr-2 h-5 w-5" style={{ color: "var(--bar-text)" }} />
+                            Add Product
                         </h2>
                     </div>
                     <div className="flex space-x-3">
                         <button
                             type="button"
                             onClick={() => document.getElementById('resetFormButton').click()}
-                            className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-md hover:bg-yellow-200"
+                            className="flex items-center px-3 py-1 text-sm rounded-md"
+                            style={{
+                                background: "var(--yellow-bg)",
+                                color: "var(--warning)",
+                                border: "1px solid var(--yellow-border)"
+                            }}
                         >
                             <AlertCircle className="h-4 w-4 mr-2" />
                             Reset
@@ -1141,32 +1186,13 @@ const Addproductform = () => {
                             type="submit"
                             form="inventoryForm"
                             disabled={isSubmitting}
-                            className="flex items-center px-4 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
-                            onClick={(e) => {
-                                // If there's unsaved bin location data, add it before form submission
-                                if (newBinLocation.trim() && newBinQuantity) {
-                                    const isDuplicate = formData.binLocations.some(
-                                        loc => loc.bin.toLowerCase() === newBinLocation.trim().toLowerCase()
-                                    );
-
-                                    if (!isDuplicate) {
-                                        // Update form data with new bin location before the form submits
-                                        setFormData(prevData => ({
-                                            ...prevData,
-                                            binLocations: [
-                                                ...prevData.binLocations,
-                                                {
-                                                    bin: newBinLocation.trim(),
-                                                    quantity: parseInt(newBinQuantity)
-                                                }
-                                            ]
-                                        }));
-                                    }
-                                }
+                            className="flex items-center px-4 py-1 rounded-md"
+                            style={{
+                                background: "var(--success)",
+                                color: "#fff"
                             }}
                         >
                             <ShoppingCart className="h-4 w-4 mr-2" />
-                            {/* Show "Add" on small screens */}
                             <span className="hidden sm:inline">{isSubmitting ? "Saving..." : "Add to Inventory"}</span>
                             <span className="sm:hidden">{isSubmitting ? "Saving..." : "Add"}</span>
                         </button>
@@ -1174,12 +1200,12 @@ const Addproductform = () => {
                 </div>
             </div>
             {formData.createdAt && (
-                <div className="mt-4 text-sm text-gray-500">
+                <div className="mt-4 text-sm" style={{ color: "var(--foreground)", opacity: 0.7 }}>
                     <p>Item created on: {new Date(formData.createdAt).toLocaleString()}</p>
                 </div>
             )}
 
-            <div className="mx-auto bg-white shadow-xl overflow-hidden">
+            <div className="mx-auto shadow-xl overflow-hidden" style={{ background: "var(--card)" }}>
                 <button
                     id="resetFormButton"
                     type="button"
@@ -1188,23 +1214,32 @@ const Addproductform = () => {
                 />
                 {/* Main Form */}
                 <form id="inventoryForm" onSubmit={handleSubmit} className="px-6 py-4">
-                    <div className="mb-4 ">
-                        <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            <div className="bg-indigo-50 p-4 rounded-lg shadow-md">
-                                <h3 className="font-medium text-blue-800 mb-3 flex items-center">
-                                    <Tag className="mr-2 h-5 w-5" /> Product Identification
+                    <div className="mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {/* 2. Product Identification Section */}
+                            <div
+                                className="p-4 rounded-lg shadow-md"
+                                style={{
+                                    background: "var(--section-indigo)",
+                                    color: "var(--section-indigo-text, #a5b4fc)", // Use a variable for text color
+                                    // border: "1px solid #4338ca"
+                                }}
+                            >
+                                <h3
+                                    className="font-semibold mb-3 flex items-center"
+                                    style={{
+                                        color: "var(--section-indigo-text, #a5b4fc)",
+                                        fontSize: "1.1rem"
+                                    }}
+                                >
+                                    <Tag className="mr-2 h-5 w-5" style={{ color: "var(--section-indigo-text, #a5b4fc)" }} />
+                                    Product Identification
                                 </h3>
                                 <div className="space-y-4">
-
-                                    {/* Part Name */}
                                     {renderAutocomplete("partName", "Part Name", true)}
-                                    {/* Category */}
-                                
                                     {renderAutocomplete("category", "Category", true)}
-
-                                    {/* Customer Reference */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-indigo-label, #c7d2fe)" }}>
                                             Customer Reference
                                         </label>
                                         <textarea
@@ -1214,31 +1249,37 @@ const Addproductform = () => {
                                             rows="2"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             placeholder="Customer part reference"
+                                            style={{ background: "transparent", color: "var(--section-indigo-text, #a5b4fc)" }}
                                         />
                                     </div>
                                 </div>
-
                             </div>
-                            <div className="shadow-md bg-pink-50 p-4 rounded-lg md:col-span-1 lg:col-span-2">
-                                <h3 className="font-medium text-indigo-800 mb-3 flex items-center">
-                                    <Folder className="mr-2 h-5 w-5" /> Manufacturer Details
+                            {/* 2. Manufacturer Details Section */}
+                            <div
+                                className="shadow-md p-4 rounded-lg md:col-span-1 lg:col-span-2"
+                                style={{
+                                    background: "var(--section-pink)",
+                                    color: "var(--section-pink-text, #f472b6)",
+                                    // border: "1px solid #be185d"
+                                }}
+                            >
+                                <h3
+                                    className="font-semibold mb-3 flex items-center"
+                                    style={{
+                                        color: "var(--section-pink-text, #f472b6)",
+                                        fontSize: "1.1rem"
+                                    }}
+                                >
+                                    <Folder className="mr-2 h-5 w-5" style={{ color: "var(--section-pink-text, #f472b6)" }} />
+                                    Manufacturer Details
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-                                        {/* Manufacturer */}
                                         {renderAutocomplete("manufacturer", "Manufacturer", true)}
-
-                                        {/* Manufacturer Part # */}
                                         {renderAutocomplete("manufacturerPart", "Manufacturer Part #", true)}
-
-
-                                        {/* Vendor */}
                                         {renderAutocomplete("vendor", "Vendor", true)}
-
-                                        {/* Vendor Product Link - Updated field */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-pink-label, #fbcfe8)" }}>
                                                 Vendor Product Link
                                             </label>
                                             <input
@@ -1248,15 +1289,12 @@ const Addproductform = () => {
                                                 onChange={handleChange}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 placeholder="https://vendor.com/product/123"
+                                                style={{ background: "transparent", color: "var(--section-pink-text, #f472b6)" }}
                                             />
                                         </div>
                                     </div>
-
-
-
-                                    {/* Description */}
                                     <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-pink-label, #fbcfe8)" }}>
                                             Description
                                         </label>
                                         <textarea
@@ -1266,6 +1304,7 @@ const Addproductform = () => {
                                             rows="2"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             placeholder="Brief description of the part"
+                                            style={{ background: "transparent", color: "var(--section-pink-text, #f472b6)" }}
                                         />
                                     </div>
                                 </div>
@@ -1273,17 +1312,24 @@ const Addproductform = () => {
                         </div>
                     </div>
 
+                    {/* 2. Pricing Information Section */}
                     <div className="mb-4">
-                        <div className="bg-green-50 p-4 rounded-lg shadow-md ">
-                            <h3 className="font-medium text-green-800 mb-3 flex items-center">
-                                <DollarSign className="mr-2 h-5 w-5" /> Pricing Information
+                        <div
+                            className="p-4 rounded-lg shadow-md"
+                            style={{
+                                background: "var(--section-green)",
+                                color: "var(--section-green-text, #bbf7d0)",
+                                // border: "1px solid #166534"
+                            }}
+                        >
+                            <h3 className="font-semibold mb-3 flex items-center" style={{ color: "var(--section-green-text, #bbf7d0)", fontSize: "1.1rem" }}>
+                                <DollarSign className="mr-2 h-5 w-5" style={{ color: "var(--section-green-text, #bbf7d0)" }} />
+                                Pricing Information
                             </h3>
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-                                    {/* Cost Price */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                        <label className="block text-sm font-medium mb-1 flex items-center" style={{ color: "var(--section-green-label, #bbf7d0)" }}>
                                             <DollarSign className="h-4 w-4 mr-1" />
                                             Cost Price <span className="ml-1 text-red-500">*</span>
                                         </label>
@@ -1297,12 +1343,11 @@ const Addproductform = () => {
                                             min="0"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             placeholder="0.00"
+                                            style={{ background: "transparent", color: "#fff" }}
                                         />
                                     </div>
-
-                                    {/* Sale Price */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-green-label, #bbf7d0)" }}>
                                             <div className="flex items-center">
                                                 <Tag className="h-4 w-4 mr-1" />
                                                 <span>Sale Price</span>
@@ -1317,38 +1362,45 @@ const Addproductform = () => {
                                             min="0"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             placeholder="0.00"
+                                            style={{ background: "transparent", color: "#fff" }}
                                         />
                                     </div>
                                 </div>
                             </div>
                         </div>
-
                     </div>
+
+                    {/* 2. Inventory Details Section */}
                     <div className="mb-4">
                         <div className="space-y-4">
-                            <div className="bg-purple-50 p-4 rounded-lg shadow-md">
-                                <h3 className="font-medium text-purple-800 mb-3 flex items-center">
-                                    <MapPin className="mr-2 h-5 w-5" /> Inventory Details
+                            <div
+                                className="p-4 rounded-lg shadow-md"
+                                style={{
+                                    background: "var(--section-purple)",
+                                    color: "var(--section-purple-text, #ddd6fe)",
+                                    // border: "1px solid #4c1d95"
+                                }}
+                            >
+                                <h3 className="font-semibold mb-3 flex items-center" style={{ color: "var(--section-purple-text, #ddd6fe)", fontSize: "1.1rem" }}>
+                                    <MapPin className="mr-2 h-5 w-5" style={{ color: "var(--section-purple-text, #ddd6fe)" }} />
+                                    Inventory Details
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
                                                 Bin Locations <span className="text-red-500">*</span>
                                             </label>
-                                            {/* Add new bin location */}
                                             <div className="flex items-center mb-3">
-
                                                 <div className="relative w-full">
                                                     <input
                                                         type="text"
                                                         value={newBinLocation}
                                                         onChange={(e) => setNewBinLocation(e.target.value)}
                                                         required={true}
-
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                        
                                                         placeholder="Bin identifier"
+                                                        style={{ background: "transparent", color: "#fff" }}
                                                     />
                                                 </div>
                                                 <button
@@ -1360,14 +1412,13 @@ const Addproductform = () => {
                                                     <PlusCircle className="h-5 w-5" />
                                                 </button>
                                             </div>
-
                                             {binLocations.length > 0 && (
                                                 <div className="mb-4">
-                                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Current Locations:</h4>
+                                                    <h4 className="text-sm font-medium mb-2" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>Current Locations:</h4>
                                                     <div className="flex flex-col space-y-2">
                                                         {binLocations.map((location, index) => (
                                                             <div key={index} className="flex items-center justify-between bg-purple-200 p-2 rounded-md">
-                                                                <span className="font-medium">
+                                                                <span className="font-medium" style={{ color: "#4c1d95" }}>
                                                                     {location.bin}: <span className="font-normal">{location.quantity} units</span>
                                                                 </span>
                                                                 <button
@@ -1383,47 +1434,45 @@ const Addproductform = () => {
                                                 </div>
                                             )}
                                         </div>
-
                                         <div className="md-2">
-
                                             <div className="flex-1">
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
                                                     Quantity <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="number"
                                                     value={newBinQuantity}
                                                     required={true}
-                                                    onChange={handleBinQuantityChange} // Use the new handler here
+                                                    onChange={handleBinQuantityChange}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     placeholder="Quantity"
                                                     min="0"
-
+                                                    style={{ background: "transparent", color: "#fff" }}
                                                 />
-
-
                                             </div>
-
-
+                                            {/* 3. Avl Qty Box */}
                                             <div className="py-4">
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
                                                     Available Quantity
                                                 </label>
                                                 <input
                                                     type="text"
                                                     readOnly
                                                     value={formData.avl_quantity || "0"}
-                                                    className="w-full px-3 py-2 bg-gray-50  border border-gray-300 rounded-md focus:outline-none"
+                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:outline-none font-bold"
                                                     placeholder="Calculated from bins"
                                                     tabIndex="-1"
+                                                    style={{
+                                                        color: "var(--avl-qty-text, #bbf7d0)",
+                                                        fontWeight: "bold",
+                                                        fontSize: "1.1rem",
+                                                        letterSpacing: "0.05em"
+                                                    }}
                                                 />
                                             </div>
                                         </div>
-
-
-                                        {/* Reorder Point */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
                                                 Reorder Point <span className="text-red-500">*</span>
                                             </label>
                                             <input
@@ -1435,11 +1484,11 @@ const Addproductform = () => {
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 placeholder="5"
                                                 min="0"
+                                                style={{ background: "transparent", color: "#fff" }}
                                             />
                                         </div>
-                                        {/* Reorder Quantity */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
                                                 Reorder Quantity
                                             </label>
                                             <input
@@ -1450,27 +1499,32 @@ const Addproductform = () => {
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 placeholder="10"
                                                 min="0"
+                                                style={{ background: "transparent", color: "#fff" }}
                                             />
                                         </div>
-
-
-
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
 
-                    <div className="mb-4 bg-gray-50 p-4 rounded-lg shadow-md">
-                        <h3 className="text-xl font-medium text-gray-800 mb-3">Files & Documentation</h3>
+                    {/* 2. Files & Documentation Section */}
+                    <div
+                        className="mb-4 p-4 rounded-lg shadow-md"
+                        style={{
+                            background: "var(--section-gray)",
+                            color: "var(--foreground)",
+                            // border: "1px solid #27272a"
+                        }}
+                    >
+                        <h3 className="text-xl font-semibold mb-3" style={{ color: "#fff" }}>Files & Documentation</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Image Upload */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium mb-1" style={{ color: "#fff" }}>
                                     Component Image
                                 </label>
-                                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md" style={{ borderColor: "#52525b" }}>
                                     <div className="space-y-1 text-center">
                                         {imagePreview ? (
                                             <div>
@@ -1479,7 +1533,7 @@ const Addproductform = () => {
                                                     alt="Preview"
                                                     className="mx-auto h-32 w-auto object-contain mb-2"
                                                 />
-                                                <p className="text-xs text-gray-500">{formData.image}</p>
+                                                <p className="text-xs" style={{ color: "#fff", opacity: 0.7 }}>{formData.image}</p>
                                             </div>
                                         ) : (
                                             <div>
@@ -1497,13 +1551,17 @@ const Addproductform = () => {
                                                         strokeLinejoin="round"
                                                     />
                                                 </svg>
-                                                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                                                <p className="text-xs" style={{ color: "#a3a3a3" }}>PNG, JPG, GIF up to 10MB</p>
                                             </div>
                                         )}
                                         <div>
                                             <label
                                                 htmlFor="image-upload"
-                                                className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                                                className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md"
+                                                style={{
+                                                    color: "var(--accent)",
+                                                    background: "var(--accent-foreground)"
+                                                }}
                                             >
                                                 <span>{imagePreview ? "Change Image" : "Upload Image"}</span>
                                                 <input
@@ -1519,31 +1577,34 @@ const Addproductform = () => {
                                     </div>
                                 </div>
                             </div>
-
                             {/* Datasheet Upload */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium mb-1" style={{ color: "#fff" }}>
                                     Datasheet
                                 </label>
-                                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md" style={{ borderColor: "#52525b" }}>
                                     <div className="space-y-1 text-center">
                                         {datasheetName ? (
                                             <div>
-                                                <Clipboard className="mx-auto h-12 w-12 text-blue-500" />
-                                                <p className="text-xs font-medium text-gray-900 mt-2">
+                                                <Clipboard className="mx-auto h-12 w-12" style={{ color: "var(--accent)" }} />
+                                                <p className="text-xs font-medium" style={{ color: "#fff" }}>
                                                     {datasheetName}
                                                 </p>
                                             </div>
                                         ) : (
                                             <div>
                                                 <Folder className="mx-auto h-12 w-12 text-gray-400" />
-                                                <p className="text-xs text-gray-500">PDF, DOC, XLS up to 10MB</p>
+                                                <p className="text-xs" style={{ color: "#a3a3a3" }}>PDF, DOC, XLS up to 10MB</p>
                                             </div>
                                         )}
                                         <div>
                                             <label
                                                 htmlFor="datasheet-upload"
-                                                className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                                                className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md"
+                                                style={{
+                                                    color: "var(--accent)",
+                                                    background: "var(--accent-foreground)"
+                                                }}
                                             >
                                                 <span>{datasheetName ? "Change File" : "Upload Datasheet"}</span>
                                                 <input
@@ -1562,8 +1623,8 @@ const Addproductform = () => {
                     </div>
                     {showSavingModal && <SavingModal isSuccess={saveSuccess} />}
                 </form>
-            </div>    </div>
-
+            </div>
+        </div>
     );
 };
 

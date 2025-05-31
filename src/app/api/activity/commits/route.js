@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
-import githubConfig from '@/config/githubConfig';
+import githubConfigImport from '@/config/githubConfig';
 
+// Helper to get user config from request (e.g., via headers or cookies)
+async function getUserGithubConfig(request) {
+  const username = request.headers.get('x-username');
+  const uid = request.headers.get('x-uid');
+  let config = { ...githubConfigImport };
+  if (username && uid) {
+    config.path = `${username}-${uid}/db`;
+    config.datasheets = `${username}-${uid}/db/datasheets`;
+  }
+  return config;
+}
 
-async function getLastModifiedFiles() {
+async function getLastModifiedFiles(githubConfig) {
   try {
     const { owner, repo, token } = githubConfig;
-    
+
     const response = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`,
       {
@@ -17,7 +28,7 @@ async function getLastModifiedFiles() {
     );
 
     if (!response.ok) throw new Error('Failed to fetch commits');
-    
+
     const commits = await response.json();
     const activities = [];
 
@@ -31,17 +42,21 @@ async function getLastModifiedFiles() {
       });
 
       if (!detailResponse.ok) continue;
-      
+
       const detail = await detailResponse.json();
-      
+
       for (const file of detail.files) {
-        if (file.filename.includes('jsons/') && file.status === 'added') {
+        if (
+          file.filename.startsWith(`${githubConfig.path}/jsons/`) &&
+          file.status === 'added'
+        ) {
           try {
             const content = await fetch(file.raw_url, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
             }).then(res => res.json());
+            if (content.id === '1000') continue;
 
             activities.push({
               id: commit.sha.substring(0, 7),
@@ -63,9 +78,10 @@ async function getLastModifiedFiles() {
   }
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const activities = await getLastModifiedFiles();
+    const githubConfig = await getUserGithubConfig(request);
+    const activities = await getLastModifiedFiles(githubConfig);
     return NextResponse.json(activities);
   } catch (error) {
     console.error('Error fetching activities:', error);

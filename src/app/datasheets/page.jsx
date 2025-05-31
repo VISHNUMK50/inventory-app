@@ -555,40 +555,37 @@ export default function Datasheets() {
     }
 
     return (
-
-        <div className="min-h-screen bg-white shadow-xl">
+        <div className="min-h-screen"
+             style={{
+                 background: "var(--background)",
+                 color: "var(--foreground)"
+             }}
+        >
             {/* Main header - with class for targeting */}
-
 
             {error ? (
                 <div className="container mx-auto px-4 py-8">
-                    <div className="text-red-600 bg-red-50 p-4 rounded-lg">
+                    <div className="text-[var(--danger)] bg-[var(--background)] p-4 rounded-lg border border-[var(--danger)]">
                         Error: {error}
                     </div>
                 </div>
             ) : (
-
-
                 <div className="px-2 py-2">
                     <div className="flex flex-row items-center justify-center sm:gap-4 gap-3">
                         <div className="relative">
-                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[var(--border)] h-5 w-5" />
                             <input
                                 type="text"
                                 placeholder="Search datasheets..."
-                                // className="w-full min-w-[260px] max-w-xs pl-12 pr-4 py-3 border border-gray-500 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300"
-                                className="w-full pl-12 pr-4 py-2 border border-gray-500 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300"
-
+                                className="w-full pl-12 pr-4 py-2 border border-[var(--border)] rounded-full bg-[var(--card)] text-[var(--foreground)] focus:bg-[var(--background)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all duration-300"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
                         <div>
                             <button
-                                className="bg-blue-600 text-white px-2 py-2 rounded-full hover:bg-blue-700 w-full sm:w-auto flex items-center justify-center gap-1"
-                                // onClick={() => document.getElementById('datasheet-upload-input').click()}
+                                className="bg-[var(--accent)] text-[var(--accent-foreground)] px-2 py-2 rounded-full hover:bg-blue-700 w-full sm:w-auto flex items-center justify-center gap-1"
                                 onClick={() => setShowAddProductModal(true)}
-
                             >
                                 <PlusCircle className="w-5 h-5" />
                                 <span className="hidden sm:inline">Add Files</span>
@@ -606,40 +603,44 @@ export default function Datasheets() {
                                 }}
                             />
                         </div>
-
                     </div>
                 </div>
-
             )}
+
             {loading ? (
                 <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
                 </div>
             ) : (
                 <div className="px-5 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredDatasheets.map((datasheet) => (
                         <div
                             key={datasheet.id}
-                            className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 relative overflow-hidden border-t-4 ${quantityData[datasheet.id] === undefined
-                                ? 'border-t-black'
-                                : quantityData[datasheet.id] > 0
-                                    ? 'border-t-green-600'
-                                    : 'border-t-red-600'
-                                }`}
+                            className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 relative overflow-hidden border-t-4 ${
+                                quantityData[datasheet.id] === undefined
+                                    ? 'border-t-black'
+                                    : quantityData[datasheet.id] > 0
+                                        ? 'border-t-[var(--success)]'
+                                        : 'border-t-[var(--danger)]'
+                            }`}
+                            style={{
+                                background: "var(--card)",
+                                color: "var(--card-foreground)"
+                            }}
                             onClick={() => openPdfModal(datasheet.downloadUrl)}
                         >
-
                             <div className="flex justify-between items-start space-x-4">
                                 <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2">
+                                    <h3 className="font-semibold text-[var(--foreground)] mb-1 line-clamp-2">
                                         {datasheet.name}
                                     </h3>
-                                    <p className={`text-sm font-medium ${quantityData[datasheet.id] === undefined
-                                        ? 'text-black'
-                                        : quantityData[datasheet.id] > 0
-                                            ? 'text-green-600'
-                                            : 'text-red-600'
-                                        }`}>
+                                    <p className={`text-sm font-medium ${
+                                        quantityData[datasheet.id] === undefined
+                                            ? 'text-black'
+                                            : quantityData[datasheet.id] > 0
+                                                ? 'text-[var(--success)]'
+                                                : 'text-[var(--danger)]'
+                                    }`}>
                                         {datasheet.partNumber} ({quantityData[datasheet.id] ?? 'N/A'} available)
                                     </p>
                                 </div>

@@ -59,20 +59,23 @@ const InventoryReport = () => {
 
     // Fetch low stock items
     useEffect(() => {
-        if (!configLoaded) return;
-        setLoadingLowStock(true);
-        fetch('/api/inventory/lowstock', {
-            headers: getUserHeaders(githubConfig)
+    if (!configLoaded) return;
+    setLoadingCategories(true);
+    fetch('/api/inventory/categories', {
+        headers: getUserHeaders(githubConfig)
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            if (Array.isArray(data)) {
+                setCategoryStats(data);
+            } else {
+                setCategoryStats([]);
+            }
+            setLoadingCategories(false);
         })
-            .then((res) => res.json())
-            .then((data) => {
-                fetchAllLowStockItems().then((allLowStock) => {
-                    setLowStockItems(allLowStock);
-                    setLoadingLowStock(false);
-                });
-            })
-            .catch(() => setLoadingLowStock(false));
-    }, [configLoaded]);
+        .catch(() => setLoadingCategories(false));
+}, [configLoaded]);
+
     const colorMap = {
         blue: "#2563eb",
         green: "#22c55e",
@@ -102,23 +105,7 @@ const InventoryReport = () => {
         };
     }
     // Fetch category stats
-    useEffect(() => {
-        if (!configLoaded) return;
-        setLoadingCategories(true);
-        const [username, uid] = githubConfig.path
-            ? githubConfig.path.replace('/db', '').split('-')
-            : ["user", "nouid"];
-
-        fetch('/api/inventory/categories', {
-            headers: getUserHeaders(githubConfig)
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                setCategoryStats(data);
-                setLoadingCategories(false);
-            })
-            .catch(() => setLoadingCategories(false));
-    }, [configLoaded]);
+    
 
     // Helper to fetch all low stock items (not just top 5)
     async function fetchAllLowStockItems() {
