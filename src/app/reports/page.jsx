@@ -34,7 +34,22 @@ const ReportsPage = () => {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
+ // Add darkMode state
+  const [darkMode, setDarkMode] = useState(false);
 
+  // Add dark mode effect
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem('darkMode');
+      if (saved === '1') {
+        setDarkMode(true);
+        document.documentElement.classList.add('dark');
+      } else {
+        setDarkMode(false);
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, []);
   useEffect(() => {
     setActiveTab(searchParams.get("tab") || "overview");
   }, [searchParams]);
