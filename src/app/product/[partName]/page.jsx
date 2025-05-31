@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
-  ChevronDown, PlusCircle, ArrowLeft, Save, Package, Clipboard, X, FileText, Download, Eye, FileX, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home
+  ChevronDown, PlusCircle, ArrowLeft, Save, Package, Clipboard, X, MapPin, FileText, Download, Eye, FileX, RefreshCw, Tag, Edit, Folder, Trash, DollarSign, AlertCircle, ClipboardList, Home
 } from "lucide-react";
 import githubConfigImport from '@/config/githubConfig';
 import TimeStamp from '@/components/TimeStamp';
@@ -422,67 +422,33 @@ export default function ProductDetail({ params }) {
   };
 
   // --- SAVE CHANGES ---
-const saveChanges = async () => {
-  setIsSaving(true);
-  setSaveError(null);
-  try {
-    const { token, repo, owner, path, branch = 'main' } = config;
-    const productToSave = {
-      ...editedProduct,
-      id: product.id,
-      lastModified: new Date().toISOString()
-    };
+  const saveChanges = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const { token, repo, owner, path, branch = 'main' } = config;
+      const productToSave = {
+        ...editedProduct,
+        id: product.id,
+        lastModified: new Date().toISOString()
+      };
 
-    const fileUpdates = [];
+      const fileUpdates = [];
 
-    // Compute old and new JSON filenames
-    const oldSanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-    const oldSanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-    const oldJsonFileName = `${product.id}-${oldSanitizedPartName}-${oldSanitizedManufacturerPart}.json`;
-    const oldJsonFilePath = `${path}/jsons/${oldJsonFileName}`;
+      // Compute old and new JSON filenames
+      const oldSanitizedManufacturerPart = product.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+      const oldSanitizedPartName = product.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+      const oldJsonFileName = `${product.id}-${oldSanitizedPartName}-${oldSanitizedManufacturerPart}.json`;
+      const oldJsonFilePath = `${path}/jsons/${oldJsonFileName}`;
 
-    const newSanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
-    const newSanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
-    const newJsonFileName = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}.json`;
-    const newJsonFilePath = `${path}/jsons/${newJsonFileName}`;
+      const newSanitizedManufacturerPart = productToSave.manufacturerPart.replace(/[^a-z0-9():]/gi, "_");
+      const newSanitizedPartName = productToSave.partName.replace(/[^a-z0-9():\s]/gi, "_").replace(/\s+/g, "_");
+      const newJsonFileName = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}.json`;
+      const newJsonFilePath = `${path}/jsons/${newJsonFileName}`;
 
-    // If filename changed, delete the old JSON file
-    if (oldJsonFilePath !== newJsonFilePath) {
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldJsonFilePath}`;
-      const resp = await fetch(apiUrl, {
-        headers: { "Authorization": `token ${token}` }
-      });
-      if (resp.ok) {
-        const fileData = await resp.json();
-        await fetch(apiUrl, {
-          method: "DELETE",
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: `Delete old product file ${oldJsonFileName}`,
-            sha: fileData.sha,
-            branch
-          })
-        });
-      }
-    }
-
-    // --- DELETE OLD IMAGE IF CHANGED ---
-    if (
-      product.image &&
-      productToSave.image &&
-      product.image !== productToSave.image &&
-      product.image.startsWith("https://") // Only delete if it's a GitHub URL
-    ) {
-      // Extract old image filename
-      const oldImageUrl = product.image;
-      const oldImagePath = decodeURIComponent(
-        oldImageUrl.split(`/${owner}/${repo}/${branch}/`)[1] || ""
-      );
-      if (oldImagePath) {
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldImagePath}`;
+      // If filename changed, delete the old JSON file
+      if (oldJsonFilePath !== newJsonFilePath) {
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldJsonFilePath}`;
         const resp = await fetch(apiUrl, {
           headers: { "Authorization": `token ${token}` }
         });
@@ -495,101 +461,135 @@ const saveChanges = async () => {
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
-              message: `Delete old image file ${oldImagePath}`,
+              message: `Delete old product file ${oldJsonFileName}`,
               sha: fileData.sha,
               branch
             })
           });
         }
       }
-    }
 
-    // --- DELETE OLD DATASHEET IF CHANGED ---
-    if (
-      product.datasheet &&
-      productToSave.datasheet &&
-      product.datasheet !== productToSave.datasheet &&
-      product.datasheet.startsWith("https://")
-    ) {
-      const oldDatasheetUrl = product.datasheet;
-      const oldDatasheetPath = decodeURIComponent(
-        oldDatasheetUrl.split(`/${owner}/${repo}/${branch}/`)[1] || ""
-      );
-      if (oldDatasheetPath) {
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldDatasheetPath}`;
-        const resp = await fetch(apiUrl, {
-          headers: { "Authorization": `token ${token}` }
+      // --- DELETE OLD IMAGE IF CHANGED ---
+      if (
+        product.image &&
+        productToSave.image &&
+        product.image !== productToSave.image &&
+        product.image.startsWith("https://") // Only delete if it's a GitHub URL
+      ) {
+        // Extract old image filename
+        const oldImageUrl = product.image;
+        const oldImagePath = decodeURIComponent(
+          oldImageUrl.split(`/${owner}/${repo}/${branch}/`)[1] || ""
+        );
+        if (oldImagePath) {
+          const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldImagePath}`;
+          const resp = await fetch(apiUrl, {
+            headers: { "Authorization": `token ${token}` }
+          });
+          if (resp.ok) {
+            const fileData = await resp.json();
+            await fetch(apiUrl, {
+              method: "DELETE",
+              headers: {
+                "Authorization": `token ${token}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                message: `Delete old image file ${oldImagePath}`,
+                sha: fileData.sha,
+                branch
+              })
+            });
+          }
+        }
+      }
+
+      // --- DELETE OLD DATASHEET IF CHANGED ---
+      if (
+        product.datasheet &&
+        productToSave.datasheet &&
+        product.datasheet !== productToSave.datasheet &&
+        product.datasheet.startsWith("https://")
+      ) {
+        const oldDatasheetUrl = product.datasheet;
+        const oldDatasheetPath = decodeURIComponent(
+          oldDatasheetUrl.split(`/${owner}/${repo}/${branch}/`)[1] || ""
+        );
+        if (oldDatasheetPath) {
+          const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${oldDatasheetPath}`;
+          const resp = await fetch(apiUrl, {
+            headers: { "Authorization": `token ${token}` }
+          });
+          if (resp.ok) {
+            const fileData = await resp.json();
+            await fetch(apiUrl, {
+              method: "DELETE",
+              headers: {
+                "Authorization": `token ${token}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                message: `Delete old datasheet file ${oldDatasheetPath}`,
+                sha: fileData.sha,
+                branch
+              })
+            });
+          }
+        }
+      }
+
+      // Handle image upload
+      if (productToSave.imageModified && productToSave.imageData) {
+        const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
+        const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
+        fileUpdates.push({
+          path: imageFilePath,
+          content: productToSave.imageData,
         });
-        if (resp.ok) {
-          const fileData = await resp.json();
-          await fetch(apiUrl, {
-            method: "DELETE",
-            headers: {
-              "Authorization": `token ${token}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              message: `Delete old datasheet file ${oldDatasheetPath}`,
-              sha: fileData.sha,
-              branch
-            })
-          });
-        }
+        productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
+        delete productToSave.imageData;
+        delete productToSave.imageModified;
       }
-    }
 
-    // Handle image upload
-    if (productToSave.imageModified && productToSave.imageData) {
-      const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
-      const imageFilePath = `${path}/images/${itemIdentifier}_${productToSave.image}`;
+      // Handle datasheet upload
+      if (productToSave.datasheetModified && productToSave.datasheetData) {
+        const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
+        const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
+        fileUpdates.push({
+          path: datasheetFilePath,
+          content: productToSave.datasheetData,
+        });
+        productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
+        delete productToSave.datasheetData;
+        delete productToSave.datasheetModified;
+      }
+
+      // Always save the product JSON with the new name
       fileUpdates.push({
-        path: imageFilePath,
-        content: productToSave.imageData,
+        path: newJsonFilePath,
+        content: safeBase64Encode(JSON.stringify(productToSave, null, 2)),
       });
-      productToSave.image = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imageFilePath}`;
-      delete productToSave.imageData;
-      delete productToSave.imageModified;
+
+      // Commit all files in one batch
+      if (token && repo && owner && fileUpdates.length > 0) {
+        await batchCommitToGithub({
+          token,
+          repo,
+          owner,
+          branch,
+          fileUpdates,
+          commitMessage: "Update product information and assets"
+        });
+      }
+
+      setProduct(productToSave);
+      setEditMode(false);
+    } catch (error) {
+      setSaveError(error.message || "Failed to save changes");
+    } finally {
+      setIsSaving(false);
     }
-
-    // Handle datasheet upload
-    if (productToSave.datasheetModified && productToSave.datasheetData) {
-      const itemIdentifier = `${productToSave.id}-${newSanitizedPartName}-${newSanitizedManufacturerPart}`;
-      const datasheetFilePath = `${path}/datasheets/${itemIdentifier}_${productToSave.datasheet}`;
-      fileUpdates.push({
-        path: datasheetFilePath,
-        content: productToSave.datasheetData,
-      });
-      productToSave.datasheet = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${datasheetFilePath}`;
-      delete productToSave.datasheetData;
-      delete productToSave.datasheetModified;
-    }
-
-    // Always save the product JSON with the new name
-    fileUpdates.push({
-      path: newJsonFilePath,
-      content: safeBase64Encode(JSON.stringify(productToSave, null, 2)),
-    });
-
-    // Commit all files in one batch
-    if (token && repo && owner && fileUpdates.length > 0) {
-      await batchCommitToGithub({
-        token,
-        repo,
-        owner,
-        branch,
-        fileUpdates,
-        commitMessage: "Update product information and assets"
-      });
-    }
-
-    setProduct(productToSave);
-    setEditMode(false);
-  } catch (error) {
-    setSaveError(error.message || "Failed to save changes");
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
 
   // --- AUTOCOMPLETE RENDER ---
   const renderAutocomplete = (field, label, required = false) => {
@@ -597,7 +597,16 @@ const saveChanges = async () => {
     const options = isCategory ? dropdownOptions.categories : dropdownOptions[`${field}s`] || [];
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1 ">
+        <label className="block text-sm font-medium mb-1"
+          style={{
+            // Use section color if in a section, fallback to accent/foreground
+            color:
+              field === "partName" || field === "category"
+                ? "var(--section-indigo-label, #6366f1)"
+                : field === "manufacturer" || field === "manufacturerPart" || field === "vendor"
+                  ? "var(--section-pink-label, #fbcfe8)"
+                  : "var(--foreground)"
+          }}>
           {label} {required && <span className="text-red-500">*</span>}
         </label>
         <div className="relative flex items-center border border-gray-300 rounded-md ">
@@ -682,98 +691,66 @@ const saveChanges = async () => {
   };
 
   // --- RENDER ---
-  if (isLoading) {
-    return (
-      <div className="mx-auto bg-white shadow-xl overflow-hidden">
-        <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-          <div className="mx-auto py-4 px-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Package className="h-8 w-8" />
-                <span className="text-2xl font-bold">InventoryPro</span>
-              </div>
-              <h2 className="text-3xl font-bold">Product Details</h2>
-              <div>
-                <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
-                  <Home className="h-4 w-4 mr-2" /> Dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading product details...</p>
+if (isLoading) {
+  return (
+    <div className="min-h-screen w-full flex flex-col bg-gray-50 dark:bg-black">
+      <div className="flex-1 flex items-center justify-center">
+        <div className="p-8 flex flex-col items-center justify-center min-h-[300px] w-full
+          bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-black dark:to-gray-900">
+          <div className="animate-spin rounded-full h-14 w-14 border-b-4 border-indigo-600 mb-6"></div>
+          <p className="text-lg text-indigo-900 dark:text-indigo-200 font-medium">Loading product details...</p>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
   if (error) {
     return (
-      <div className="mx-auto bg-white shadow-xl overflow-hidden">
-        <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-          <div className="mx-auto py-4 px-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Package className="h-8 w-8" />
-                <span className="text-2xl font-bold">InventoryPro</span>
-              </div>
-              <h2 className="text-3xl font-bold">Product Details</h2>
-              <div>
-                <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
-                  <Home className="h-4 w-4 mr-2" /> Dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div className="p-6 bg-red-50 flex flex-col items-center justify-center">
-          <AlertCircle className="w-10 h-10 text-red-500 mb-4" />
-          <p className="text-red-700 text-lg">Error: {error}</p>
-          <Link href="/manage-inventory" className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+      <div className="mx-auto bg-white shadow-xl overflow-hidden"
+        style={{ color: "var(--foreground, #1f2937)", backgroundColor: "var(--background, #ffffff)" }}>
+
+        <div className="p-8 flex flex-col items-center justify-center min-h-[300px] bg-gradient-to-br from-red-50 to-red-100">
+          <AlertCircle className="w-12 h-12 text-red-600 mb-4" />
+          <p className="text-red-800 text-xl font-semibold">Error: {error}</p>
+          <Link
+            href="/manage-inventory"
+            className="mt-6 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded shadow hover:from-blue-700 hover:to-indigo-800 flex items-center"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Inventory
           </Link>
         </div>
       </div>
+
     );
   }
   if (!product) {
     return (
-      <div className="mx-auto bg-white shadow-xl overflow-hidden">
-        <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-          <div className="mx-auto py-4 px-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Package className="h-8 w-8" />
-                <span className="text-2xl font-bold">InventoryPro</span>
-              </div>
-              <h2 className="text-3xl font-bold">Product Details</h2>
-              <div>
-                <Link href="/" className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md mr-4 flex items-center">
-                  <Home className="h-4 w-4 mr-2" /> Dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div className="p-6 bg-yellow-50 flex flex-col items-center justify-center">
-          <AlertCircle className="w-10 h-10 text-yellow-500 mb-4" />
-          <p className="text-yellow-700 text-lg">Product not found or data is unavailable</p>
-          <Link href="/manage-inventory" className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+      <div className="mx-auto bg-white shadow-xl overflow-hidden"
+        style={{ color: "var(--foreground, #1f2937)", backgroundColor: "var(--background, #ffffff)" }}>
+
+        <div className="p-8 flex flex-col items-center justify-center min-h-[300px] bg-gradient-to-br from-yellow-50 to-yellow-100">
+          <AlertCircle className="w-12 h-12 text-yellow-500 mb-4" />
+          <p className="text-yellow-700 text-xl font-semibold">Product not found or data is unavailable</p>
+          <Link
+            href="/manage-inventory"
+            className="mt-6 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded shadow hover:from-blue-700 hover:to-indigo-800 flex items-center"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Inventory
           </Link>
         </div>
       </div>
+
     );
   }
 
   return (
-    <div className="mx-auto bg-white shadow-xl overflow-hidden">
-      {/* Header */}
+    <div className="mx-auto bg-white shadow-xl overflow-hidden"
+      style={{ color: "var(--foreground, #1f2937)", backgroundColor: "var(--background, #ffffff)" }}>
 
       {/* Navigation and Action Buttons */}
-      <div className="bg-gray-100 px-6 py-3 flex items-center justify-between border-b border-gray-200">
-        <Link href="/manage-inventory" className="flex items-center text-blue-600 hover:text-blue-800">
+      <div className="px-6 py-3 flex items-center justify-between border-b border-indigo-100"
+        style={{ background: "var(--bar-bg )" }}>
+        <Link href="/manage-inventory" className="flex items-center text-blue-700 hover:text-blue-900 font-semibold">
           <ArrowLeft className="h-4 w-4 mr-1" /> Back to Inventory
         </Link>
 
@@ -782,13 +759,13 @@ const saveChanges = async () => {
             <>
               <button
                 onClick={() => setEditMode(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded hover:from-blue-700 hover:to-indigo-800 flex items-center shadow"
               >
                 <Edit className="w-4 h-4 mr-2" /> Edit
               </button>
 
               <button
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center"
+                className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white rounded hover:from-red-600 hover:to-red-800 flex items-center shadow"
                 onClick={() => {
                   if (confirm("Are you sure you want to delete this product?")) {
                     alert("Product would be deleted in a real implementation");
@@ -804,7 +781,7 @@ const saveChanges = async () => {
               <button
                 onClick={saveChanges}
                 disabled={isSaving}
-                className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`px-4 py-2 bg-gradient-to-r from-green-500 to-green-700 text-white rounded hover:from-green-600 hover:to-green-800 flex items-center shadow ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {isSaving ? (
                   <>
@@ -822,7 +799,7 @@ const saveChanges = async () => {
                   setEditMode(false);
                   setEditedProduct(product);
                 }}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center"
+                className="px-4 py-2 bg-gradient-to-r from-gray-400 to-gray-600 text-white rounded hover:from-gray-500 hover:to-gray-700 flex items-center shadow"
                 disabled={isSaving}
               >
                 Cancel
@@ -832,7 +809,7 @@ const saveChanges = async () => {
 
           <button
             onClick={() => fetchProductDetails(partName)}
-            className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
+            className="px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded hover:from-blue-200 hover:to-indigo-200 flex items-center shadow"
           >
             <RefreshCw className="w-4 h-4 mr-2" /> Refresh
           </button>
@@ -841,7 +818,7 @@ const saveChanges = async () => {
 
       {/* Save Error Alert */}
       {saveError && (
-        <div className="p-4 bg-red-50 border-b border-red-100">
+        <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200">
           <div className="flex items-center">
             <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
             <p className="text-red-700">Error saving product: {saveError}</p>
@@ -853,218 +830,304 @@ const saveChanges = async () => {
       <div className="px-6 py-2">
         {/* Product Details Section */}
         {editMode ? (
-          /* Edit Form */
           <div className="rounded-lg">
             {/* Product Identification Section */}
-            <div className="mb-6 grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-3">
-
-              <div className=" p-4 bg-blue-50 rounded-lg">
-
-                <h3 className="font-medium text-blue-800 mb-3 flex items-center">
-                  <Tag className="mr-2 h-5 w-5" /> Product Identification
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div
+                className="p-4 rounded-lg shadow-md"
+                style={{
+                  background: "var(--section-indigo)",
+                  color: "var(--section-indigo-text, #a5b4fc)",
+                }}
+              >
+                <h3
+                  className="font-semibold mb-3 flex items-center"
+                  style={{
+                    color: "var(--section-indigo-text, #a5b4fc)",
+                    fontSize: "1.1rem",
+                  }}
+                >
+                  <Tag className="mr-2 h-5 w-5" style={{ color: "var(--section-indigo-text, #a5b4fc)" }} />
+                  Product Identification
                 </h3>
-
                 <div className="space-y-4">
-                  {/* Part Name Dropdown */}
                   {renderAutocomplete("partName", "Part Name", true)}
-                  {/* Category Dropdown */}
                   {renderAutocomplete("category", "Category", true)}
-                  {/* Customer Reference */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Customer Reference</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-indigo-label, #c7d2fe)" }}>
+                      Customer Reference
+                    </label>
                     <textarea
                       name="customerRef"
-                      placeholder="Customer part reference"
                       value={editedProduct.customerRef}
                       onChange={handleInputChange}
                       rows="2"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Customer part reference"
+                      style={{ background: "transparent", color: "var(--section-indigo-text, #a5b4fc)" }}
                     />
                   </div>
                 </div>
               </div>
-
               {/* Manufacturer Details Section */}
-              <div className="bg-pink-50 p-4 rounded-lg md:col-span-1 lg:col-span-2">
-                <h3 className="font-medium text-indigo-800 mb-3 flex items-center">
-                  <Folder className="mr-2 h-5 w-5" /> Manufacturer Details
+              <div
+                className="shadow-md p-4 rounded-lg md:col-span-1 lg:col-span-2"
+                style={{
+                  background: "var(--section-pink)",
+                  color: "var(--section-pink-text, #f472b6)",
+                }}
+              >
+                <h3
+                  className="font-semibold mb-3 flex items-center"
+                  style={{
+                    color: "var(--section-pink-text, #f472b6)",
+                    fontSize: "1.1rem",
+                  }}
+                >
+                  <Folder className="mr-2 h-5 w-5" style={{ color: "var(--section-pink-text, #f472b6)" }} />
+                  Manufacturer Details
                 </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Manufacturer Dropdown */}
-                  {renderAutocomplete("manufacturer", "Manufacturer", true)}
-                  {/* Manufacturer Part # Dropdown */}
-                  {renderAutocomplete("manufacturerPart", "Manufacturer Part #", true)}
-                  {/* Vendor Dropdown */}
-                  {renderAutocomplete("vendor", "Vendor", false)}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Product Link</label>
-                    <input
-                      type="text"
-                      name="vendorProductLink"
-                      placeholder="https://vendor.com/product/123"
-                      value={editedProduct.vendorProductLink || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {renderAutocomplete("manufacturer", "Manufacturer", true)}
+                    {renderAutocomplete("manufacturerPart", "Manufacturer Part #", true)}
+                    {renderAutocomplete("vendor", "Vendor", false)}
+                    <div>
+                      <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-pink-label, #fbcfe8)" }}>
+                        Vendor Product Link
+                      </label>
+                      <input
+                        type="text"
+                        name="vendorProductLink"
+                        value={editedProduct.vendorProductLink || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://vendor.com/product/123"
+                        style={{ background: "transparent", color: "var(--section-pink-text, #f472b6)" }}
+                      />
+                    </div>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-pink-label, #fbcfe8)" }}>
+                      Description
+                    </label>
                     <textarea
                       name="description"
-                      placeholder="Brief description of the part"
                       value={editedProduct.description}
                       onChange={handleInputChange}
-                      rows="3"
+                      rows="2"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    ></textarea>
+                      placeholder="Brief description of the part"
+                      style={{ background: "transparent", color: "var(--section-pink-text, #f472b6)" }}
+                    />
                   </div>
                 </div>
               </div>
-
             </div>
             {/* Pricing Information Section */}
-            <div className="mb-6 bg-green-50 p-4 rounded-lg">
-              <h3 className="font-medium text-green-800 mb-3 flex items-center">
-                <DollarSign className="mr-2 h-5 w-5" /> Pricing Information
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                    <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      <span>Cost Price</span>
+            <div className="mb-4">
+              <div
+                className="p-4 rounded-lg shadow-md"
+                style={{
+                  background: "var(--section-green)",
+                  color: "var(--section-green-text, #bbf7d0)",
+                }}
+              >
+                <h3 className="font-semibold mb-3 flex items-center" style={{ color: "var(--section-green-text, #bbf7d0)", fontSize: "1.1rem" }}>
+                  <DollarSign className="mr-2 h-5 w-5" style={{ color: "var(--section-green-text, #bbf7d0)" }} />
+                  Pricing Information
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 flex items-center" style={{ color: "var(--section-green-label, #bbf7d0)" }}>
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Cost Price <span className="ml-1 text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        name="costPrice"
+                        value={editedProduct.costPrice}
+                        required={true}
+                        onChange={handleInputChange}
+                        step="0.01"
+                        min="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                        style={{ background: "transparent", color: "#fff" }}
+                      />
                     </div>
-                  </label>
-                  <input
-                    type="number"
-                    name="costPrice"
-                    placeholder="0.00"
-                    value={editedProduct.costPrice}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                    </svg>
-                    Sale Price
-                  </label>
-                  <input
-                    type="number"
-                    name="salePrice"
-                    placeholder="0.00"
-                    value={editedProduct.salePrice}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                    <div>
+                      <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-green-label, #bbf7d0)" }}>
+                        <div className="flex items-center">
+                          <Tag className="h-4 w-4 mr-1" />
+                          <span>Sale Price</span>
+                        </div>
+                      </label>
+                      <input
+                        type="number"
+                        name="salePrice"
+                        value={editedProduct.salePrice}
+                        onChange={handleInputChange}
+                        step="0.01"
+                        min="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                        style={{ background: "transparent", color: "#fff" }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-
             {/* Inventory Details Section */}
-            <div className="mb-6 p-4 bg-purple-50 rounded-lg">
-              <h2 className="flex items-center text-purple-700 font-medium mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-                </svg>
-                Inventory Details
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bin Locations</label>
-                  <div className="space-y-2 mb-2">
-                    {editedProduct.binLocations && editedProduct.binLocations.map((location, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          placeholder="Bin Location"
-                          value={location.bin}
-                          onChange={(e) => {
-                            const updatedLocations = [...editedProduct.binLocations];
-                            updatedLocations[index].bin = e.target.value;
-                            setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
-                          }}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <input
-                          type="number"
-                          placeholder="Quantity"
-                          value={location.quantity}
-                          onChange={(e) => {
-                            const updatedLocations = [...editedProduct.binLocations];
-                            updatedLocations[index].quantity = e.target.value;
-                            setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
-                          }}
-                          className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+            <div className="mb-4">
+              <div className="space-y-4">
+                <div
+                  className="p-4 rounded-lg shadow-md"
+                  style={{
+                    background: "var(--section-purple)",
+                    color: "var(--section-purple-text, #ddd6fe)",
+                  }}
+                >
+                  <h3 className="font-semibold mb-3 flex items-center" style={{ color: "var(--section-purple-text, #ddd6fe)", fontSize: "1.1rem" }}>
+                    <MapPin className="mr-2 h-5 w-5" style={{ color: "var(--section-purple-text, #ddd6fe)" }} />
+                    Inventory Details
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
+                          Bin Locations <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex flex-col space-y-2 mb-2">
+                          {editedProduct.binLocations && editedProduct.binLocations.map((location, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                placeholder="Bin Location"
+                                value={location.bin}
+                                onChange={(e) => {
+                                  const updatedLocations = [...editedProduct.binLocations];
+                                  updatedLocations[index].bin = e.target.value;
+                                  setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
+                                }}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                style={{ background: "transparent", color: "#fff" }}
+                              />
+                              <input
+                                type="number"
+                                placeholder="Quantity"
+                                value={location.quantity}
+                                onChange={(e) => {
+                                  const updatedLocations = [...editedProduct.binLocations];
+                                  updatedLocations[index].quantity = e.target.value;
+                                  setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
+                                }}
+                                className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                style={{ background: "transparent", color: "#fff" }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedLocations = editedProduct.binLocations.filter((_, i) => i !== index);
+                                  setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
+                                }}
+                                className="p-2 text-red-600 hover:text-red-800"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
-                            const updatedLocations = editedProduct.binLocations.filter((_, i) => i !== index);
-                            setEditedProduct({ ...editedProduct, binLocations: updatedLocations });
+                            const binLocations = editedProduct.binLocations || [];
+                            setEditedProduct({
+                              ...editedProduct,
+                              binLocations: [...binLocations, { bin: "", quantity: 0 }]
+                            });
                           }}
-                          className="p-2 text-red-600 hover:text-red-800"
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
                         >
-                          <Trash className="h-4 w-4" />
+                          + Add Bin Location
                         </button>
                       </div>
-                    ))}
+                      <div className="md-2">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
+                            Quantity <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            readOnly
+                            value={editedProduct.binLocations?.reduce((sum, l) => sum + (parseInt(l.quantity) || 0), 0) || "0"}
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:outline-none font-bold"
+                            placeholder="Calculated from bins"
+                            tabIndex="-1"
+                            style={{
+                              color: "var(--avl-qty-text, #bbf7d0)",
+                              fontWeight: "bold",
+                              fontSize: "1.1rem",
+                              letterSpacing: "0.05em",
+                              background: "transparent"
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
+                          Reorder Point <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="reorderPoint"
+                          required={true}
+                          value={editedProduct.reorderPoint}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="5"
+                          min="0"
+                          style={{ background: "transparent", color: "#fff" }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1" style={{ color: "var(--section-purple-label, #ddd6fe)" }}>
+                          Reorder Quantity
+                        </label>
+                        <input
+                          type="number"
+                          name="reorderQty"
+                          value={editedProduct.reorderQty}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="10"
+                          min="0"
+                          style={{ background: "transparent", color: "#fff" }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const binLocations = editedProduct.binLocations || [];
-                      setEditedProduct({
-                        ...editedProduct,
-                        binLocations: [...binLocations, { bin: "", quantity: 0 }]
-                      });
-                    }}
-                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-                  >
-                    + Add Bin Location
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Point</label>
-                  <input
-                    type="number"
-                    name="reorderPoint"
-                    placeholder="5"
-                    value={editedProduct.reorderPoint}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Quantity</label>
-                  <input
-                    type="number"
-                    name="reorderQty"
-                    placeholder="10"
-                    value={editedProduct.reorderQty}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
                 </div>
               </div>
             </div>
-
             {/* Files & Documentation Section */}
-            <div className="mb-4 bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-xl font-medium text-gray-800 mb-3">Files & Documentation</h3>
+            <div
+              className="mb-4 p-4 rounded-lg shadow-md"
+              style={{
+                background: "var(--section-gray)",
+                color: "var(--foreground)",
+              }}
+            >
+              <h3 className="text-xl font-semibold mb-3" style={{ color: "#fff" }}>Files & Documentation</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: "#fff" }}>
                     Component Image
                   </label>
-                  <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                  <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md" style={{ borderColor: "#52525b" }}>
                     <div className="space-y-1 text-center">
                       {imagePreview ? (
                         <div>
@@ -1073,7 +1136,7 @@ const saveChanges = async () => {
                             alt="Preview"
                             className="mx-auto h-32 w-auto object-contain mb-2"
                           />
-                          <p className="text-xs text-gray-500">{editedProduct.image}</p>
+                          <p className="text-xs" style={{ color: "#fff", opacity: 0.7 }}>{editedProduct.image}</p>
                         </div>
                       ) : (
                         <div>
@@ -1091,13 +1154,17 @@ const saveChanges = async () => {
                               strokeLinejoin="round"
                             />
                           </svg>
-                          <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                          <p className="text-xs" style={{ color: "#a3a3a3" }}>PNG, JPG, GIF up to 10MB</p>
                         </div>
                       )}
                       <div>
                         <label
                           htmlFor="image-upload"
-                          className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                          className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md"
+                          style={{
+                            color: "var(--accent)",
+                            background: "var(--accent-foreground)"
+                          }}
                         >
                           <span>{imagePreview ? "Change Image" : "Upload Image"}</span>
                           <input
@@ -1107,38 +1174,40 @@ const saveChanges = async () => {
                             accept="image/*"
                             onChange={handleImageUpload}
                             className="sr-only"
-
                           />
                         </label>
                       </div>
                     </div>
                   </div>
                 </div>
-
                 {/* Datasheet Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: "#fff" }}>
                     Datasheet
                   </label>
-                  <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                  <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md" style={{ borderColor: "#52525b" }}>
                     <div className="space-y-1 text-center">
                       {datasheetName ? (
                         <div>
-                          <Clipboard className="mx-auto h-12 w-12 text-blue-500" />
-                          <p className="text-xs font-medium text-gray-900 mt-2">
+                          <Clipboard className="mx-auto h-12 w-12" style={{ color: "var(--accent)" }} />
+                          <p className="text-xs font-medium" style={{ color: "#fff" }}>
                             {datasheetName}
                           </p>
                         </div>
                       ) : (
                         <div>
                           <Folder className="mx-auto h-12 w-12 text-gray-400" />
-                          <p className="text-xs text-gray-500">PDF, DOC, XLS up to 10MB</p>
+                          <p className="text-xs" style={{ color: "#a3a3a3" }}>PDF, DOC, XLS up to 10MB</p>
                         </div>
                       )}
                       <div>
                         <label
                           htmlFor="datasheet-upload"
-                          className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                          className="mt-2 cursor-pointer inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md"
+                          style={{
+                            color: "var(--accent)",
+                            background: "var(--accent-foreground)"
+                          }}
                         >
                           <span>{datasheetName ? "Change File" : "Upload Datasheet"}</span>
                           <input
@@ -1147,8 +1216,6 @@ const saveChanges = async () => {
                             type="file"
                             onChange={handleDatasheetUpload}
                             className="sr-only"
-                          // value={editedProduct.datasheet}
-
                           />
                         </label>
                       </div>
@@ -1160,7 +1227,7 @@ const saveChanges = async () => {
           </div>
         ) : (
           /* View Mode */
-          <div className="mx-auto ">
+          <div className="mx-auto">
             {/* Product Header */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 pb-4 border-b">
               <div>
@@ -1171,7 +1238,6 @@ const saveChanges = async () => {
                   <p className="mt-1 text-gray-500 italic">No description available</p>
                 )}
               </div>
-
               {/* Status Badge */}
               <div className="mt-4 md:mt-0 flex items-center">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${calculateTotalQuantity(product.binLocations) > 0
@@ -1183,11 +1249,11 @@ const saveChanges = async () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Left Column - Image and Quick Stats */}
-              <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="rounded-lg shadow overflow-hidden" style={{ background: "var(--section-gray)" }}>
                 {/* Product Image */}
-                <div className="relative h-48 bg-gray-100 flex items-center justify-center border-b">
+                <div className="relative h-48 flex items-center justify-center border-b" style={{ background: "var(--section-indigo)" }}>
                   {product.image ? (
                     <img
                       src={product.image}
@@ -1201,44 +1267,42 @@ const saveChanges = async () => {
                     </div>
                   )}
                 </div>
-
                 {/* Quick Stats */}
                 <div className="p-4">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-gray-500">Total Quantity</span>
-                    <span className="font-semibold text-lg">
+                    <span className="text-sm font-medium" style={{ color: "var(--section-indigo-label)" }}>Total Quantity</span>
+                    <span className="font-semibold text-lg" style={{ color: "var(--avl-qty-text)" }}>
                       {calculateTotalQuantity(product.binLocations)}
                     </span>
                   </div>
-
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-gray-500">Category</span>
+                    <span className="text-sm font-medium" style={{ color: "var(--section-indigo-label)" }}>Category</span>
                     {product.category ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        style={{ background: "var(--section-indigo)", color: "var(--section-indigo-text)" }}>
                         {product.category}
                       </span>
                     ) : (
                       <span className="text-gray-400">Not specified</span>
                     )}
                   </div>
-
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-500">Manufacturer</span>
-                    <span className="font-medium">{product.manufacturer || "Not specified"}</span>
+                    <span className="text-sm font-medium" style={{ color: "var(--section-indigo-label)" }}>Manufacturer</span>
+                    <span className="font-medium" style={{ color: "var(--section-indigo-text)" }}>{product.manufacturer || "Not specified"}</span>
                   </div>
                 </div>
                 {/* Datasheet Preview */}
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <FileText className="h-5 w-5 mr-2 text-blue-600" /> Datasheet
+                <div className="rounded-lg shadow overflow-hidden" style={{ background: "var(--section-gray)" }}>
+                  <div className="px-4 py-5 border-b" style={{ background: "var(--section-indigo)" }}>
+                    <h2 className="text-lg font-medium flex items-center" style={{ color: "var(--section-indigo-text)" }}>
+                      <FileText className="h-5 w-5 mr-2" /> Datasheet
                     </h2>
                   </div>
                   <div className="p-4">
                     {product.datasheet ? (
                       <div className="space-y-4">
                         <div className="border rounded-lg overflow-hidden">
-                          <div className="bg-gray-100 h-48 flex items-center justify-center">
+                          <div className="h-48 flex items-center justify-center" style={{ background: "var(--section-gray)" }}>
                             <FileText
                               className="h-16 w-16 text-gray-400"
                               onClick={() => openPdfModal(product.datasheet)}
@@ -1246,21 +1310,23 @@ const saveChanges = async () => {
                           </div>
                           <div className="p-3 border-t">
                             <div className="flex items-center justify-between">
-
-                              <span className="text-sm truncate">
+                              <span className="text-sm truncate" style={{ color: "var(--section-indigo-text)" }}>
                                 {product.datasheet ? product.datasheet.split('/').pop() : "Datasheet"}
-                              </span>                              <div className="flex space-x-2">
+                              </span>
+                              <div className="flex space-x-2">
                                 <a
                                   href={product.datasheet}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                  className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white"
+                                  style={{ background: "var(--accent)" }}
                                 >
                                   <Download className="mr-1 h-3 w-3" /> Download
                                 </a>
                                 <button
                                   onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(product.datasheet)}`, '_blank')}
-                                  className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                  className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm"
+                                  style={{ color: "var(--accent)", background: "var(--accent-foreground)" }}
                                 >
                                   <Eye className="mr-1 h-3 w-3" /> View
                                 </button>
@@ -1277,61 +1343,61 @@ const saveChanges = async () => {
                     )}
                   </div>
                 </div>
-
               </div>
 
               {/* Middle Column - Basic Information and Inventory Details */}
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <ClipboardList className="h-5 w-5 mr-2 text-blue-600" /> Basic Information
+                <div className="rounded-lg shadow overflow-hidden" style={{ background: "var(--section-indigo)" }}>
+                  <div className="px-4 py-5 border-b" style={{ background: "var(--section-indigo)" }}>
+                    <h2 className="text-lg font-medium flex items-center" style={{ color: "var(--section-indigo-text)" }}>
+                      <ClipboardList className="h-5 w-5 mr-2" /> Basic Information
                     </h2>
                   </div>
                   <div className="p-4">
                     <table className="min-w-full">
                       <tbody className="divide-y divide-gray-200">
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Part Name</td>
-                          <td className="py-2 text-sm text-gray-800">{product.partName || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-indigo-label)" }}>Part Name</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-indigo-text)" }}>{product.partName || "Not specified"}</td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer Part</td>
-                          <td className="py-2 text-sm text-gray-800">{product.manufacturerPart || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-indigo-label)" }}>Manufacturer Part</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-indigo-text)" }}>{product.manufacturerPart || "Not specified"}</td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Manufacturer</td>
-                          <td className="py-2 text-sm text-gray-800">{product.manufacturer || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-indigo-label)" }}>Manufacturer</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-indigo-text)" }}>{product.manufacturer || "Not specified"}</td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Description</td>
-                          <td className="py-2 text-sm text-gray-800">{product.description || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-indigo-label)" }}>Description</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-indigo-text)" }}>{product.description || "Not specified"}</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <Package className="h-5 w-5 mr-2 text-blue-600" /> Inventory Details
+                <div className="rounded-lg shadow overflow-hidden" style={{ background: "var(--section-purple)" }}>
+                  <div className="px-4 py-5 border-b" style={{ background: "var(--section-purple)" }}>
+                    <h2 className="text-lg font-medium flex items-center" style={{ color: "var(--section-purple-text)" }}>
+                      <Package className="h-5 w-5 mr-2" /> Inventory Details
                     </h2>
                   </div>
                   <div className="p-4">
                     <table className="min-w-full">
                       <tbody className="divide-y divide-gray-200">
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Bin Locations</td>
-                          <td className="py-2 text-sm text-gray-800">
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-purple-label)" }}>Bin Locations</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-purple-text)" }}>
                             {product && product.binLocations && product.binLocations.length > 0 ? (
                               <div className="space-y-1">
                                 {product.binLocations.map((location, index) => (
                                   <div key={index} className="flex items-center space-x-2">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      style={{ background: "var(--section-indigo)", color: "var(--section-indigo-text)" }}>
                                       {location.bin}
                                     </span>
-                                    <span className="text-xs text-gray-600">Qty: {location.quantity}</span>
+                                    <span className="text-xs" style={{ color: "var(--section-purple-label)" }}>Qty: {location.quantity}</span>
                                   </div>
                                 ))}
                               </div>
@@ -1341,12 +1407,12 @@ const saveChanges = async () => {
                           </td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Point</td>
-                          <td className="py-2 text-sm text-gray-800">{product.reorderPoint || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-purple-label)" }}>Reorder Point</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-purple-text)" }}>{product.reorderPoint || "Not specified"}</td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Reorder Quantity</td>
-                          <td className="py-2 text-sm text-gray-800">{product.reorderQty || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-purple-label)" }}>Reorder Quantity</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-purple-text)" }}>{product.reorderQty || "Not specified"}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1354,26 +1420,26 @@ const saveChanges = async () => {
                 </div>
               </div>
 
-              {/* Right Column - Pricing & References + Datasheet Preview */}
+              {/* Right Column - Pricing & References */}
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <DollarSign className="h-5 w-5 mr-2 text-blue-600" /> Pricing
+                <div className="rounded-lg shadow overflow-hidden" style={{ background: "var(--section-green)" }}>
+                  <div className="px-4 py-5 border-b" style={{ background: "var(--section-green)" }}>
+                    <h2 className="text-lg font-medium flex items-center" style={{ color: "var(--section-green-text)" }}>
+                      <DollarSign className="h-5 w-5 mr-2" /> Pricing
                     </h2>
                   </div>
                   <div className="p-4">
                     <table className="min-w-full">
                       <tbody className="divide-y divide-gray-200">
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Cost Price</td>
-                          <td className="py-2 text-sm text-gray-800">
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-green-label)" }}>Cost Price</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-green-text)" }}>
                             {product.costPrice ? `$${product.costPrice}` : "Not specified"}
                           </td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Sale Price</td>
-                          <td className="py-2 text-sm text-gray-800">
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-green-label)" }}>Sale Price</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-green-text)" }}>
                             {product.salePrice ? `$${product.salePrice}` : "Not specified"}
                           </td>
                         </tr>
@@ -1382,26 +1448,26 @@ const saveChanges = async () => {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b">
-                    <h2 className="text-lg font-medium text-gray-700 flex items-center">
-                      <Eye className="h-5 w-5 mr-2 text-blue-600" /> References
+                <div className="rounded-lg shadow overflow-hidden" style={{ background: "var(--section-pink)" }}>
+                  <div className="px-4 py-5 border-b" style={{ background: "var(--section-pink)" }}>
+                    <h2 className="text-lg font-medium flex items-center" style={{ color: "var(--section-pink-text)" }}>
+                      <Eye className="h-5 w-5 mr-2" /> References
                     </h2>
                   </div>
                   <div className="p-4">
                     <table className="min-w-full">
                       <tbody className="divide-y divide-gray-200">
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Vendor</td>
-                          <td className="py-2 text-sm text-gray-800">{product.vendor || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-pink-label)" }}>Vendor</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-pink-text)" }}>{product.vendor || "Not specified"}</td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Vendor Part #</td>
-                          <td className="py-2 text-sm text-gray-800">{product.vendorPart || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-pink-label)" }}>Vendor Part #</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-pink-text)" }}>{product.vendorPart || "Not specified"}</td>
                         </tr>
                         <tr>
-                          <td className="py-2 text-sm font-medium text-gray-600">Customer Reference</td>
-                          <td className="py-2 text-sm text-gray-800">{product.customerRef || "Not specified"}</td>
+                          <td className="py-2 text-sm font-medium" style={{ color: "var(--section-pink-label)" }}>Customer Reference</td>
+                          <td className="py-2 text-sm" style={{ color: "var(--section-pink-text)" }}>{product.customerRef || "Not specified"}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1416,16 +1482,30 @@ const saveChanges = async () => {
 
 
         {/* Status Section */}
-        <div className="bg-gray-50 px-6 py-4 border-t rounded-lg border-gray-200">
+        <div
+          className="px-6 py-4 border-t rounded-lg border-gray-200 mt-6"
+          style={{
+            background: "var(--section-yellow, #fef9c3)",
+            color: "var(--section-yellow-text, #b45309)",
+            boxShadow: "0 2px 8px 0 rgba(251, 191, 36, 0.08)"
+          }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <TimeStamp />
             </div>
             <div>
               {Number(product.quantity) <= Number(product.reorderPoint) && Number(product.reorderPoint) > 0 && (
-                <div className="flex items-center text-amber-600">
+                <div
+                  className="flex items-center px-3 py-1 rounded-full text-sm font-semibold"
+                  style={{
+                    background: "var(--section-yellow, #fde68a)",
+                    color: "var(--section-yellow-text, #b45309)",
+                    border: "1px solid #fde68a"
+                  }}
+                >
                   <AlertCircle className="h-4 w-4 mr-1" />
-                  <span className="text-sm font-medium">Low stock alert</span>
+                  <span>Low stock alert</span>
                 </div>
               )}
             </div>

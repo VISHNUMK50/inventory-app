@@ -303,13 +303,13 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="mx-auto bg-white shadow-xl overflow-hidden">
+    <div className="mx-auto bg-card shadow-xl overflow-hidden min-h-screen transition-colors duration-200">
       <div className="flex flex-col items-center w-full gap-6">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 flex flex-col items-center">
+        <div className="bg-card rounded-2xl shadow-2xl w-full max-w-4xl p-8 flex flex-col items-center transition-colors duration-200">
           {/* Profile Photo Section */}
           <div className="relative mb-6">
             <div
-              className="w-36 h-36 rounded-full border-4 border-blue-200 shadow-lg overflow-hidden flex items-center justify-center bg-gray-100 cursor-pointer hover:opacity-90 transition"
+              className="w-36 h-36 rounded-full border-4 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden flex items-center justify-center bg-background cursor-pointer hover:opacity-90 transition"
               onClick={handlePhotoClick}
             >
               {photoPreview ? (
@@ -321,7 +321,7 @@ const ProfilePage = () => {
                   className="object-cover object-center w-full h-full"
                 />
               ) : (
-                <Camera className="h-16 w-16 text-blue-300" />
+                <Camera className="h-16 w-16 text-blue-300 dark:text-blue-700" />
               )}
             </div>
             <input
@@ -339,7 +339,7 @@ const ProfilePage = () => {
             <button
               type="button"
               onClick={handlePhotoClick}
-              className="absolute bottom-2 right-2 bg-blue-600 text-white rounded-full p-2 shadow hover:bg-blue-700 transition"
+              className="absolute bottom-2 right-2 bg-accent text-accent-foreground rounded-full p-2 shadow hover:bg-blue-700 transition"
               title="Change Photo"
             >
               <Upload className="h-5 w-5" />
@@ -349,97 +349,101 @@ const ProfilePage = () => {
           <form className="w-full space-y-4" onSubmit={handleSave}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">User ID</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">User ID</label>
                 <input
                   type="text"
                   value={userId}
                   readOnly
                   onFocus={(e) => e.target.blur()}
-                  className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
+                  className="w-full px-3 py-2 border border-border rounded bg-section-gray dark:bg-section-gray text-gray-500 dark:text-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">GitHub Path</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">GitHub Path</label>
                 <input
                   type="text"
                   value={githubPath}
                   readOnly
                   onFocus={(e) => e.target.blur()}
-                  className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
+                  className="w-full px-3 py-2 border border-border rounded bg-section-gray dark:bg-section-gray text-gray-500 dark:text-gray-400"
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Full Name</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full px-3 py-2 border border-border bg-background rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-foreground"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Email Address</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   readOnly
                   onFocus={(e) => e.target.blur()}
-                  className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
+                  className="w-full px-3 py-2 border border-border rounded bg-section-gray dark:bg-section-gray text-gray-500 dark:text-gray-400"
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Phone Number</label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full px-3 py-2 border border-border bg-background rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-foreground"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Company</label>
                 <input
                   type="text"
                   name="company"
                   value={formData.company}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full px-3 py-2 border border-border bg-background rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-foreground"
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Position</label>
                 <input
                   type="text"
                   name="position"
                   value={formData.position}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full px-3 py-2 border border-border bg-background rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-foreground"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Address</label>
                 <input
                   type="text"
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full px-3 py-2 border border-border bg-background rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-foreground"
                 />
               </div>
             </div>
             <div className="pt-6">
               <button
                 type="submit"
-                className="flex items-center justify-center w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg shadow hover:bg-blue-700 transition"
+                className="flex items-center justify-center w-full px-4 py-3 
+                bg-gray-700 dark:bg-red-800 
+                text-gray-100 dark:text-red-200 
+                rounded-lg font-semibold text-lg shadow 
+                hover:bg-blue-700 hover:text-white transition"
               >
                 <Save className="h-5 w-5 mr-2" />
                 Save Changes
