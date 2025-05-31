@@ -1,13 +1,61 @@
 "use client";
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Save, Upload, Camera } from "lucide-react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/config/firebase";
 import githubConfig from "@/config/githubConfig";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import jsPDF from "jspdf";
+import avatar from "../../../public/avatar.png"; // Make sure avatar.png exists in public folder
+import { onAuthStateChanged } from "firebase/auth";
 
+// Utility to base64 encode UTF-8 strings for GitHub API
+function encodeContent(content) {
+  if (typeof window === "undefined") return Buffer.from(content).toString("base64");
+  return window.btoa(unescape(encodeURIComponent(content)));
+}
 
+// Save or update a file in GitHub repo
+async function saveFileToGithub({ token, repo, owner, branch, filePath, content, commitMessage }) {
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+  let sha;
+  // Check if file exists to get sha
+  const getRes = await fetch(apiUrl, {
+    headers: { Authorization: `token ${token}` }
+  });
+  if (getRes.ok) {
+    const data = await getRes.json();
+    sha = data.sha;
+  }
+  // Save or create file
+  const res = await fetch(apiUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: `token ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: commitMessage,
+      content: encodeContent(content),
+      branch,
+      ...(sha ? { sha } : {})
+    })
+  });
+  if (!res.ok) throw new Error(`GitHub save failed: ${res.status}`);
+}
+function generateProfilePDF(profile) {
+  const doc = new jsPDF();
+  doc.setFontSize(18);
+  doc.text("User Profile", 10, 15);
+  doc.setFontSize(12);
+  let y = 30;
+  Object.entries(profile).forEach(([key, value]) => {
+    doc.text(`${key}: ${value ?? ""}`, 10, y);
+    y += 10;
+  });
+  return doc.output("datauristring"); // returns a data URI string
+}
 const ProfilePage = () => {
   const router = useRouter();
   const fileInputRef = useRef(null);
@@ -20,33 +68,13 @@ const ProfilePage = () => {
     company: "",
     position: "Manager",
   });
-  const [userId, setUserId] = useState(""); // State to store the User ID
-  const [githubPath, setGithubPath] = useState(""); // State to store the GitHub path
-  const [config, setConfig] = useState(null); // State to store the GitHub config
+  const [userId, setUserId] = useState("");
+  const [githubPath, setGithubPath] = useState("");
+  const [config, setConfig] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
 
-  // Fetch the User ID and generate the GitHub path
-  useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      const uid = currentUser.uid;
-      const email = currentUser.email;
-      const username = email.split("@")[0];
-      setUserId(uid);
-      const path = `${username}-${uid}`;
-      setGithubPath(path);
-      // Remove the function call and just set the config
-      setConfig(githubConfig);
-      setFormData(prev => ({
-        ...prev,
-        name: username, // Set name from Firebase username
-        email: email // Set email from Firebase
-      }));
-
-    }
-  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -56,37 +84,49 @@ const ProfilePage = () => {
     });
   };
 
-
   // Fetch profile data from Firestore when the component mounts
   useEffect(() => {
-    const fetchProfileFromFirestore = async () => {
-      const currentUser = auth.currentUser;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
+        setConfig(githubConfig);
         const uid = currentUser.uid;
         const email = currentUser.email;
         const username = email.split("@")[0];
         setUserId(uid);
-        setGithubPath(`${username}-${uid}`);
+        setGithubPath(`${username}-${uid}/db`);
         const docId = email.replace(/\./g, "_");
-        const userDoc = await getDoc(doc(db, "users", docId));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          const userData = data.user || {};
-          setFormData({
-            name: userData.displayName || "",
-            email: userData.email || email,
-            phone: userData.phone || "",
-            address: userData.address || "",
-            company: userData.company || "",
-            position: userData.position || "Manager",
-          });
-          if (userData.photoURL) setPhotoPreview(userData.photoURL);
-        } else {
-          setFormData(prev => ({ ...prev, email }));
+        try {
+          const userDoc = await getDoc(doc(db, "users", docId));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            const userData = data.user || {};
+            setFormData({
+              name: userData.displayName || username,
+              email: userData.email || email,
+              phone: userData.phone || "",
+              address: userData.address || "",
+              company: userData.company || "",
+              position: userData.position || "Manager",
+            });
+            setPhotoPreview(userData.photoURL || avatar.src);
+          } else {
+            setFormData({
+              name: username,
+              email: email,
+              phone: "",
+              address: "",
+              company: "",
+              position: "Manager",
+            });
+            setPhotoPreview(avatar.src);
+          }
+        } catch (err) {
+          console.error("Firestore getDoc error:", err);
+          // Optionally set default state here
         }
       }
-    };
-    fetchProfileFromFirestore();
+    });
+    return () => unsubscribe();
   }, []);
 
   const handlePhotoClick = () => {
@@ -98,34 +138,45 @@ const ProfilePage = () => {
     if (file) {
       setIsUploading(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         setPhotoPreview(reader.result);
+
+        try {
+          // Save photo to GitHub images folder with displayName as filename
+          if (config && config.token && config.repo && config.owner && githubPath && formData.name) {
+            const { token, repo, owner, branch } = config;
+            // Extract file extension
+            const ext = file.name.split('.').pop() || "jpg";
+            // Sanitize displayName for filename
+            const safeName = formData.name.replace(/[^a-z0-9_\-]/gi, "_");
+            const filePath = `${githubPath}/images/${safeName}.${ext}`;
+
+            // Convert base64 data URL to base64 string (remove prefix)
+            const base64Data = reader.result.split(",")[1];
+
+            await saveFileToGithub({
+              token,
+              repo,
+              owner,
+              branch,
+              filePath,
+              content: base64Data,
+              commitMessage: `Upload profile photo for ${formData.name}`,
+            });
+
+            // Set the GitHub raw URL as the photo URL
+            const photoUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+            setFormData(prev => ({ ...prev, photoURL: photoUrl }));
+          }
+        } catch (error) {
+          console.error("Error uploading photo to GitHub:", error);
+        } finally {
+          setIsUploading(false);
+        }
       };
       reader.readAsDataURL(file);
-
-      try {
-        // Upload photo to GitHub
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('path', `${githubPath}/profile/${file.name}`);
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (response.ok) {
-          const { url } = await response.json();
-          setFormData(prev => ({ ...prev, profilePhoto: url }));
-        }
-      } catch (error) {
-        console.error("Error uploading photo:", error);
-      } finally {
-        setIsUploading(false);
-      }
     }
   };
-
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -136,19 +187,114 @@ const ProfilePage = () => {
         return;
       }
       const docId = currentUser.email.replace(/\./g, "_");
-      await updateDoc(doc(db, "users", docId), {
+      await setDoc(doc(db, "users", docId), {
         user: {
           uid: userId,
           email: currentUser.email,
           displayName: formData.name,
-          photoURL: photoPreview || currentUser.photoURL,
+          photoURL: photoPreview || avatar.src,
           phone: formData.phone,
           address: formData.address,
           company: formData.company,
           position: formData.position,
         }
-      });
-      alert("Profile updated successfully!");
+      }, { merge: true });
+
+      // --- Save to GitHub ---
+      if (config && config.token && config.repo && config.owner && githubPath) {
+        const { token, repo, owner, branch } = config;
+
+        // 1. Save profile.json
+        await saveFileToGithub({
+          token, repo, owner, branch,
+          filePath: `${githubPath}/profile/profile.json`,
+          content: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            company: formData.company,
+            position: formData.position,
+            photoURL: photoPreview || "",
+            uid: userId
+          }, null, 2),
+          commitMessage: "Update profile.json"
+        });
+
+        // --- Save profile as PDF in /datasheets ---
+        const pdfDataUri = generateProfilePDF({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          company: formData.company,
+          position: formData.position,
+          uid: userId
+        });
+        // Extract base64 from data URI
+        const pdfBase64 = pdfDataUri.split(",")[1];
+        await saveFileToGithub({
+          token, repo, owner, branch,
+          filePath: `${githubPath}/datasheets/profile.pdf`,
+          content: pdfBase64,
+          commitMessage: "Save profile as PDF"
+        });
+        // --- End PDF save ---
+
+        // ...existing code for dropdownOptions, lastUsedId, dummy product...
+        await saveFileToGithub({
+          token, repo, owner, branch,
+          filePath: `${githubPath}/dropdownOptions.json`,
+          content: JSON.stringify({
+            partNames: [],
+            manufacturers: [],
+            vendors: [],
+            manufacturerParts: [],
+            categories: []
+          }, null, 2),
+          commitMessage: "Init dropdownOptions.json"
+        });
+
+        await saveFileToGithub({
+          token, repo, owner, branch,
+          filePath: `${githubPath}/lastUsedId.json`,
+          content: JSON.stringify({ lastUsedId: 1000 }, null, 2),
+          commitMessage: "Init lastUsedId.json"
+        });
+
+        await saveFileToGithub({
+          token, repo, owner, branch,
+          filePath: `${githubPath}/jsons/1000-1000-1000.json`,
+          content: JSON.stringify({
+            id: "1000",
+            partName: "1000",
+            createdAt: new Date().toISOString(),
+            manufacturer: "1000",
+            manufacturerPart: "1000",
+            vendor: "1000",
+            vendorProductLink: "",
+            image: "",
+            imageData: "",
+            imageType: "",
+            datasheet: "",
+            datasheetData: "",
+            datasheetType: "",
+            avl_quantity: "0",
+            binLocations: [],
+            customerRef: "",
+            description: "dummy product - please delete if you want to.",
+            reorderPoint: "",
+            reorderQty: "",
+            costPrice: "",
+            salePrice: "",
+            category: ""
+          }, null, 2),
+          commitMessage: "Add dummy product 1000-1000-1000.json"
+        });
+      }
+      // --- End Save to GitHub ---
+
+      // alert("Profile updated successfully!");
       router.push("/dashboard");
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -156,12 +302,8 @@ const ProfilePage = () => {
     }
   };
 
-
-
-
   return (
-    <div className="mx-auto bg-white shadow-xl overflow-hidden">      
-
+    <div className="mx-auto bg-white shadow-xl overflow-hidden">
       <div className="flex flex-col items-center w-full gap-6">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 flex flex-col items-center">
           {/* Profile Photo Section */}
@@ -174,8 +316,9 @@ const ProfilePage = () => {
                 <Image
                   src={photoPreview}
                   alt="Profile"
-                  fill
-                  className="object-cover"
+                  width={144}
+                  height={144}
+                  className="object-cover object-center w-full h-full"
                 />
               ) : (
                 <Camera className="h-16 w-16 text-blue-300" />
@@ -211,7 +354,7 @@ const ProfilePage = () => {
                   type="text"
                   value={userId}
                   readOnly
-                  onFocus={(e) => e.target.blur()} // Prevents editing
+                  onFocus={(e) => e.target.blur()}
                   className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
@@ -221,7 +364,7 @@ const ProfilePage = () => {
                   type="text"
                   value={githubPath}
                   readOnly
-                  onFocus={(e) => e.target.blur()} // Prevents editing
+                  onFocus={(e) => e.target.blur()}
                   className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
@@ -244,7 +387,7 @@ const ProfilePage = () => {
                   name="email"
                   value={formData.email}
                   readOnly
-                  onFocus={(e) => e.target.blur()} // Prevents editing
+                  onFocus={(e) => e.target.blur()}
                   className="w-full px-3 py-2 border border-gray-200 rounded bg-gray-100 text-gray-500"
                 />
               </div>
@@ -304,8 +447,8 @@ const ProfilePage = () => {
             </div>
           </form>
         </div>
-      </div>      </div>
-
+      </div>
+    </div>
   );
 };
 

@@ -52,8 +52,7 @@ export async function GET(request) {
     const githubConfig = await getUserGithubConfig(request);
     const { owner, repo, token, path: userPath } = githubConfig;
     const path = userPath ? `${userPath}/jsons` : 'db/jsons';
-
-    // Fetch inventory files
+    // console.log(`Fetching directory: https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=master`);
     const response = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=master`,
       {
@@ -63,6 +62,7 @@ export async function GET(request) {
         }
       }
     );
+
     if (!response.ok) throw new Error('Failed to fetch directory');
     const files = await response.json();
 
@@ -90,6 +90,8 @@ export async function GET(request) {
     const categoryStats = {};
     let totalQuantity = 0;
     for (const file of files) {
+      // Skip files starting with "1000"
+      if (file.name.startsWith('1000')) continue;
       if (file.name.endsWith('.json')) {
         const fileContent = await fetch(file.download_url, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -111,6 +113,13 @@ export async function GET(request) {
         }
         totalQuantity += quantity;
       }
+    }
+    if (
+      (allCategories.length === 0 || allCategories.every(c => !c)) &&
+      Object.keys(categoryStats).length === 0
+    ) {
+      // No categories and no inventory items
+      return NextResponse.json([]);
     }
 
     // Merge dropdown categories with inventory stats

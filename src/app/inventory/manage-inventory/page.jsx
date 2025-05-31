@@ -11,6 +11,17 @@ import { db, auth } from "@/config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 const ManageInventory = () => {
   // State for inventory items
+
+  useEffect(() => {
+  // On mount, read preference
+  const saved = localStorage.getItem('darkMode');
+  if (saved === '1') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+}, []);
+
   const [inventoryItems, setInventoryItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,10 +51,10 @@ const ManageInventory = () => {
   const [configLoaded, setConfigLoaded] = useState(false);
   const [userDatasheet, setUserDatasheet] = useState(null);
   useEffect(() => {
-    console.log("useEffect (onAuthStateChanged) - githubConfig before:", githubConfig);
+    // console.log("useEffect (onAuthStateChanged) - githubConfig before:", githubConfig);
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log("Auth state changed. Current user:", currentUser);
+      // console.log("Auth state changed. Current user:", currentUser);
       if (!currentUser) {
         setConfigLoaded(true);
         return;
@@ -52,11 +63,11 @@ const ManageInventory = () => {
         const docId = currentUser.email.replace(/\./g, "_");
         // console.log("Firestore docId:", docId);
         const userDoc = await getDoc(doc(db, "users", docId));
-        console.log("userDoc.exists():", userDoc.exists());
+        // console.log("userDoc.exists():", userDoc.exists());
         let config = githubConfigImport;
         if (userDoc.exists()) {
           const data = userDoc.data();
-          console.log("Firestore user data:", data);
+          // console.log("Firestore user data:", data);
           if (data.githubConfig) {
             config = {
               ...githubConfigImport,
@@ -67,7 +78,7 @@ const ManageInventory = () => {
             const uid = currentUser.uid || "nouid";
             config.path = `${username}-${uid}/db`;
             config.datasheets = `${username}-${uid}/db/datasheets`;
-            console.log("githubConfig from Firestore (with dynamic path):", config);
+            // console.log("githubConfig from Firestore (with dynamic path):", config);
           }
           if (data.datasheet) setUserDatasheet(data.datasheet);
         }
@@ -75,7 +86,7 @@ const ManageInventory = () => {
         setConfig(config);
 
         setConfigLoaded(true);
-        console.log("useEffect (onAuthStateChanged) - githubConfig after set:", config);
+        // console.log("useEffect (onAuthStateChanged) - githubConfig after set:", config);
 
       };
       fetchUserConfig();
@@ -94,7 +105,7 @@ const ManageInventory = () => {
 
   // Apply filters and search when inventory items, search term, or filters change
   useEffect(() => {
-    console.log("Inventory items after fetch:", inventoryItems);
+    // console.log("Inventory items after fetch:", inventoryItems);
     if (inventoryItems.length > 0) {
       applyFiltersAndSearch();
     }
@@ -102,7 +113,7 @@ const ManageInventory = () => {
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
-      console.log('Inventory updated, refreshing data...');
+      // console.log('Inventory updated, refreshing data...');
       fetchInventoryData(true);
     };
 
@@ -112,7 +123,7 @@ const ManageInventory = () => {
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
-      console.log('Inventory updated, refreshing data...');
+      // console.log('Inventory updated, refreshing data...');
       fetchInventoryData(true);
     };
 
@@ -803,21 +814,34 @@ const ManageInventory = () => {
 
 
   return (
-    <div className="mx-auto bg-white shadow-xl overflow-hidden">
+    <div className="mx-auto shadow-xl overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)", minHeight: "100vh" }}>
       {/* Main header - with class for targeting */}
 
       {/* Fixed position action bar with a placeholder for when it's fixed */}
-      <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50  shadow-md' : 'relative'} bg-gray-300 shadow-md py-1 px-3 sm:px-6 `}>
-
+      <div className={`${scrolled ? 'fixed top-0 left-0 right-0 z-50 shadow-md' : 'relative'} shadow-md py-1 px-3 sm:px-6`}
+        style={{
+          background: "var(--bar-bg)",
+          borderBottom: "1px solid var(--border)"
+        }}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 sm:space-x-4">
-          <h2 className="text-2xl font-bold text-black flex items-center">
-            <Store className="mr-2 h-5 w-5" /> Manage Products
+          <h2 className="text-2xl font-bold flex items-center"
+            style={{
+              color: "var(--bar-text)",
+              letterSpacing: "0.01em"
+            }}
+          >
+            <Store className="mr-2 h-5 w-5" style={{ color: "var(--bar-text)" }} /> Manage Products
           </h2>
 
           <div className="flex flex-wrap items-center gap-1 sm:gap-2 justify-between ">
-
             <button
-              className="p-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
+              className="p-2 rounded flex items-center"
+              style={{
+                background: "var(--accent-foreground)",
+                color: "var(--accent)",
+                border: "1px solid var(--accent)"
+              }}
               onClick={() => setShowFilters(!showFilters)}
               title="Filter"
             >
@@ -825,7 +849,11 @@ const ManageInventory = () => {
             </button>
 
             <button
-              className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+              className="p-2 rounded flex items-center"
+              style={{
+                background: "var(--accent)",
+                color: "#fff"
+              }}
               onClick={fetchInventoryItems}
               title="Refresh"
             >
@@ -834,7 +862,12 @@ const ManageInventory = () => {
 
             <div className="relative">
               <button
-                className="p-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
+                className="p-2 rounded flex items-center"
+                style={{
+                  background: "var(--card)",
+                  color: "var(--foreground)",
+                  border: "1px solid var(--border)"
+                }}
                 title="View Options"
               >
                 <ChevronDown className="w-4 h-4" />
@@ -850,25 +883,36 @@ const ManageInventory = () => {
               </select>
             </div>
             <div className="hidden sm:flex flex-row gap-2">
-
               {selectedItems.length > 0 && (
                 <>
                   <button
-                    className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center text-sm"
+                    className="px-3 py-1 rounded flex items-center text-sm"
+                    style={{
+                      background: "var(--danger)",
+                      color: "#fff"
+                    }}
                     onClick={deleteSelectedItems}
                   >
                     <Trash className="w-3 h-3 mr-1" /> Delete
                   </button>
 
                   <button
-                    className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center text-sm"
+                    className="px-3 py-1 rounded flex items-center text-sm"
+                    style={{
+                      background: "var(--success)",
+                      color: "#fff"
+                    }}
                     onClick={exportToCSV}
                   >
                     <Download className="w-3 h-3 mr-1" /> Export
                   </button>
 
                   <button
-                    className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center text-sm"
+                    className="px-3 py-1 rounded flex items-center text-sm"
+                    style={{
+                      background: "var(--section-purple)",
+                      color: "var(--section-purple-text)"
+                    }}
                     onClick={copyToClipboard}
                   >
                     <Clipboard className="w-3 h-3 mr-1" /> Copy
@@ -883,15 +927,25 @@ const ManageInventory = () => {
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-8 pr-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-full text-sm bg-white transition-all"
+                className="pl-8 pr-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-full text-sm transition-all"
+                style={{
+                  background: "var(--card)",
+                  color: "var(--foreground)"
+                }}
               />
-              <Search className="w-4 h-4 text-gray-400 absolute left-2 top-2.5" />
+              <Search className="w-4 h-4 absolute left-2 top-2.5" style={{ color: "var(--border)" }} />
             </div>
 
             <Link href="/add-product">
-              <button className="px-2 py-2 sm:py-1 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
-                <PlusCircle className="w-4 h-4 " />
-                <span className="hidden sm:block ml-2 ">Add Product</span>
+              <button
+                className="px-2 py-2 sm:py-1 rounded flex items-center"
+                style={{
+                  background: "var(--accent)",
+                  color: "#fff"
+                }}
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span className="hidden sm:block ml-2">Add Product</span>
               </button>
             </Link>
           </div>
@@ -900,46 +954,63 @@ const ManageInventory = () => {
               {/* For small screens */}
               <div className="flex flex-row gap-2 sm:hidden">
                 <button
-                  className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center text-sm"
+                  className="px-3 py-1 rounded flex items-center text-sm"
+                  style={{
+                    background: "var(--danger)",
+                    color: "#fff"
+                  }}
                   onClick={deleteSelectedItems}
                 >
                   <Trash className="w-3 h-3 mr-1" /> Delete
                 </button>
 
                 <button
-                  className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center text-sm"
+                  className="px-3 py-1 rounded flex items-center text-sm"
+                  style={{
+                    background: "var(--success)",
+                    color: "#fff"
+                  }}
                   onClick={exportToCSV}
                 >
                   <Download className="w-3 h-3 mr-1" /> Export
                 </button>
 
                 <button
-                  className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center text-sm"
+                  className="px-3 py-1 rounded flex items-center text-sm"
+                  style={{
+                    background: "var(--section-purple)",
+                    color: "var(--section-purple-text)"
+                  }}
                   onClick={copyToClipboard}
                 >
                   <Clipboard className="w-3 h-3 mr-1" /> Copy
                 </button>
               </div>
-
-
             </>
           )}
-
         </div>
       </div>
 
-
       {/* Filters Section */}
       {showFilters && (
-        <div className="py-3 px-3 sm:px-6 bg-gray-50 border-b border-gray-200">
+        <div className="py-3 px-3 sm:px-6"
+          style={{
+            background: "var(--section-gray)",
+            borderBottom: "1px solid var(--border)"
+          }}
+        >
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center">
-              <label className="text-xs font-medium text-gray-700 mr-2">Category</label>
+              <label className="text-xs font-medium mr-2" style={{ color: "var(--section-indigo-label)" }}>Category</label>
               <select
                 name="category"
                 value={filters.category}
                 onChange={handleFilterChange}
                 className="w-44 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{
+                  background: "var(--section-indigo)",
+                  color: "var(--section-indigo-text)"
+                }}
               >
                 <option value="">All Categories</option>
                 {getUniqueCategories().map(cat => (
@@ -949,12 +1020,16 @@ const ManageInventory = () => {
             </div>
 
             <div className="flex items-center">
-              <label className="text-xs font-medium text-gray-700 mr-2">Manufacturer</label>
+              <label className="text-xs font-medium mr-2" style={{ color: "var(--section-pink-label)" }}>Manufacturer</label>
               <select
                 name="manufacturer"
                 value={filters.manufacturer}
                 onChange={handleFilterChange}
                 className="w-44 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{
+                  background: "var(--section-pink)",
+                  color: "var(--section-pink-text)"
+                }}
               >
                 <option value="">All Manufacturers</option>
                 {getUniqueManufacturers().map(mfr => (
@@ -963,12 +1038,16 @@ const ManageInventory = () => {
               </select>
             </div>
             <div className="flex items-center">
-              <label className="text-xs font-medium text-gray-700 mr-2">Vendor</label>
+              <label className="text-xs font-medium mr-2" style={{ color: "var(--section-pink-label)" }}>Vendor</label>
               <select
                 name="vendor"
                 value={filters.vendor}
                 onChange={handleFilterChange}
                 className="w-44 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{
+                  background: "var(--section-pink)",
+                  color: "var(--section-pink-text)"
+                }}
               >
                 <option value="">All Vendors</option>
                 {getUniqueVendors().map(vendor => (
@@ -977,7 +1056,7 @@ const ManageInventory = () => {
               </select>
             </div>
             <div className="flex items-center">
-              <label className="text-xs font-medium text-gray-700 mr-2">Min Stock</label>
+              <label className="text-xs font-medium mr-2" style={{ color: "var(--section-green-label)" }}>Min Stock</label>
               <input
                 type="number"
                 name="minStock"
@@ -985,11 +1064,15 @@ const ManageInventory = () => {
                 onChange={handleFilterChange}
                 className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 min="0"
+                style={{
+                  background: "var(--section-green)",
+                  color: "var(--section-green-text)"
+                }}
               />
             </div>
 
             <div className="flex items-center">
-              <label className="text-xs font-medium text-gray-700 mr-2">Max Stock</label>
+              <label className="text-xs font-medium mr-2" style={{ color: "var(--section-green-label)" }}>Max Stock</label>
               <input
                 type="number"
                 name="maxStock"
@@ -997,12 +1080,21 @@ const ManageInventory = () => {
                 onChange={handleFilterChange}
                 className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 min="0"
+                style={{
+                  background: "var(--section-green)",
+                  color: "var(--section-green-text)"
+                }}
               />
             </div>
 
             <button
               onClick={resetFilters}
-              className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              className="px-3 py-1 text-sm rounded"
+              style={{
+                background: "var(--yellow-bg)",
+                color: "var(--warning)",
+                border: "1px solid var(--yellow-border)"
+              }}
             >
               Reset
             </button>
@@ -1012,26 +1104,24 @@ const ManageInventory = () => {
 
       {/* Loading and Error States */}
       {isLoading && (
-        <div className="p-8  text-center">
+        <div className="p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading inventory data...</p>
+          <p style={{ color: "var(--foreground)", opacity: 0.7 }}>Loading inventory data...</p>
         </div>
       )}
 
       {error && !isLoading && (
-        <div className="p-6 bg-red-50 flex items-center justify-center">
-          <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-          <p className="text-red-700">Error loading inventory: {error}</p>
+        <div className="p-6 flex items-center justify-center" style={{ background: "var(--danger)", color: "#fff" }}>
+          <AlertCircle className="w-5 h-5 mr-2" />
+          <p>Error loading inventory: {error}</p>
         </div>
       )}
 
       {/* Inventory Table */}
       {!isLoading && !error && (
-        // <div className="bg-gray px-4 py-3 flex items-center justify-between border-t border-gray-200">
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
+          <table className="min-w-full divide-y" style={{ borderColor: "var(--border)" }}>
+            <thead style={{ background: "var(--section-gray)" }}>
               <tr>
                 <th className="px-2 sm:px-4 py-3 text-left">
                   <input
@@ -1041,72 +1131,80 @@ const ManageInventory = () => {
                     className="ml-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-indigo-label)" }}
                   onClick={() => handleSort("id")}>
                   ID {renderSortIndicator("id")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: "var(--section-indigo-label)" }}>
                   Image
                 </th>
-
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-indigo-label)" }}
                   onClick={() => handleSort("partname")}
                 >
                   Part NAME{renderSortIndicator("partname")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-pink-label)" }}
                   onClick={() => handleSort("manufacturerpart")}
                 >
                   MANUFACTURER Part # {renderSortIndicator("manufacturerpart")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-pink-label)" }}
                   onClick={() => handleSort("vendor")}
                 >
                   Vendor {renderSortIndicator("vendor")}
                 </th>
-
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-indigo-label)" }}
                   onClick={() => handleSort("category")}
                 >
                   Category {renderSortIndicator("category")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-green-label)" }}
                   onClick={() => handleSort("description")}
                 >
                   Description {renderSortIndicator("description")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-green-label)" }}
                   onClick={() => handleSort("stock")}
                 >
                   In-Stock {renderSortIndicator("stock")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer"
+                  style={{ color: "var(--section-purple-label)" }}
                   onClick={() => handleSort("bin")}
                 >
                   Bin {renderSortIndicator("bin")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: "var(--foreground)" }}>
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody style={{ background: "var(--card)" }}>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="px-2 sm:px-4 py-8 text-center text-gray-500">
+                  <td colSpan="11" className="px-2 sm:px-4 py-8 text-center" style={{ color: "var(--border)" }}>
                     No inventory items found. Try adjusting your filters or adding new items.
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">{/* Remove whitespace */}
+                  <tr key={index} style={{ background: "var(--card)" }} className="hover:bg-blue-50">
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
                       <input
                         type="checkbox"
@@ -1124,7 +1222,7 @@ const ManageInventory = () => {
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Link href={`/product/${encodeURIComponent(item.manufacturerPart)}`} className="text-blue-600 hover:underline cursor-pointer">
+                      <Link href={`/product/${encodeURIComponent(item.manufacturerPart)}`} style={{ color: "var(--accent)" }} className="hover:underline cursor-pointer">
                         {item.partName || item.manufacturerPart || "N/A"}
                       </Link>
                     </td>
@@ -1138,25 +1236,30 @@ const ManageInventory = () => {
                         {item.binLocations && Array.isArray(item.binLocations) ? (
                           <div className="grid grid-cols-2 gap-1 auto-cols-min">
                             {item.binLocations.map((location, idx) => (
-                              <span key={`${location.bin}-${idx}`} className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-800" title={`Quantity: ${location.quantity}`}>
+                              <span key={`${location.bin}-${idx}`} className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium"
+                                style={{
+                                  background: "var(--section-purple)",
+                                  color: "var(--section-purple-text)"
+                                }}
+                                title={`Quantity: ${location.quantity}`}>
                                 {location.bin} ({location.quantity})
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-gray-500">No bin assigned</span>
+                          <span style={{ color: "var(--border)" }}>No bin assigned</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center space-x-3">
-                        <button className="text-blue-600 hover:text-blue-800" onClick={() => openPdfModal(item)}>
+                        <button className="hover:underline" style={{ color: "var(--accent)" }} onClick={() => openPdfModal(item)}>
                           <FileSpreadsheet className="h-5 w-5" />
                         </button>
                         <Link href={`/product/${encodeURIComponent(item.manufacturerPart)}?editMode=true`}>
-                          <Edit className="text-blue-600 hover:text-blue-800 w-5 h-5" />
+                          <Edit className="w-5 h-5" style={{ color: "var(--accent)" }} />
                         </Link>
-                        <button className="text-red-600 hover:text-red-800" onClick={() => handleDeleteItem(item.manufacturerPart)}>
+                        <button className="hover:underline" style={{ color: "var(--danger)" }} onClick={() => handleDeleteItem(item.manufacturerPart)}>
                           <Trash className="h-5 w-5" />
                         </button>
                       </div>
@@ -1167,20 +1270,18 @@ const ManageInventory = () => {
             </tbody>
           </table>
         </div>
-      )
-      }
+      )}
 
       {/* Stats Footer */}
-      <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
-        <div className="text-sm text-gray-600">
+      <div style={{ background: "var(--section-gray)", borderTop: "1px solid var(--border)" }} className="px-4 py-3 flex items-center justify-between">
+        <div className="text-sm" style={{ color: "var(--foreground)" }}>
           Showing <span className="font-medium">{filteredItems.length}</span> of <span className="font-medium">{inventoryItems.length}</span> items
           {selectedItems.length > 0 && (
             <span> | <span className="font-medium">{selectedItems.length}</span> selected</span>
           )}
         </div>
-        <div className="text-sm text-gray-600" >
+        <div className="text-sm" style={{ color: "var(--foreground)" }}>
           <TimeStamp />
-
         </div>
       </div>
       <ImageModal
@@ -1195,8 +1296,7 @@ const ManageInventory = () => {
         pdfUrl={pdfUrl}
         onClose={closePdfModal}
       />
-    </div >
-
+    </div>
   );
 };
 

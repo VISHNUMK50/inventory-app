@@ -15,7 +15,7 @@ async function getUserGithubConfig(request) {
     config.path = `${username}-${uid}/db`;
     config.datasheets = `${username}-${uid}/db/datasheets`;
   }
-  console.log('getUserGithubConfig path:', config.path);
+  // console.log('getUserGithubConfig path:', config.path);
   return config;
 }
 
@@ -24,12 +24,12 @@ export async function GET(request) {
     const githubConfig = await getUserGithubConfig(request);
     const { owner, repo, token, path: userPath } = githubConfig;
     const path = userPath ? `${userPath}/jsons` : 'db/jsons';
-    console.log('API GET: userPath:', userPath);
-    console.log('API GET: path:', path);
+    // console.log('API GET: userPath:', userPath);
+    // console.log('API GET: path:', path);
 
     // Fetch inventory files
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=master`;
-    console.log('Fetching inventory files from:', url);
+    // console.log('Fetching inventory files from:', url);
     const response = await fetch(
       url,
       {
@@ -45,15 +45,20 @@ export async function GET(request) {
 
     let inventory = [];
     for (const file of files) {
+      // Skip files starting with 1000
+      if (file.name.startsWith('1000')) continue;
       if (file.name.endsWith('.json')) {
-        console.log('Fetching file:', file.download_url);
+        // console.log('Fetching file:', file.download_url);
         const fileContent = await fetch(file.download_url, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const item = await fileContent.json();
+        // Also skip if id is '1000'
+        if (item.id === '1000') continue;
         inventory.push(item);
       }
     }
+
     // Calculate totals
     const totalCount = inventory.reduce((sum, item) => sum + (parseInt(item.avl_quantity) || 0), 0);
     const onHand = inventory.reduce((sum, item) => sum + (parseInt(item.avl_quantity) || 0), 0);
@@ -72,8 +77,8 @@ export async function GET(request) {
     };
 
     const lowStockItems = inventory
-      .filter(item => 
-        parseInt(item.avl_quantity) > 0 && 
+      .filter(item =>
+        parseInt(item.avl_quantity) > 0 &&
         parseInt(item.avl_quantity) <= parseInt(item.reorderPoint)
       )
       .map(item => ({

@@ -1,15 +1,32 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { User, Settings, HelpCircle, Moon, Sun, LogOut } from "lucide-react";
+import { User, Settings, HelpCircle, Moon, Sun,FileChartColumnIncreasing   , LogOut } from "lucide-react";
 import Link from "next/link";
 import { signOut } from "firebase/auth";
-import { auth } from "../config/firebase"; // Adjust the path to your firebase.js file
+import { auth, db } from "../config/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import avatar from "../../public/avatar.png"; // adjust path if needed
 import { useRouter } from "next/navigation";
 
 const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
-    const router = useRouter();
+  const router = useRouter();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const menuRef = useRef(null); // Reference to the menu container
+  const [photoURL, setPhotoURL] = useState(avatar.src);
+
+    useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const docId = user.email.replace(/\./g, "_");
+        const userDoc = await getDoc(doc(db, "users", docId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setPhotoURL(data.user?.photoURL || avatar.src);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Close the menu when clicking outside
   useEffect(() => {
@@ -26,18 +43,18 @@ const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
   }, []);
 
   const handleLogout = () => {
-    console.log("Logout clicked");
+    // console.log("Logout clicked");
     auth.signOut()
-        .then(() => {
-            // Clear all items from localStorage
-            localStorage.clear();
-            // Redirect to root URL
-            router.push('/');
-        })
-        .catch((error) => {
-            console.error("Error signing out:", error);
-        });
-};
+      .then(() => {
+        // Clear all items from localStorage
+        localStorage.clear();
+        // Redirect to root URL
+        router.push('/');
+      })
+      .catch((error) => {
+        console.error("Error signing out:", error);
+      });
+  };
 
   return (
     <div className="relative" ref={menuRef}>
@@ -46,9 +63,9 @@ const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
         onClick={() => setProfileMenuOpen(!profileMenuOpen)}
       >
         <img
-          src="/INVEXIS_WICON.png" // Replace with the actual path to the profile photo
+          src={photoURL}
           alt="Profile"
-          className="h-9 w-9 rounded-full border-2 border-white"
+          className="h-9 w-9 rounded-full border-2 border-white object-cover object-center"
         />
       </button>
 
@@ -58,10 +75,18 @@ const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
           <ul className="py-1">
             <li>
               <Link
-                href="/profile" // Navigate to the profile page
+                href="/profile"
                 className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
               >
                 <User className="h-5 w-5 mr-2" /> My Profile
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/reports"
+                className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
+              >
+                <FileChartColumnIncreasing    className="h-5 w-5 mr-2" /> Reports
               </Link>
             </li>
             <li>
@@ -99,7 +124,7 @@ const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
             <li>
               <button
                 className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
-                onClick={handleLogout} // Call the logout function
+                onClick={handleLogout}
               >
                 <LogOut className="h-5 w-5 mr-2" /> Logout
               </button>
