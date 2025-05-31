@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Bar, Line } from 'recharts';
 import { Download, Filter, Calendar, RefreshCw } from 'lucide-react';
 import InventoryReport from "@/app/inventory/reports/page";
@@ -28,7 +28,7 @@ const sampleData = {
   ]
 };
 
-const ReportsPage = () => {
+const ReportsPageContent = () => {
   const [dateRange, setDateRange] = useState('month');
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
@@ -269,5 +269,9 @@ const ReportsPage = () => {
     </div>
   );
 };
-
+const ReportsPage = () => (
+  <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+    <ReportsPageContent />
+  </Suspense>
+);
 export default ReportsPage;
