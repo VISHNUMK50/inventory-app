@@ -10,29 +10,29 @@ import { useRouter } from "next/navigation";
 
 const Dashboard = () => {
     const router = useRouter();
-    const [darkMode, setDarkMode] = useState(false);
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            const saved = localStorage.getItem('darkMode');
-            if (saved === '1') {
-                setDarkMode(true);
-                document.documentElement.classList.add('dark');
-            } else {
-                setDarkMode(false);
-                document.documentElement.classList.remove('dark');
-            }
-        }
-    }, []);
+    // const [darkMode, setDarkMode] = useState(false);
+    // useEffect(() => {
+    //     if (typeof window !== "undefined") {
+    //         const saved = localStorage.getItem('darkMode');
+    //         if (saved === '1') {
+    //             setDarkMode(true);
+    //             document.documentElement.classList.add('dark');
+    //         } else {
+    //             setDarkMode(false);
+    //             document.documentElement.classList.remove('dark');
+    //         }
+    //     }
+    // }, []);
 
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        if (darkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        localStorage.setItem('darkMode', darkMode ? '1' : '0');
-    }, [darkMode]);
+    // useEffect(() => {
+    //     if (typeof window === "undefined") return;
+    //     if (darkMode) {
+    //         document.documentElement.classList.add('dark');
+    //     } else {
+    //         document.documentElement.classList.remove('dark');
+    //     }
+    //     localStorage.setItem('darkMode', darkMode ? '1' : '0');
+    // }, [darkMode]);
 
     const [githubConfig, setGithubConfig] = useState(githubConfigImport);
     const [configLoaded, setConfigLoaded] = useState(false);

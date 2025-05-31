@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { User, Settings, HelpCircle, Moon, Sun,FileChartColumnIncreasing   , LogOut } from "lucide-react";
+import { User, Settings, HelpCircle, Moon, Sun, FileChartColumnIncreasing, LogOut } from "lucide-react";
 import Link from "next/link";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../config/firebase";
@@ -14,7 +14,7 @@ const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
   const menuRef = useRef(null); // Reference to the menu container
   const [photoURL, setPhotoURL] = useState(avatar.src);
 
-    useEffect(() => {
+  useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         const docId = user.email.replace(/\./g, "_");
@@ -86,7 +86,7 @@ const ProfileMenu = ({ darkMode, toggleDarkMode, onLogout }) => {
                 href="/reports"
                 className="flex items-center px-4 py-2 w-full hover:bg-gray-100"
               >
-                <FileChartColumnIncreasing    className="h-5 w-5 mr-2" /> Reports
+                <FileChartColumnIncreasing className="h-5 w-5 mr-2" /> Reports
               </Link>
             </li>
             <li>

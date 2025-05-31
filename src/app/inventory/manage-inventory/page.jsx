@@ -12,15 +12,15 @@ import { onAuthStateChanged } from "firebase/auth";
 const ManageInventory = () => {
   // State for inventory items
 
-  useEffect(() => {
-  // On mount, read preference
-  const saved = localStorage.getItem('darkMode');
-  if (saved === '1') {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
-}, []);
+//   useEffect(() => {
+//   // On mount, read preference
+//   const saved = localStorage.getItem('darkMode');
+//   if (saved === '1') {
+//     document.documentElement.classList.add('dark');
+//   } else {
+//     document.documentElement.classList.remove('dark');
+//   }
+// }, []);
 
   const [inventoryItems, setInventoryItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);

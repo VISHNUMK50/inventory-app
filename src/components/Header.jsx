@@ -8,12 +8,31 @@ import { auth, db } from "@/config/firebase"; // Make sure these are correctly i
 import { doc, getDoc } from "firebase/firestore";
 
 const Header = ({ title = "Inventory Management System", hide = false }) => {
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem('darkMode') === '1';
+  const [mounted, setMounted] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const saved = localStorage.getItem('darkMode');
+    if (saved === '1') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
     }
-    return false;
-  });
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode ? '1' : '0');
+  }, [darkMode, mounted]);
+
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const pathname = usePathname();
@@ -55,9 +74,9 @@ const Header = ({ title = "Inventory Management System", hide = false }) => {
       });
   };
 
-  if (hide) return null;
+  if (hide || !mounted) return null; // Prevents flash
 
-    return (
+  return (
     <header
       style={{
         background: "linear-gradient(90deg, var(--accent), var(--indigo))",
@@ -75,7 +94,7 @@ const Header = ({ title = "Inventory Management System", hide = false }) => {
             />
           </Link>
         </div>
-  
+
         {/* Title Section */}
         <div className="ml-10 absolute left-1/2 transform -translate-x sm:static sm:transform-none">
           <h1
@@ -85,7 +104,7 @@ const Header = ({ title = "Inventory Management System", hide = false }) => {
             {title}
           </h1>
         </div>
-  
+
         {/* Navigation Section */}
         <div className="flex items-center space-x-4">
           {pathname !== "/dashboard" ? (
