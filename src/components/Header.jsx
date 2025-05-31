@@ -8,8 +8,13 @@ import { auth, db } from "@/config/firebase"; // Make sure these are correctly i
 import { doc, getDoc } from "firebase/firestore";
 
 const Header = ({ title = "Inventory Management System", hide = false }) => {
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem('darkMode') === '1';
+    }
+    return false;
+  });
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const pathname = usePathname();
 
@@ -37,11 +42,7 @@ const Header = ({ title = "Inventory Management System", hide = false }) => {
     localStorage.setItem('darkMode', darkMode ? '1' : '0');
   }, [darkMode]);
 
-  useEffect(() => {
-    // On mount, read preference
-    const saved = localStorage.getItem('darkMode');
-    if (saved === '1') setDarkMode(true);
-  }, [])
+
 
   const handleLogout = () => {
     auth.signOut()
